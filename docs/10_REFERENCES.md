@@ -67,6 +67,7 @@ docs/vendor/encoder/ALPS_Alpine_EC11E_Series.pdf
 - 确认 IAP/EEPROM 写入规则。
 - 校准官方示例中的初始化顺序和寄存器配置。
 - UART1 默认实现按官方 STC8H 串口示例校准：Timer1 作为波特率发生器，`AUXR.S1ST2=0`，Timer1 1T，Timer1 mode0 16 位自动重装，`BRT = 65536 - FOSC / baud / 4`。
+- Timer0 当前实现按官方 STC8H Timer0 mode0 16-bit auto-reload 示例校准：11.0592MHz/12T/1ms reload 为 `0xFC66`，中断向量为 1。
 - I2C 当前板级配置按官方 STC8H GPIO 资料校准：开漏输出需要上拉；`P1PU/P3PU` 内部 4.1K 上拉和 `P1IE/P3IE` 数字输入使能均属于 XFR 扩展寄存器，访问前必须设置 `P_SW2.EAXFR=1`。
 - ADC 当前实现按官方 STC8H ADC 资料校准：STC8H1K08 为 10-bit ADC，P3.3 对应 ADC11；ADC 引脚需配置为高阻输入；ADC 上电后等待约 1ms；`ADCTIM` 推荐 `0x3f`；10-bit ADC 速度不高于 500kHz。
 - STC8G/STC8H 官方库函数包用于核对库函数层面的外设初始化顺序。已解压到临时目录分析，不把展开源码纳入仓库；仓库仅保留官方压缩包和吸收记录。

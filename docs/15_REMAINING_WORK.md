@@ -47,8 +47,10 @@
 - 已复测 EC11 慢速旋转和快速旋转，30ms 快速阈值和 10 步进加速生效。
 - 已新增 ADC HAL 和 PlatformIO `adc_pot` 示例，读取 P3.3/ADC11。
 - 已复测 P3.3/ADC11 电位器输入，ADC 原始值可覆盖 0..1023 范围。
+- 已新增 Timer0 1ms tick HAL 和 PlatformIO `timer_tick` 示例。
+- 已烧录 `timer_tick` 并验证串口输出：启动行 `Timer0 1ms tick`，之后每约 1 秒输出 `tick`。
 - Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
-- 继续后续模块实现和硬件实测。
+- 进行 STC8H1K08 TSSOP20 后续硬件实测：Timer0 1ms tick 的 P1.2 LED 500ms 翻转需人工目视确认。
 
 ## 2. 待优化项
 

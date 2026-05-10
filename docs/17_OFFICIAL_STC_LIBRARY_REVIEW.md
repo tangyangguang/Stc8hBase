@@ -70,6 +70,24 @@ reload = 65536 - MAIN_Fosc / 4 / baud
 - `ADCTIM=0x3f`，ADC 时钟 `SYSclk/2/16`。
 - 无效通道或超时返回 `STC8H_ADC_INVALID_VALUE`。
 
+### Timer
+
+官方 Timer0 例程要点：
+
+- Timer0 可选 12T、1T 或外部脉冲输入。
+- `AUXR` bit7 选择 Timer0 1T/12T。
+- `INTCLKO` bit0 控制 Timer0 时钟输出。
+- `TR0` 控制 Timer0 启停。
+- Timer0 中断向量为 1。
+- 11.0592MHz、12T、1ms tick 的重装值为 `65536 - 11059200 / 12 / 1000 = 0xFC66`。
+
+本库当前做法：
+
+- 只实现 Timer0 1ms tick 的最小 HAL。
+- 默认使用 12T，避免额外时钟配置。
+- ISR 由示例或板级文件显式绑定，Timer HAL 不默认占用中断向量。
+- UART1 使用 Timer1，`timer_tick` 示例同时验证 Timer0 与 Timer1 可并行使用。
+
 ### 软件 I2C
 
 官方软件 I2C：
@@ -106,4 +124,4 @@ reload = 65536 - MAIN_Fosc / 4 / baud
 
 ## 5. 当前结论
 
-当前本库的 GPIO、UART1、软件 I2C、ADC 实现方向与官方库和官方手册核对后没有发现需要推倒重来的问题。后续模块应在开工前先查本记录列出的官方文件，再结合 STC8H1K08 TSSOP20 的实际资源裁剪实现。
+当前本库的 GPIO、UART1、软件 I2C、ADC、Timer0 实现方向与官方库和官方手册核对后没有发现需要推倒重来的问题。后续模块应在开工前先查本记录列出的官方文件，再结合 STC8H1K08 TSSOP20 的实际资源裁剪实现。

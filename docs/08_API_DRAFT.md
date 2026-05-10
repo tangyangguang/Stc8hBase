@@ -215,14 +215,17 @@ typedef enum {
     STC8H_TIMER2
 } stc8h_timer_id_t;
 
-void stc8h_timer_init_1ms(stc8h_timer_id_t timer);
+stc8h_status_t stc8h_timer_init_1ms(stc8h_timer_id_t timer);
 void stc8h_timer_start(stc8h_timer_id_t timer);
 void stc8h_timer_stop(stc8h_timer_id_t timer);
+void stc8h_timer_enable_interrupt(stc8h_timer_id_t timer);
+void stc8h_timer_disable_interrupt(stc8h_timer_id_t timer);
+void stc8h_timer_clear_flag(stc8h_timer_id_t timer);
 ```
 
 取舍：
 
-- 第一版优先满足 1ms tick 和简单周期任务。
+- 第一版优先满足 Timer0 1ms tick 和简单周期任务。
 - 不做通用复杂定时器框架。
 - 默认资源建议：Timer0 用作 1ms tick，Timer2 用于红外脉宽计时或备用载波。
 - UART 波特率相关资源由 `stc8h_uart` 管理，具体是否占用某个 Timer 以 STC8H1K08 手册和实现为准。
@@ -230,6 +233,7 @@ void stc8h_timer_stop(stc8h_timer_id_t timer);
 - 第一版 ISR 由示例或板级文件绑定。
 - Timer HAL 只提供装载、启动、停止、清标志和必要的计数读取能力。
 - 如果示例提供全局 tick 计数，ISR 向量和全局变量必须在资源声明中列明。
+- 当前实现只初始化 Timer0 1ms tick；Timer1 保留给 UART1，Timer2 预留给红外脉宽测量或备用载波。
 
 ### 3.3 `stc8h_uart`
 

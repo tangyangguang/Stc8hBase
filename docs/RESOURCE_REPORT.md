@@ -582,3 +582,80 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 - 已完成烧录实测。
 - P3.3/ADC11 输出覆盖低端、中间和高端，观察到 `0`、`47`、`235`、`334`、`503`、`511`、`657`、`826`、`1023` 等读数。
 - 旋转 10K 电位器时 ADC 原始值随位置变化。
+
+## 11. PlatformIO `timer_tick` 示例
+
+路径：
+
+```text
+examples/platformio/timer_tick
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- Timer0 产生 1ms tick。
+- Timer0 ISR 每约 500ms 翻转 P1.2 LED。
+- UART1 每约 1000ms 输出一次 `tick`。
+- 验证 Timer0 与 UART1 使用的 Timer1 可以同时工作。
+
+资料依据：
+
+- STC 官方手册：Timer0 中断向量为 1；Timer0 12T/1T 由 `AUXR` bit7 选择；Timer0 时钟输出由 `INTCLKO` bit0 控制。
+- STC 官方 Timer0 示例：11.0592MHz、12T、1ms tick 重装值为 `0xFC66`。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 1473 bytes |
+| Stack start | 0x21 |
+| Internal RAM 边界 | 栈从 0x21 开始，当前静态/参数/overlay 占用到 0x20 |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer0 1ms tick；Timer1 由 UART1 初始化使用 |
+| 中断 | Timer0 向量 1；全局中断显式开启 |
+| UART | UART1 |
+| GPIO | P1.2 LED |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| SPI/PWM/IR | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/board_init_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_interrupt_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_timer_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_timer0_isr
+_stc8h_interrupt_enable_global
+_stc8h_timer_init_1ms
+_stc8h_timer_start
+_stc8h_timer_enable_interrupt
+_stc8h_timer_clear_flag
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR、ring buffer、soft timer、CRC、filter 或除法库符号。
+
+硬件验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 已完成烧录实测。
+- 串口输出已验证：启动后输出 `Timer0 1ms tick`，随后每约 1 秒输出 `tick`。
+- Timer0 中断、全局中断、UART1/Timer1 并行工作已验证。
+- P1.2 LED 每约 500ms 翻转仍需人工目视确认。

@@ -185,7 +185,16 @@ docs/RESOURCE_REPORT.md
 - 示例只启用单个 ADC 测试通道，不隐藏开启多个通道。
 - 记录 ADC 示例 ROM/RAM、是否使用中断、是否使用 XFR 寄存器。
 
-### 6.8 EEPROM/IAP 验收
+### 6.9 Timer 验收
+
+- `timer_tick` 示例使用 Timer0 产生 1ms tick。
+- Timer0 ISR 由示例文件显式绑定，不由 HAL 默认占用中断向量。
+- P1.2 LED 每约 500ms 翻转一次。
+- UART1 每约 1000ms 输出一次 `tick`。
+- Timer0 使用中断向量 1，资源报告记录 Timer0、Timer1、UART1 和全局中断占用。
+- 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、SPI、EEPROM、IR 等未使用模块符号。
+
+### 6.10 EEPROM/IAP 验收
 
 - 示例明确擦写地址范围。
 - 写入、读回、擦除验证通过。

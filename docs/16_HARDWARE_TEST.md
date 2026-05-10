@@ -22,6 +22,7 @@ examples/platformio/i2c_scan/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/lcd1602_text/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ec11_counter/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/adc_pot/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/timer_tick/.pio/build/STC8H1K08/firmware.hex
 ```
 
 ## 2. 板级默认配置
@@ -253,6 +254,35 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
 
+### 4.8 `timer_tick`
+
+目的：
+
+- 验证 Timer0 1ms tick。
+- 验证 Timer0 中断向量和全局中断开关。
+- 验证 Timer0 与 UART1 使用的 Timer1 不冲突。
+
+预期：
+
+- 串口启动后输出 `Timer0 1ms tick`。
+- UART1 每约 1 秒输出一次 `tick`。
+- P1.2 LED 每约 500ms 翻转一次。
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/timer_tick
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+说明：
+
+- 当前 Timer HAL 只实现 Timer0 1ms tick 初始化、启动、停止、中断使能和清标志。
+- ISR 由示例文件显式定义，HAL 不默认占用中断向量。
+- Timer0 使用 12T 模式，11.0592MHz 下 1ms 重装值为 `0xFC66`。
+- UART1 仍使用 Timer1 作为波特率发生器。
+
 ## 5. 本机工具状态
 
 当前本机已发现：
@@ -346,3 +376,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `adc_pot` 已烧录实测通过。
 - P3.3/ADC11 输出覆盖低端、中间和高端：已观察到 `0`、`47`、`235`、`334`、`503`、`511`、`657`、`826`、`1023` 等读数。
 - 旋转 10K 电位器时 ADC 原始值随位置变化，10-bit 右对齐读取有效。
+- `timer_tick` 已烧录成功。
+- `timer_tick` 串口实测通过：启动后输出 `Timer0 1ms tick`，随后每约 1 秒输出 `tick`。
+- `timer_tick` 已验证 Timer0 中断、全局中断、UART1/Timer1 并行工作。
+- `timer_tick` 的 P1.2 LED 每约 500ms 翻转仍需人工目视确认。
