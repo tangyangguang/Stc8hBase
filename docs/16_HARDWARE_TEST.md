@@ -499,6 +499,12 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - IAP 触发窗口临时关闭全局中断。
 - 不在红外等严格时序任务运行期间执行 EEPROM/IAP 写擦。
 
+实测结果：
+
+- 已在用户确认测试扇区可擦除后烧录 `STC8H1K08_write_test` 环境。
+- 已确认串口连续输出 `eeprom ok`。
+- 该项验证通过。
+
 ## 4.19 输出电平辅助 `output_levels`
 
 目的：

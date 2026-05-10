@@ -1204,7 +1204,8 @@ _stc8h_uart_write_code
 
 - 已完成 SDCC 编译和资源检查。
 - 默认安全环境可直接烧录，预期输出 `eeprom write disabled`。
-- 写擦环境等待用户确认 `0x0000..0x01FF` 可擦除后再烧录实测。
+- 已在用户确认测试扇区可擦除后烧录 `STC8H1K08_write_test` 环境。
+- 已确认写擦环境擦除 `0x0000..0x01FF`，写入并读回 `0x0000..0x0003`，串口连续输出 `eeprom ok`。
 
 ## 19. PlatformIO `output_levels` 示例
 
