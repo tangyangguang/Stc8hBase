@@ -440,6 +440,7 @@ Keil C51 验证状态：
 
 - 本机未发现 `c51`、`C51`、`uv4`、`UV4` 或 `wine`，暂不能自动完成 Keil C51 编译验证。
 - 当前仅完成 SDCC 编译验证；Keil C51 状态为待人工验证。
+- 已新增 Keil C51 模块编译验证入口 `examples/keil_c51/module_compile_check/`，用于在 Windows + Keil C51 环境中按模块编译检查当前源码。
 
 备注：
 

@@ -101,3 +101,20 @@ SDCC 的 8051 扩展语法可能导致 VS Code C/C++ 插件误报。
 - 明确编辑器红线不等于 SDCC 编译失败。
 
 这类配置只服务开发体验，不应影响固件编译结果。
+
+## 8. Keil C51 编译验证入口
+
+仓库提供 Keil C51 模块编译验证入口：
+
+```text
+examples/keil_c51/module_compile_check/
+```
+
+在 Windows + Keil C51 环境中执行：
+
+```bat
+cd examples\keil_c51\module_compile_check
+build_c51.bat
+```
+
+该入口只验证模块源码能否被 Keil C51 编译，不代表业务工程配置、烧录或运行验证已经完成。

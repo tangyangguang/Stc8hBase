@@ -88,7 +88,8 @@
 - 已烧录实测 `ir_nec_tx`，串口读到 `ir tx ok`，示波器在 P1.0 观察到约 38.5kHz 发射载波。
 - 已新增 PlatformIO `ir_nec_rx` 接收硬件示例，当前接线为 VS1838B/1838B 输出接 P3.2。
 - 已烧录实测 `ir_nec_rx`，确认 P3.2 空闲电平为高，普通 NEC 帧可解出 `addr/cmd`，长按可输出 `repeat`。
-- Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
+- 已新增 Keil C51 模块编译验证入口 `examples/keil_c51/module_compile_check/`。
+- Keil C51 实际编译验证：本机无 Keil 工具，需在 Windows + Keil C51 环境运行 `build_c51.bat`。
 - 已按当前临时接线 DIO/SDA=P3.2、CLK=P1.7 烧录实测 `tm1637_number`，确认依次显示 `8888`、`0123`、`4567`，随后 `0000` 起递增。
 
 ## 2. 待优化项
