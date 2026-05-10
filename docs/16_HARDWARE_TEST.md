@@ -522,6 +522,42 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 本示例只验证计算逻辑，不驱动真实 LED、蜂鸣器或继电器。
 - 实际 GPIO 输出仍由板级代码调用 GPIO HAL 或板级宏完成。
 
+## 4.20 TM1637 `tm1637_number`
+
+目的：
+
+- 验证 TM1637 四位数码管显示。
+- 验证亮度设置、数字编码和 ACK 检查。
+
+默认接线：
+
+```text
+TM1637 CLK -> P1.6
+TM1637 DIO -> P1.5
+TM1637 VCC -> 5V 或模块要求电源
+TM1637 GND -> GND
+```
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/tm1637_number
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+预期：
+
+- 数码管显示递增数字。
+- 串口周期输出 `tm1637 ok`。
+- 未接模块或 DIO/CLK 接错时，通常输出 `tm1637 error`。
+
+说明：
+
+- TM1637 不是标准 I2C，不接到 LCD1602 的 SDA/SCL。
+- CLK/DIO 默认使用开漏输出，并启用 P1 内部上拉；如模块已有上拉也可工作。
+- 当前示例默认不和 SPI 同时使用，因为 P1.5 同时是 SPI 默认 SCLK。
+
 ## 5. 本机工具状态
 
 当前本机已发现：

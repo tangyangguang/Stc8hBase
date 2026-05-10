@@ -595,14 +595,21 @@ stc8h_u8 drv_relay_level_off(const drv_relay_t *relay);
 ```c
 void drv_tm1637_init(void);
 void drv_tm1637_set_brightness(stc8h_u8 brightness);
-void drv_tm1637_display_digits(const stc8h_u8 *digits, stc8h_u8 len);
-void drv_tm1637_display_number(stc8h_s16 value);
+void drv_tm1637_set_display(stc8h_u8 on);
+stc8h_status_t drv_tm1637_display_raw(const stc8h_u8 *segments, stc8h_u8 len);
+stc8h_status_t drv_tm1637_display_digits(const stc8h_u8 *digits, stc8h_u8 len);
+stc8h_status_t drv_tm1637_display_number(stc8h_s16 value);
+stc8h_u8 drv_tm1637_encode_digit(stc8h_u8 digit);
+stc8h_status_t drv_tm1637_clear(void);
 ```
 
 取舍：
 
 - 第一版优先常见 4 位数码管。
 - 引脚映射通过板级配置宏提供。
+- TM1637 不是 I2C，不复用软件 I2C API。
+- 写命令和写显示数据检查 ACK，ACK 失败返回 `STC8H_ERROR`。
+- `drv_tm1637_display_number()` 不使用除法库，十进制拆分用小循环换取 ROM 可控。
 
 ### 4.8 `drv_ir_tx`
 

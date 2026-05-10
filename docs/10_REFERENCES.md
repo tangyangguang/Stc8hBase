@@ -58,6 +58,7 @@ docs/vendor/stc/stc8g-stc8h-lib-demo-code.rar
 docs/vendor/ti/PCF8574_TI.pdf
 docs/vendor/lcd/HD44780_Hitachi_via_Adafruit.pdf
 docs/vendor/encoder/ALPS_Alpine_EC11E_Series.pdf
+docs/vendor/titan/TM1637_TitanMicro.pdf
 ```
 
 用途：
@@ -76,6 +77,7 @@ docs/vendor/encoder/ALPS_Alpine_EC11E_Series.pdf
 - PCF8574 资料用于核对 LCD1602 I2C 背包的 I/O 扩展器行为。
 - HD44780 资料用于核对 LCD1602 初始化、命令和显示地址行为。
 - Alps Alpine EC11E 资料用于核对 EC11 系列旋转编码器两相 A/B 输出、额定参数、定位数/脉冲数。用户手头 EC11 模块不一定是 Alps 原厂同型号，驱动只依赖通用两相增量输出和按键触点行为。
+- TM1637 Titan Micro datasheet 权威镜像用于核对二线接口、显示寄存器地址 `0xC0..0xC5`、数据命令 `0x40`、显示控制命令 `0x88..0x8F` 和 ACK 时序。
 
 原则：
 
@@ -153,6 +155,7 @@ docs/vendor/stc/stc8g-stc8h-lib-demo-code.rar
 - ADC 官方库使用 `ADCTIM` 设置采样时序，`ADC_CONTR` 启动转换并轮询 `ADC_FLAG`，错误值返回 4096；本库对应使用 `ADCTIM=0x3f`、右对齐 10-bit 结果、超时返回 `STC8H_ADC_INVALID_VALUE`。
 - EEPROM/IAP 官方库在触发 IAP 前关闭全局中断，并按 `0x5A`、`0xA5` 顺序写 `IAP_TRIG`；本库 `stc8h_eeprom` 沿用这个保护思路，并要求示例默认不执行写擦。
 - 软件 I2C 官方示例每个相位都有短延时，ACK 通过释放 SDA 后读电平判断；本库继续保留板级宏绑定，并要求 SDA/SCL 释放后能读到高电平。
+- TM1637 数据手册说明其二线接口不是标准 I2C，无从地址；本库 `drv_tm1637` 采用独立 bit-bang 时序，不复用 `stc8h_i2c`。
 - 硬件 I2C、SPI、PWM、DMA 的官方库可作为后续模块寄存器顺序参考，但本库第一版仍只实现实际用到且验证过的最小能力。
 
 不直接采用的点：

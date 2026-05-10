@@ -1280,3 +1280,89 @@ _stc8h_uart_write_code
 
 - 已完成 SDCC 编译和资源检查。
 - 等待烧录实测串口输出。
+
+## 20. PlatformIO `tm1637_number` 示例
+
+路径：
+
+```text
+examples/platformio/tm1637_number
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 验证 TM1637 二线 bit-bang 写显示数据。
+- 默认 P1.6 为 CLK，P1.5 为 DIO。
+- 周期显示递增数字，UART1 输出 `tm1637 ok` 或 `tm1637 error`。
+
+资料依据：
+
+- TM1637 datasheet：二线接口不是标准 I2C，无从地址。
+- 显示寄存器地址为 `0xC0..0xC5`。
+- 自动地址写数据命令为 `0x40`。
+- 显示控制命令为 `0x88..0x8F`，低 3 位为亮度。
+- 每字节传输后 TM1637 通过拉低 DIO 产生 ACK。
+
+设计取舍：
+
+- CLK/DIO 由板级宏编译期绑定，不走运行期 port/pin 分派。
+- 不复用软件 I2C。
+- `display_number` 不使用除法/取模库，使用小循环做十进制拆分。
+- 第一版不实现按键扫描功能，只做显示。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 1976 bytes |
+| Stack start | 0x2b |
+| Internal RAM 边界 | 栈从 0x2b 开始，当前静态/参数/overlay 占用到 0x2a |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| GPIO | P1.6/CLK、P1.5/DIO，开漏输出 |
+| TM1637 | 二线 bit-bang，ACK 检查 |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| SPI/EEPROM/PWM/IR | 未使用 |
+| Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/drv_tm1637_wrap.rel
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_delay_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_drv_tm1637_init
+_drv_tm1637_set_brightness
+_drv_tm1637_display_number
+_drv_tm1637_display_raw
+_stc8h_delay_us
+_stc8h_gpio_set_mode
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、IR、utils 或除法/取模库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 等待连接 TM1637 模块后烧录实测。
