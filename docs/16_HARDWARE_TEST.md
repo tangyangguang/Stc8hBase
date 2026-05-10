@@ -24,6 +24,7 @@ examples/platformio/ec11_counter/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/adc_pot/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/timer_tick/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/soft_timer_tick/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/ring_buffer_demo/.pio/build/STC8H1K08/firmware.hex
 ```
 
 ## 2. 板级默认配置
@@ -311,6 +312,30 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 1ms tick 下支持 65 秒以内的非阻塞间隔。
 - 当前示例用两个 soft timer：250ms LED、1000ms UART。
 
+### 4.10 `ring_buffer_demo`
+
+目的：
+
+- 验证 `util_ring_buffer` 的空读、满写拒绝、回绕写入和顺序读出。
+- 验证 ring buffer 不拉入未使用外设模块。
+
+预期：
+
+- 串口周期输出 `ring buffer ok`。
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ring_buffer_demo
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+说明：
+
+- 当前示例使用 4 字节 DATA RAM 数组，实际可存 3 字节。
+- ring buffer 本身不占用中断、Timer、I2C、ADC 等资源。
+
 ## 5. 本机工具状态
 
 当前本机已发现：
@@ -409,3 +434,4 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `timer_tick` 已验证 Timer0 中断、全局中断、UART1/Timer1 并行工作。
 - `timer_tick` 的 P1.2 LED 每约 500ms 翻转仍需人工目视确认。
 - `soft_timer_tick` 已编译通过，已完成 16-bit 回绕宿主机测试，等待烧录实测。
+- `ring_buffer_demo` 已编译通过，已完成宿主机回绕测试，等待烧录实测。

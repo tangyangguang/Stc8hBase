@@ -65,6 +65,7 @@ Stc8hBase/
 - ADC。
 - Timer0 1ms tick。
 - 16-bit soft timer 工具已完成编译和回绕测试。
+- Ring buffer 工具已完成编译和回绕测试。
 
 ## 6. 文档索引
 

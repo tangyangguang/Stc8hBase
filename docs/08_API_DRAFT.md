@@ -677,17 +677,25 @@ void drv_ir_rx_reset(void);
 
 ```c
 typedef struct {
-    stc8h_u8 *buffer;
+    STC8H_DATA stc8h_u8 *buffer;
     stc8h_u8 size;
     stc8h_u8 head;
     stc8h_u8 tail;
 } util_ring_buffer_t;
 
-void util_ring_buffer_init(util_ring_buffer_t *rb, stc8h_u8 *buffer, stc8h_u8 size);
+void util_ring_buffer_init(util_ring_buffer_t *rb, STC8H_DATA stc8h_u8 *buffer, stc8h_u8 size);
 stc8h_u8 util_ring_buffer_push(util_ring_buffer_t *rb, stc8h_u8 value);
 stc8h_u8 util_ring_buffer_pop(util_ring_buffer_t *rb, stc8h_u8 *value);
 stc8h_u8 util_ring_buffer_available(const util_ring_buffer_t *rb);
 ```
+
+取舍：
+
+- 默认使用 internal DATA RAM 缓冲，避免通用指针带来的代码和周期成本。
+- 缓冲采用保留一个空位的方式区分空/满，实际可存字节数为 `size - 1`。
+- `size` 必须大于等于 2。
+- 不使用 `%` 取模，避免拉入除法/取模库。
+- 不内置中断保护；ISR 与主循环并发访问时，由调用方在读取多字节状态或批量操作时处理临界区。
 
 ### 5.2 `util_soft_timer`
 

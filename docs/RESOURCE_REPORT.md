@@ -737,3 +737,76 @@ _stc8h_timer_clear_flag
 - 已完成 SDCC 编译和资源检查。
 - 已完成宿主机 16-bit 回绕测试。
 - 等待烧录实测。
+
+## 13. PlatformIO `ring_buffer_demo` 示例
+
+路径：
+
+```text
+examples/platformio/ring_buffer_demo
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 验证 `util_ring_buffer` 空读、满写拒绝、回绕写入和顺序读出。
+- UART1 周期输出 `ring buffer ok` 或 `ring buffer error`。
+
+设计取舍：
+
+- 默认使用 internal DATA RAM 缓冲，避免通用指针带来的代码和周期成本。
+- 保留一个空位区分空/满，实际可存字节数为 `size - 1`。
+- 不使用 `%` 取模，避免拉入除法/取模库。
+- 不内置中断保护；ISR 与主循环并发访问时，由调用方处理临界区。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 1352 bytes |
+| Stack start | 0x23 |
+| Internal RAM 边界 | 栈从 0x23 开始，当前静态/参数/overlay 占用到 0x22 |
+| DATA buffer | 示例使用 4 字节数组，实际可存 3 字节 |
+| XDATA/PDATA | 未使用 |
+| Timer | 未使用 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| Ring Buffer | `util_ring_buffer` |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| SPI/PWM/IR | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+.pio/build/STC8H1K08/src/util_ring_buffer_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_util_ring_buffer_init
+_util_ring_buffer_push
+_util_ring_buffer_pop
+_util_ring_buffer_available
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 Timer、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR、soft timer、CRC、filter 或除法/取模库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 已完成宿主机回绕测试。
+- 等待烧录实测。
