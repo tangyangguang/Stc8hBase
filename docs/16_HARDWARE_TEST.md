@@ -694,7 +694,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `timer_tick` 已验证 Timer0 中断、全局中断、UART1/Timer1 并行工作。
 - `timer_tick` 的 P1.2 LED 每约 500ms 翻转仍需人工目视确认。
 - `soft_timer_tick` 已编译通过，已完成 16-bit 回绕宿主机测试，等待烧录实测。
-- `ring_buffer_demo` 已编译通过，已完成宿主机回绕测试，等待烧录实测。
+- `ring_buffer_demo` 已烧录实测通过：串口 115200 连续输出 `ring buffer ok`。
 - `pwm_output` 已烧录实测通过：串口输出 `pwm output ok`，P1.2 指示灯呈现逐渐变亮、逐渐变暗的呼吸效果。
 
 ## 4.22 红外 NEC 协议自检 `ir_nec_demo`

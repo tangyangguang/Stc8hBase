@@ -809,7 +809,7 @@ _stc8h_uart_write_code
 
 - 已完成 SDCC 编译和资源检查。
 - 已完成宿主机回绕测试。
-- 等待烧录实测。
+- 已烧录实测通过：串口 115200 连续输出 `ring buffer ok`。
 
 ## 14. PlatformIO `uart_echo_buffered` 示例
 
