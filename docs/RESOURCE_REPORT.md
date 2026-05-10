@@ -883,3 +883,74 @@ _util_ring_buffer_pop
 
 - 已完成 SDCC 编译和资源检查。
 - 等待烧录实测。
+
+## 15. PlatformIO `crc_demo` 示例
+
+路径：
+
+```text
+examples/platformio/crc_demo
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 验证 `util_checksum8`。
+- 验证 `util_crc16_modbus`。
+- UART1 周期输出 `crc ok` 或 `crc error`。
+
+设计取舍：
+
+- `util_crc` 第一版只处理 RAM 数据指针。
+- CRC16/MODBUS 使用逐位算法，不使用查表常量。
+- 不做 CRC 参数对象、运行期多项式选择或反射配置。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 646 bytes |
+| Stack start | 0x19 |
+| Internal RAM 边界 | 栈从 0x19 开始，当前静态/参数/overlay 占用到 0x18 |
+| DATA buffer | 示例使用 9 字节测试数据 |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| CRC | `checksum8`、`crc16_modbus` |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| SPI/PWM/IR | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+.pio/build/STC8H1K08/src/util_crc_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_util_checksum8
+_util_crc16_modbus
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR、ring buffer、soft timer、filter 或除法/取模库符号。
+
+验证状态：
+
+- 已完成宿主机标准向量测试：`"123456789"` 的 `checksum8=0xDD`，`crc16_modbus=0x4B37`。
+- 已完成 SDCC 编译和资源检查。
+- 等待烧录实测。

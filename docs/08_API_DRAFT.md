@@ -730,9 +730,15 @@ stc8h_u8 util_soft_timer_expired(util_soft_timer_t *timer, stc8h_u16 now);
 接口方向：
 
 ```c
-stc8h_u8 util_checksum8(const stc8h_u8 *data, stc8h_u16 len);
-stc8h_u16 util_crc16_modbus(const stc8h_u8 *data, stc8h_u16 len);
+stc8h_u8 util_checksum8(const STC8H_DATA stc8h_u8 *data, stc8h_u16 len);
+stc8h_u16 util_crc16_modbus(const STC8H_DATA stc8h_u8 *data, stc8h_u16 len);
 ```
+
+取舍：
+
+- 第一版只做 RAM 数据校验，不做 `code` 指针重载。
+- CRC16/MODBUS 使用逐位算法，不使用查表常量。
+- 适合 EEPROM 参数、低速串口协议和小数据包校验。
 
 ### 5.4 `util_filter`
 

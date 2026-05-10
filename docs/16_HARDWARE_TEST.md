@@ -18,6 +18,7 @@ examples/make/milestone1_demo/build/milestone1_demo.ihx
 examples/platformio/gpio_blink/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/uart_hello/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/uart_echo_buffered/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/crc_demo/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_lines/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_scan/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/lcd1602_text/.pio/build/STC8H1K08/firmware.hex
@@ -364,6 +365,30 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 当前示例使用 4 字节 DATA RAM 数组，实际可存 3 字节。
 - ring buffer 本身不占用中断、Timer、I2C、ADC 等资源。
 
+### 4.11 `crc_demo`
+
+目的：
+
+- 验证 `util_checksum8`。
+- 验证 `util_crc16_modbus`。
+
+预期：
+
+- 串口周期输出 `crc ok`。
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/crc_demo
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+说明：
+
+- 标准测试向量 `"123456789"` 的 CRC16/MODBUS 为 `0x4B37`。
+- CRC16/MODBUS 使用逐位算法，不放查表常量。
+
 ## 5. 本机工具状态
 
 当前本机已发现：
@@ -441,6 +466,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - 已再次核对官方 UART1 公式，修正 11.0592MHz / 115200 reload 为 `0xFFE8`，并补齐 `AUXR.S1ST2`、`P_SW1`、`INTCLKO`、P3.0/P3.1 模式设置。
 - `uart_hello` 已硬件实测通过：串口监视器 115200 8N1 可连续收到 `UART hello 115200`。
 - `uart_echo_buffered` 已编译通过，等待烧录实测。
+- `crc_demo` 已编译通过，已完成宿主机标准向量测试，等待烧录实测。
 - `i2c_scan` 曾出现 `0x08` 到 `0x77` 全地址 ACK；经 `i2c_lines` 诊断，原因为 SDA 开漏释放后仍读 0，即总线缺少有效上拉导致 ACK 假阳性。
 - 已按官方资料启用 P1.7/P3.2 数字输入和内部 4.1K 上拉；`i2c_lines` 复测通过：`release SDA=1 SCL=1`，各拉低状态均正确。
 - 内部上拉启用后，`i2c_scan` 不再全地址 ACK，首次结果为 `none`；检查后发现 LCD1602 有一根线接错。

@@ -54,8 +54,10 @@
 - 已新增 `util_ring_buffer`，使用 DATA RAM 缓冲，保留一个空位区分空/满。
 - 已新增 PlatformIO `ring_buffer_demo` 示例，并完成 SDCC 编译和回绕宿主机测试。
 - 已新增 PlatformIO `uart_echo_buffered` 示例，使用 UART 轮询接收 + `util_ring_buffer` 回显，不启用 UART 中断。
+- 已新增 `util_crc`，包含 `checksum8` 和逐位 `crc16_modbus`。
+- 已新增 PlatformIO `crc_demo` 示例，并完成 SDCC 编译和宿主机标准向量测试。
 - Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
-- 进行 STC8H1K08 TSSOP20 后续硬件实测：`uart_echo_buffered` 回显、`ring_buffer_demo` 串口输出、`soft_timer_tick` 串口输出和 P1.2 LED 250ms 翻转；`timer_tick` 的 P1.2 LED 500ms 翻转需人工目视确认。
+- 进行 STC8H1K08 TSSOP20 后续硬件实测：`crc_demo` 串口输出、`uart_echo_buffered` 回显、`ring_buffer_demo` 串口输出、`soft_timer_tick` 串口输出和 P1.2 LED 250ms 翻转；`timer_tick` 的 P1.2 LED 500ms 翻转需人工目视确认。
 
 ## 2. 待优化项
 
