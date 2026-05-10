@@ -954,3 +954,74 @@ _stc8h_uart_write_code
 - 已完成宿主机标准向量测试：`"123456789"` 的 `checksum8=0xDD`，`crc16_modbus=0x4B37`。
 - 已完成 SDCC 编译和资源检查。
 - 等待烧录实测。
+
+## 16. PlatformIO `filter_demo` 示例
+
+路径：
+
+```text
+examples/platformio/filter_demo
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 验证 `util_filter_limit_u16`。
+- 验证 `util_filter_iir_u16`。
+- UART1 周期输出 `filter ok` 或 `filter error`。
+
+设计取舍：
+
+- 不实现任意长度平均数组，避免除法库和额外样本缓存。
+- `util_filter_iir_u16` 使用移位平滑，适合 ADC、电位器和慢速传感器输入。
+- `shift=0` 表示立即跟随输入。
+- 输入接近当前值时仍至少移动 1，避免小误差永久不收敛。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 946 bytes |
+| Stack start | 0x11 |
+| Internal RAM 边界 | 栈从 0x11 开始，当前静态/参数/overlay 占用到 0x10 |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| Filter | `limit_u16`、`iir_u16` |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| SPI/PWM/IR | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+.pio/build/STC8H1K08/src/util_filter_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_util_filter_limit_u16
+_util_filter_iir_u16
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR、ring buffer、soft timer、CRC 或除法/取模库符号。
+
+验证状态：
+
+- 已完成宿主机边界测试。
+- 已完成 SDCC 编译和资源检查。
+- 等待烧录实测。

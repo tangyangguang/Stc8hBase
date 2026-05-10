@@ -67,6 +67,7 @@ Stc8hBase/
 - 16-bit soft timer 工具已完成编译和回绕测试。
 - Ring buffer 工具已完成编译和回绕测试。
 - CRC/checksum 工具已完成编译和标准向量测试。
+- Filter 工具已完成编译和边界测试。
 
 ## 6. 文档索引
 

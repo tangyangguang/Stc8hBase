@@ -91,7 +91,7 @@ LED、蜂鸣器、继电器驱动第一版不直接操作 GPIO，只提供有效
 | `util_ring_buffer` | UART 和数据流缓冲 |
 | `util_soft_timer` | 非阻塞时间间隔判断 |
 | `util_crc` | CRC/校验辅助 |
-| `util_filter` | 简单平均或中值滤波 |
+| `util_filter` | 限幅和移位式 IIR 平滑 |
 
 工具模块不能变成隐藏调度器或操作系统。
 

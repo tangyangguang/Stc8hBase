@@ -19,6 +19,7 @@ examples/platformio/gpio_blink/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/uart_hello/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/uart_echo_buffered/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/crc_demo/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/filter_demo/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_lines/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_scan/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/lcd1602_text/.pio/build/STC8H1K08/firmware.hex
@@ -389,6 +390,31 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 标准测试向量 `"123456789"` 的 CRC16/MODBUS 为 `0x4B37`。
 - CRC16/MODBUS 使用逐位算法，不放查表常量。
 
+### 4.12 `filter_demo`
+
+目的：
+
+- 验证 `util_filter_limit_u16`。
+- 验证 `util_filter_iir_u16`。
+
+预期：
+
+- 串口周期输出 `filter ok`。
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/filter_demo
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+说明：
+
+- `util_filter_iir_u16` 使用移位平滑，不使用除法。
+- `shift=0` 表示立即跟随输入。
+- 输入接近当前值时仍至少移动 1，避免滤波值永久卡住。
+
 ## 5. 本机工具状态
 
 当前本机已发现：
@@ -467,6 +493,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `uart_hello` 已硬件实测通过：串口监视器 115200 8N1 可连续收到 `UART hello 115200`。
 - `uart_echo_buffered` 已编译通过，等待烧录实测。
 - `crc_demo` 已编译通过，已完成宿主机标准向量测试，等待烧录实测。
+- `filter_demo` 已编译通过，已完成宿主机边界测试，等待烧录实测。
 - `i2c_scan` 曾出现 `0x08` 到 `0x77` 全地址 ACK；经 `i2c_lines` 诊断，原因为 SDA 开漏释放后仍读 0，即总线缺少有效上拉导致 ACK 假阳性。
 - 已按官方资料启用 P1.7/P3.2 数字输入和内部 4.1K 上拉；`i2c_lines` 复测通过：`release SDA=1 SCL=1`，各拉低状态均正确。
 - 内部上拉启用后，`i2c_scan` 不再全地址 ACK，首次结果为 `none`；检查后发现 LCD1602 有一根线接错。

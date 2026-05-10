@@ -749,11 +749,13 @@ stc8h_u16 util_crc16_modbus(const STC8H_DATA stc8h_u8 *data, stc8h_u16 len);
 接口方向：
 
 ```c
-stc8h_u16 util_filter_average_u16(const stc8h_u16 *data, stc8h_u8 len);
 stc8h_u16 util_filter_limit_u16(stc8h_u16 value, stc8h_u16 min_value, stc8h_u16 max_value);
+stc8h_u16 util_filter_iir_u16(stc8h_u16 current, stc8h_u16 input, stc8h_u8 shift);
 ```
 
 取舍：
 
 - 不做复杂滤波框架。
 - 优先提供项目中最常重复的简单函数。
+- 不做任意长度平均数组，避免除法库和额外样本缓存。
+- `util_filter_iir_u16` 使用移位平滑，适合 ADC、电位器和慢速传感器输入。
