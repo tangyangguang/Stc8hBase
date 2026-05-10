@@ -1199,3 +1199,84 @@ _stc8h_uart_write_code
 - 已完成 SDCC 编译和资源检查。
 - 默认安全环境可直接烧录，预期输出 `eeprom write disabled`。
 - 写擦环境等待用户确认 `0x0000..0x01FF` 可擦除后再烧录实测。
+
+## 19. PlatformIO `output_levels` 示例
+
+路径：
+
+```text
+examples/platformio/output_levels
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 验证 `drv_led`、`drv_buzzer`、`drv_relay` 有效电平辅助。
+- 验证 active-high 和 active-low 两类输出电平。
+- UART1 周期输出 `output levels ok` 或 `output levels error`。
+
+设计取舍：
+
+- 驱动只保存 1 字节 `active_level`。
+- 不直接操作 GPIO。
+- 不实现闪烁、蜂鸣节奏、继电器保护时序等业务逻辑。
+- 无源蜂鸣器不在本驱动中处理，后续通过 PWM 模块驱动。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 925 bytes |
+| Stack start | 0x12 |
+| Internal RAM 边界 | 栈从 0x12 开始，当前静态/参数/overlay 占用到 0x11 |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| LED/Buzzer/Relay | 有效电平辅助 |
+| GPIO | 未使用 |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| SPI/EEPROM/PWM/IR | 未使用 |
+| Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/drv_buzzer_wrap.rel
+.pio/build/STC8H1K08/src/drv_led_wrap.rel
+.pio/build/STC8H1K08/src/drv_relay_wrap.rel
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_drv_led_init
+_drv_led_level_on
+_drv_led_level_off
+_drv_buzzer_init
+_drv_buzzer_level_on
+_drv_buzzer_level_off
+_drv_relay_init
+_drv_relay_level_on
+_drv_relay_level_off
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 GPIO、Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR、utils 或除法/取模库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 等待烧录实测串口输出。

@@ -62,6 +62,7 @@ Stc8hBase/
 - 软件 I2C。
 - I2C LCD1602。
 - Button / EC11。
+- LED / 有源蜂鸣器 / 继电器有效电平辅助已完成编译和资源检查。
 - ADC。
 - Timer0 1ms tick。
 - SPI 硬件主机轮询基础收发已完成编译和资源检查。

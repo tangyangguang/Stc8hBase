@@ -498,6 +498,30 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - IAP 触发窗口临时关闭全局中断。
 - 不在红外等严格时序任务运行期间执行 EEPROM/IAP 写擦。
 
+## 4.19 输出电平辅助 `output_levels`
+
+目的：
+
+- 验证 LED、蜂鸣器、继电器有效电平计算。
+- 确认这些驱动不直接操作 GPIO、不占用 Timer 或中断。
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/output_levels
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+预期：
+
+- 串口周期输出 `output levels ok`。
+
+说明：
+
+- 本示例只验证计算逻辑，不驱动真实 LED、蜂鸣器或继电器。
+- 实际 GPIO 输出仍由板级代码调用 GPIO HAL 或板级宏完成。
+
 ## 5. 本机工具状态
 
 当前本机已发现：
