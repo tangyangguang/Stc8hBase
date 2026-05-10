@@ -56,6 +56,7 @@
 - 已新增 PlatformIO `ring_buffer_demo` 示例，并完成 SDCC 编译和回绕宿主机测试。
 - 已烧录实测 `ring_buffer_demo`，串口 115200 连续输出 `ring buffer ok`。
 - 已新增 PlatformIO `uart_echo_buffered` 示例，使用 UART 轮询接收 + `util_ring_buffer` 回显，不启用 UART 中断。
+- 已烧录实测 `uart_echo_buffered`，逐字节低速发送 `abc123\r\n` 可完整回显；一次性连续发送多字节可能丢字符，符合当前低速轮询示例边界。
 - 已新增 `util_crc`，包含 `checksum8` 和逐位 `crc16_modbus`。
 - 已新增 PlatformIO `crc_demo` 示例，并完成 SDCC 编译和宿主机标准向量测试。
 - 已烧录实测 `crc_demo`，串口 115200 连续输出 `crc ok`。
@@ -83,7 +84,7 @@
 - 红外真实硬件接收层尚未实现：后续需要接 VS1838B/HS0038 后，按 STC 官方资料选择外部中断 + Timer 捕获或固定周期采样方案。
 - 红外真实硬件发射层尚未实现：后续需要接红外发射管和驱动三极管/MOS 管后，按 STC 官方资料选择 PWM 或 Timer 产生 38kHz 载波。
 - Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
-- 进行 STC8H1K08 TSSOP20 后续硬件实测：短接 P1.3/P1.4 后测试 `spi_loopback`，确认 EEPROM 测试扇区后测试 `eeprom_rw` 写擦环境，连接 TM1637 后测试 `tm1637_number`，以及 `uart_echo_buffered` 回显；`timer_tick` 的 P1.2 LED 500ms 翻转需人工目视确认。
+- 进行 STC8H1K08 TSSOP20 后续硬件实测：短接 P1.3/P1.4 后测试 `spi_loopback`，确认 EEPROM 测试扇区后测试 `eeprom_rw` 写擦环境，连接 TM1637 后测试 `tm1637_number`；`timer_tick` 的 P1.2 LED 500ms 翻转需人工目视确认。
 
 ## 2. 待优化项
 

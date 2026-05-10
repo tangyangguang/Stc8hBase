@@ -667,7 +667,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - 已新增 PlatformIO `uart_hello` 最小串口示例，等待先独立验证 UART1。
 - 已再次核对官方 UART1 公式，修正 11.0592MHz / 115200 reload 为 `0xFFE8`，并补齐 `AUXR.S1ST2`、`P_SW1`、`INTCLKO`、P3.0/P3.1 模式设置。
 - `uart_hello` 已硬件实测通过：串口监视器 115200 8N1 可连续收到 `UART hello 115200`。
-- `uart_echo_buffered` 已编译通过，等待烧录实测。
+- `uart_echo_buffered` 已烧录实测通过：逐字节低速发送 `abc123\r\n` 可完整回显；一次性连续发送多字节可能丢字符，符合当前低速轮询示例边界。
 - `crc_demo` 已烧录实测通过：串口 115200 连续输出 `crc ok`。
 - `filter_demo` 已烧录实测通过：串口 115200 连续输出 `filter ok`。
 - `output_levels` 已烧录实测通过：串口 115200 连续输出 `output levels ok`。
