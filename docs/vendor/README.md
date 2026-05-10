@@ -21,5 +21,6 @@
 | `lcd/HD44780_Hitachi_via_Adafruit.pdf` | Hitachi datasheet 权威镜像 | `https://cdn-shop.adafruit.com/datasheets/HD44780.pdf` | LCD1602 兼容控制器命令、初始化时序、DDRAM 地址和 4-bit 模式核对 | `4324d67ec14fc8e7ba8cf7db7256749c9b80b94b3f8bedfa614a0d2839c7dea9` |
 | `encoder/ALPS_Alpine_EC11E_Series.pdf` | Alps Alpine 官方 | `https://tech.alpsalpine.com/cms.media/product_catalog_ec_01_ec11e_en_611f078659.pdf` | EC11 系列旋转编码器两相 A/B 输出、额定参数、定位数/脉冲数核对；具体器件以实物和实际型号为准 | `08dae9fa97a2a97d9c9954e87455aff6f0cc557be1fb84fcb0f11608937ba241` |
 | `titan/TM1637_TitanMicro.pdf` | Titan Micro datasheet 权威镜像 | `https://www.makerguides.com/wp-content/uploads/2019/08/TM1637-Datasheet.pdf` | TM1637 二线接口、命令字、显示寄存器地址、亮度控制和 ACK 时序核对 | `5f0e107b0398111395d660baa421ca3826278eb2838f14f1742758667106b128` |
+| `infineon/Infineon_AN2023_03_IR_Remote_Control.pdf` | Infineon 官方应用笔记 | `https://www.infineon.com/dgdl/Infineon-AN2023-03_Infrared_Remote_Control_and_Saving_Last_Speed_Setting-ApplicationNotes-v01_00-EN.pdf?fileId=8ac78c8c8d1b852e018d21ff0aa71feb` | 红外遥控 NEC 帧结构、引导码、重复码、脉宽和载波事实核对 | `f07b3b420e2b65b6c34795d97d66f04b99521d1c83d501b00e261026e965aa9b` |
 
 下载日期：2026-05-10。

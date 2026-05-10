@@ -623,26 +623,34 @@ stc8h_status_t drv_tm1637_clear(void);
 
 职责：
 
-- 红外遥控发射。
-- 第一版优先支持 NEC 协议。
-- 支持发送地址和命令。
+- NEC 红外遥控发射协议编码。
+- 输出一段段 `mark/space` 持续时间。
+- 不直接控制 GPIO、PWM 或 Timer。
 
 接口方向：
 
 ```c
-void drv_ir_tx_init(void);
-void drv_ir_tx_send_nec(stc8h_u16 address, stc8h_u8 command);
-void drv_ir_tx_carrier_on(void);
-void drv_ir_tx_carrier_off(void);
+typedef enum {
+    DRV_IR_TX_DONE = 0,
+    DRV_IR_TX_MARK,
+    DRV_IR_TX_SPACE
+} drv_ir_tx_level_t;
+
+typedef struct {
+    stc8h_u32 raw;
+    stc8h_u8 step;
+} drv_ir_tx_nec_t;
+
+void drv_ir_tx_nec_begin(drv_ir_tx_nec_t *tx, stc8h_u8 address, stc8h_u8 command);
+drv_ir_tx_level_t drv_ir_tx_nec_next(drv_ir_tx_nec_t *tx, stc8h_u16 *duration_us);
 ```
 
 取舍：
 
-- NEC 协议作为第一版默认协议。
-- 38kHz 载波默认优先使用 PWM 产生。
-- 如果硬件 PWM 引脚不适合测试板，允许使用 Timer 产生载波。
-- 如果项目资源紧张，可以提供 GPIO 软件调制实现，但要在文档中说明 CPU 占用。
-- 引脚映射通过板级配置宏提供。
+- 第一版只支持 NEC 普通 8-bit 地址格式：`address`、`~address`、`command`、`~command`。
+- `DRV_IR_TX_MARK` 表示需要输出 38kHz 载波，`DRV_IR_TX_SPACE` 表示关闭载波保持空闲。
+- 38kHz 载波由板级发送层选择 PWM、Timer 或极简软件调制实现，并在资源报告中记录。
+- 本协议编码层本身不占用 GPIO、PWM、Timer 或中断。
 - 不做通用红外协议框架，但模块边界保持独立，方便以后按需新增其他协议。
 
 ### 4.9 `drv_ir_rx`
@@ -664,27 +672,35 @@ typedef enum {
 } drv_ir_rx_event_t;
 
 typedef struct {
-    stc8h_u16 address;
+    stc8h_u8 address;
     stc8h_u8 command;
-    stc8h_u8 command_inv;
-    stc8h_u8 repeat;
+    stc8h_u32 raw;
 } drv_ir_rx_frame_t;
 
-void drv_ir_rx_init(void);
-void drv_ir_rx_feed_pulse(stc8h_u8 level, stc8h_u16 width_us);
-drv_ir_rx_event_t drv_ir_rx_get_event(drv_ir_rx_frame_t *frame);
-void drv_ir_rx_reset(void);
+typedef struct {
+    stc8h_u8 state;
+    stc8h_u8 bit_index;
+    stc8h_u32 raw;
+    drv_ir_rx_event_t event;
+    drv_ir_rx_frame_t frame;
+} drv_ir_rx_t;
+
+void drv_ir_rx_init(drv_ir_rx_t *rx);
+void drv_ir_rx_reset(drv_ir_rx_t *rx);
+void drv_ir_rx_feed_pulse(drv_ir_rx_t *rx, stc8h_u8 level, stc8h_u16 width_us);
+drv_ir_rx_event_t drv_ir_rx_get_event(drv_ir_rx_t *rx, drv_ir_rx_frame_t *frame);
 ```
 
 取舍：
 
 - 接收头按 `VS1838B`/`HS0038` 这类常见解调接收头设计，通常输出解调后的低有效脉冲，驱动按脉宽解码。
-- 脉宽测量默认使用外部中断边沿触发 + Timer 计时。
+- 脉宽测量由板级捕获层完成，通常使用外部中断边沿触发 + Timer 计时。
 - 如果实际引脚不支持外部中断，允许固定周期采样实现，但必须说明采样周期和 CPU 占用。
 - 第一版优先低 RAM 状态机，不保存完整原始波形数组。
+- 第一版只支持 NEC 普通 8-bit 地址格式，不支持扩展 16-bit 地址格式。
 - 不做学习型遥控码库，不做多协议自动识别，但保留独立模块边界，方便以后新增协议实现。
-- 引脚映射和中断/定时器资源通过板级配置指定。
-- ISR/Timer/采样代码属于板级绑定层，负责测量边沿间隔并调用 `drv_ir_rx_feed_pulse`。
+- 引脚映射和中断/定时器资源通过板级配置指定，不由 `drv_ir_rx` 隐式占用。
+- ISR/Timer/采样代码属于板级绑定层，负责测量边沿间隔并调用 `drv_ir_rx_feed_pulse(rx, level, width_us)`。
 - NEC 解码状态机不直接访问寄存器。
 
 ## 5. Utils

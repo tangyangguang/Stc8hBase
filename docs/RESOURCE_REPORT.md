@@ -1451,3 +1451,87 @@ _stc8h_uart_write_code
 
 - 已完成 SDCC 编译和资源检查。
 - 等待烧录实测 P1.2 LED 明暗变化。
+
+## 22. PlatformIO `ir_nec_demo` 示例
+
+路径：
+
+```text
+examples/platformio/ir_nec_demo
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 验证 `drv_ir_tx` NEC `mark/space` 编码器。
+- 验证 `drv_ir_rx` NEC 解码状态机。
+- 不接外部红外元件，内部把 TX 编码器输出的脉宽送入 RX 解码器。
+- 串口输出 `ir nec ok` 或 `ir nec error`。
+
+资料依据：
+
+- Infineon 官方红外遥控应用笔记用于核对 NEC 引导码、重复码、数据位脉宽和载波事实。
+- 第一版只实现 NEC 普通 8-bit 地址格式：`address`、`~address`、`command`、`~command`。
+- VS1838B/HS0038 这类解调接收头通常输出低有效 mark，因此 RX feed 中 `level=0` 表示 mark，`level=1` 表示 space。
+
+设计取舍：
+
+- `drv_ir_tx` 只生成 `mark/space + duration_us` 序列，不直接控制 GPIO、PWM 或 Timer。
+- `drv_ir_rx` 只消费 `level + width_us`，不直接读取 GPIO、Timer 或中断标志。
+- 真实硬件接收层后续由板级代码绑定外部中断/Timer 或固定周期采样。
+- 真实硬件发射层后续由板级代码绑定 PWM/Timer 载波和红外 LED 驱动管。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 2914 bytes |
+| Stack start | 0x4d |
+| Internal RAM 边界 | 栈从 0x4d 开始，当前静态/参数/overlay 占用到 0x4c |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用；IR 协议层未使用 Timer |
+| 中断 | 未使用 |
+| UART | UART1 |
+| GPIO | 未使用 |
+| PWM | 未使用 |
+| IR | NEC TX 编码器、NEC RX 解码状态机 |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC/SPI/EEPROM/TM1637 | 未使用 |
+| Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/drv_ir_rx_wrap.rel
+.pio/build/STC8H1K08/src/drv_ir_tx_wrap.rel
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_drv_ir_rx_init
+_drv_ir_rx_reset
+_drv_ir_rx_feed_pulse
+_drv_ir_rx_get_event
+_drv_ir_tx_nec_begin
+_drv_ir_tx_nec_next
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、GPIO、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、PWM、utils 或除法/取模库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 等待烧录实测串口输出 `ir nec ok`。

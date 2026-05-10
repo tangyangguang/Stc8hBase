@@ -29,6 +29,7 @@ examples/platformio/timer_tick/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/spi_loopback/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/soft_timer_tick/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ring_buffer_demo/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/ir_nec_demo/.pio/build/STC8H1K08/firmware.hex
 ```
 
 ## 2. 板级默认配置
@@ -693,3 +694,39 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `timer_tick` 的 P1.2 LED 每约 500ms 翻转仍需人工目视确认。
 - `soft_timer_tick` 已编译通过，已完成 16-bit 回绕宿主机测试，等待烧录实测。
 - `ring_buffer_demo` 已编译通过，已完成宿主机回绕测试，等待烧录实测。
+
+## 4.22 红外 NEC 协议自检 `ir_nec_demo`
+
+目标：
+
+- 验证 `drv_ir_tx` NEC 编码器输出的 `mark/space` 时序数量。
+- 验证 `drv_ir_rx` NEC 解码状态机可识别普通帧、重复码和异常脉宽。
+- 验证协议层不占用 GPIO、Timer、PWM 或中断。
+
+接线：
+
+```text
+不需要外接红外元件。
+串口下载线保持连接。
+```
+
+烧录：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ir_nec_demo
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+预期：
+
+```text
+ir nec ok
+ir nec ok
+```
+
+说明：
+
+- 本示例是协议自检，不验证 38kHz 载波和红外接收头硬件。
+- 后续真实硬件接收需要接 VS1838B/HS0038，并由板级捕获层测量边沿间隔。
+- 后续真实硬件发射需要红外 LED 外接三极管或 MOS 管驱动，并由板级发送层控制 38kHz 载波。
