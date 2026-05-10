@@ -52,15 +52,19 @@ Stc8hBase/
 
 ## 5. 当前状态
 
-当前仓库已完成 Milestone 1 开工前的设计评审，下一步进入 Milestone 1 实现。
+当前仓库已进入 Milestone 1 实现和硬件验证阶段。
 
-Milestone 1 目标：
+已实现并完成硬件实测的主要内容：
 
 - core 编译器兼容、类型、配置、延时、中断辅助。
 - GPIO。
 - UART。
 - 软件 I2C。
 - I2C LCD1602。
+- Button / EC11。
+- ADC。
+- Timer0 1ms tick。
+- 16-bit soft timer 工具已完成编译和回绕测试。
 
 ## 6. 文档索引
 

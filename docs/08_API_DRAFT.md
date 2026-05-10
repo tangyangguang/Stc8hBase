@@ -699,13 +699,19 @@ stc8h_u8 util_ring_buffer_available(const util_ring_buffer_t *rb);
 
 ```c
 typedef struct {
-    stc8h_u32 last;
-    stc8h_u32 interval;
+    stc8h_u16 last;
+    stc8h_u16 interval;
 } util_soft_timer_t;
 
-void util_soft_timer_start(util_soft_timer_t *timer, stc8h_u32 now, stc8h_u32 interval);
-stc8h_u8 util_soft_timer_expired(util_soft_timer_t *timer, stc8h_u32 now);
+void util_soft_timer_start(util_soft_timer_t *timer, stc8h_u16 now, stc8h_u16 interval);
+stc8h_u8 util_soft_timer_expired(util_soft_timer_t *timer, stc8h_u16 now);
 ```
+
+取舍：
+
+- 使用 16-bit tick，单个 timer 对象占 4 字节 RAM。
+- 适合 1ms tick 下 65 秒以内的非阻塞间隔。
+- 不支持长时间任务调度框架；更长时间由应用层按业务组合。
 
 ### 5.3 `util_crc`
 

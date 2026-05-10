@@ -659,3 +659,81 @@ _stc8h_timer_clear_flag
 - 串口输出已验证：启动后输出 `Timer0 1ms tick`，随后每约 1 秒输出 `tick`。
 - Timer0 中断、全局中断、UART1/Timer1 并行工作已验证。
 - P1.2 LED 每约 500ms 翻转仍需人工目视确认。
+
+## 12. PlatformIO `soft_timer_tick` 示例
+
+路径：
+
+```text
+examples/platformio/soft_timer_tick
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- Timer0 只提供 1ms tick。
+- 主循环使用两个 `util_soft_timer_t` 对象分别控制 250ms LED 翻转和 1000ms UART 输出。
+- 验证软件定时器不占用额外硬件资源。
+
+设计取舍：
+
+- `util_soft_timer_t` 使用 16-bit tick，单个对象占 4 字节 RAM。
+- 1ms tick 下支持 65 秒以内的非阻塞间隔。
+- 不做任务调度器，不保存函数指针，不自动注册 timer。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 1694 bytes |
+| Stack start | 0x25 |
+| Internal RAM 边界 | 栈从 0x25 开始，当前静态/参数/overlay 占用到 0x24 |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer0 1ms tick；Timer1 由 UART1 初始化使用 |
+| 中断 | Timer0 向量 1；全局中断显式开启 |
+| UART | UART1 |
+| GPIO | P1.2 LED |
+| Soft Timer | 两个 4 字节对象，分别用于 250ms 和 1000ms 周期 |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| SPI/PWM/IR | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/board_init_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_interrupt_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_timer_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+.pio/build/STC8H1K08/src/util_soft_timer_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_timer0_isr
+_util_soft_timer_start
+_util_soft_timer_expired
+_stc8h_timer_init_1ms
+_stc8h_timer_start
+_stc8h_timer_enable_interrupt
+_stc8h_timer_clear_flag
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR、ring buffer、CRC、filter 或除法库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 已完成宿主机 16-bit 回绕测试。
+- 等待烧录实测。

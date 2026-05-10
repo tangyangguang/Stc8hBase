@@ -23,6 +23,7 @@ examples/platformio/lcd1602_text/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ec11_counter/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/adc_pot/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/timer_tick/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/soft_timer_tick/.pio/build/STC8H1K08/firmware.hex
 ```
 
 ## 2. 板级默认配置
@@ -283,6 +284,33 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - Timer0 使用 12T 模式，11.0592MHz 下 1ms 重装值为 `0xFC66`。
 - UART1 仍使用 Timer1 作为波特率发生器。
 
+### 4.9 `soft_timer_tick`
+
+目的：
+
+- 验证 `util_soft_timer` 基于 1ms tick 做非阻塞周期判断。
+- 验证周期业务放在主循环中，不放在 Timer ISR 中。
+
+预期：
+
+- 串口启动后输出 `soft timer tick`。
+- UART1 每约 1 秒输出一次 `soft tick`。
+- P1.2 LED 每约 250ms 翻转一次。
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/soft_timer_tick
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+说明：
+
+- `util_soft_timer_t` 使用 16-bit tick，单个对象占 4 字节 RAM。
+- 1ms tick 下支持 65 秒以内的非阻塞间隔。
+- 当前示例用两个 soft timer：250ms LED、1000ms UART。
+
 ## 5. 本机工具状态
 
 当前本机已发现：
@@ -380,3 +408,4 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `timer_tick` 串口实测通过：启动后输出 `Timer0 1ms tick`，随后每约 1 秒输出 `tick`。
 - `timer_tick` 已验证 Timer0 中断、全局中断、UART1/Timer1 并行工作。
 - `timer_tick` 的 P1.2 LED 每约 500ms 翻转仍需人工目视确认。
+- `soft_timer_tick` 已编译通过，已完成 16-bit 回绕宿主机测试，等待烧录实测。
