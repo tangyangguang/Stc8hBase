@@ -1,5 +1,6 @@
 #include "drv_ir_rx.h"
 #include "drv_ir_tx.h"
+#include "stc8h_delay.h"
 #include "stc8h_uart.h"
 
 static stc8h_u8 feed_tx_to_rx(drv_ir_rx_t *rx, stc8h_u8 address, stc8h_u8 command)
@@ -79,5 +80,6 @@ void main(void)
 
     while (1) {
         print_result(ok);
+        stc8h_delay_ms(1000u);
     }
 }

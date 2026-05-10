@@ -1471,7 +1471,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 - 验证 `drv_ir_tx` NEC `mark/space` 编码器。
 - 验证 `drv_ir_rx` NEC 解码状态机。
 - 不接外部红外元件，内部把 TX 编码器输出的脉宽送入 RX 解码器。
-- 串口输出 `ir nec ok` 或 `ir nec error`。
+- 串口每约 1 秒输出 `ir nec ok` 或 `ir nec error`。
 
 资料依据：
 
@@ -1490,13 +1490,14 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 2914 bytes |
+| ROM/EPROM/FLASH | 2997 bytes |
 | Stack start | 0x4d |
 | Internal RAM 边界 | 栈从 0x4d 开始，当前静态/参数/overlay 占用到 0x4c |
 | XDATA/PDATA | 未使用 |
 | Timer | Timer1 由 UART1 初始化使用；IR 协议层未使用 Timer |
 | 中断 | 未使用 |
 | UART | UART1 |
+| Delay | 阻塞延时，用于降低示例串口输出频率 |
 | GPIO | 未使用 |
 | PWM | 未使用 |
 | IR | NEC TX 编码器、NEC RX 解码状态机 |
@@ -1511,6 +1512,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 .pio/build/STC8H1K08/src/drv_ir_rx_wrap.rel
 .pio/build/STC8H1K08/src/drv_ir_tx_wrap.rel
 .pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_delay_wrap.rel
 .pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
 ```
 
@@ -1523,6 +1525,8 @@ _drv_ir_rx_feed_pulse
 _drv_ir_rx_get_event
 _drv_ir_tx_nec_begin
 _drv_ir_tx_nec_next
+_stc8h_delay_us
+_stc8h_delay_ms
 _stc8h_uart_init
 _stc8h_uart_write_code
 ```
@@ -1534,4 +1538,5 @@ _stc8h_uart_write_code
 验证状态：
 
 - 已完成 SDCC 编译和资源检查。
-- 等待烧录实测串口输出 `ir nec ok`。
+- 协议自检已烧录实测通过：串口 115200 可读到连续 `ir nec ok`。
+- 将示例输出频率降为约 1 秒一次后，已重新完成 SDCC 编译；降频版本等待下次断电上电配合后复烧确认。
