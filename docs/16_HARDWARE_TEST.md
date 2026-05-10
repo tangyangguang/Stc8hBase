@@ -16,6 +16,7 @@ examples/make/milestone1_demo/build/milestone1_demo.ihx
 
 ```text
 examples/platformio/gpio_blink/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/uart_hello/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_scan/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/lcd1602_text/.pio/build/STC8H1K08/firmware.hex
 ```
@@ -247,3 +248,4 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - 已根据 STC8H 官方 UART 示例口径，把 UART1 从 Timer1 8 位 reload 改为 Timer1 16 位自动重装方式。
 - 已新增 PlatformIO `uart_hello` 最小串口示例，等待先独立验证 UART1。
 - 已再次核对官方 UART1 公式，修正 11.0592MHz / 115200 reload 为 `0xFFE8`，并补齐 `AUXR.S1ST2`、`P_SW1`、`INTCLKO`、P3.0/P3.1 模式设置。
+- `uart_hello` 已硬件实测通过：串口监视器 115200 8N1 可连续收到 `UART hello 115200`。

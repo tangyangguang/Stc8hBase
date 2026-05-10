@@ -41,6 +41,8 @@ https://github.com/IOsetting/FwLib_STC8
 
 ```text
 https://www.stcmicro.com/cn/stc/stc8h1k08.html
+docs/vendor/stc/STC8H1K08_Features.pdf
+docs/vendor/stc/STC8H-en.pdf
 ```
 
 用途：
@@ -56,6 +58,7 @@ https://www.stcmicro.com/cn/stc/stc8h1k08.html
 - 官方资料作为硬件事实来源。
 - 官方示例可以参考，但不直接决定本库 API。
 - 当本库实现与官方寄存器示例冲突时，先修正寄存器事实，再重新评估 API。
+- 已把必要官方 PDF 归档到 `docs/vendor/stc/`，用于离线复核；实现前仍应留意官网是否有新版。
 
 ### 2.3 PlatformIO STC8H1K08 支持
 
