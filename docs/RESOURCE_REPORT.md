@@ -1632,3 +1632,88 @@ _stc8h_uart_write_code
 - 已完成 SDCC 编译和资源检查。
 - 已烧录实测，串口 115200 读到 `ir tx ok`。
 - 已用示波器在 P1.0 观察到约 38.5kHz 发射载波。
+
+## 24. PlatformIO `ir_nec_rx` 示例
+
+路径：
+
+```text
+examples/platformio/ir_nec_rx
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 使用 P3.2 读取 VS1838B/1838B 红外接收头输出。
+- 使用 Timer0 12T 自由运行计数和轮询边沿测量脉宽。
+- 将 `level + width_us` 喂给 `drv_ir_rx`，输出普通 NEC 帧和 repeat。
+
+资料依据：
+
+- STC8H 官方资料：P3.2 可作为 INT0；当前示例为降低实现复杂度，先采用轮询边沿验证硬件链路。
+- STC8H 官方 Timer0 资料：Timer0 可配置为 16-bit 12T 计数器。
+- Infineon 官方红外遥控应用笔记：NEC 普通帧、repeat 和脉宽事实。
+- VS1838B/HS0038 类接收头通常输出低有效 mark，因此空闲应读到高电平。
+
+设计取舍：
+
+- 当前示例不启用外部中断，避免在硬件验证阶段引入 INT0 双边沿捕获差异。
+- 轮询会占用 CPU，适合硬件验证，不作为低功耗业务模板。
+- Timer0 只用于脉宽测量，不使用 1ms tick。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 3501 bytes |
+| Stack start | 0x53 |
+| Internal RAM 边界 | 栈从 0x53 开始，当前静态/参数/overlay 占用到 0x52 |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer0 12T 自由运行脉宽计时；Timer1 由 UART1 初始化使用 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| GPIO | P3.2 输入，启用数字输入和内部上拉 |
+| PWM | 未使用 |
+| IR | NEC RX 解码状态机 |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC/SPI/EEPROM/TM1637 | 未使用 |
+| Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/drv_ir_rx_wrap.rel
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_drv_ir_rx_init
+_drv_ir_rx_reset
+_drv_ir_rx_feed_pulse
+_drv_ir_rx_get_event
+_stc8h_gpio_set_mode
+_stc8h_uart_init
+_stc8h_uart_putc
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 `stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR TX、PWM、utils 或除法/取模库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 已烧录实测，P3.2 空闲状态输出 `level=1`。
+- 已确认普通 NEC 帧可解码，曾读到 `frame addr=0x01 cmd=0x11`、`cmd=0x22`、`cmd=0x33`。
+- 已确认长按 repeat：曾读到 `frame addr=0x00 cmd=0x19`，随后连续输出 `repeat`。

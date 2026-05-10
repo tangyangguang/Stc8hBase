@@ -31,6 +31,7 @@ examples/platformio/soft_timer_tick/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ring_buffer_demo/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ir_nec_demo/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ir_nec_tx/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/ir_nec_rx/.pio/build/STC8H1K08/firmware.hex
 ```
 
 ## 2. 板级默认配置
@@ -792,3 +793,46 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 本示例使用 P1.0 / PWMA channel 1，周期 `290`，占空比约 1/3。
 - 每约 1 秒发送一次 NEC `address=0x00`、`command=0x45`。
 - 当前只确认发射载波和发送程序运行；完整端到端遥控效果需接收设备或 VS1838B/HS0038 接收头验证。
+
+## 4.24 红外 NEC 接收 `ir_nec_rx`
+
+目标：
+
+- 验证 VS1838B/1838B 红外接收头输出可由 P3.2 读取。
+- 验证 Timer0 自由运行计数 + 轮询边沿测量可驱动 `drv_ir_rx` NEC 解码状态机。
+- 验证普通 NEC 帧和长按 repeat。
+
+当前测试接线：
+
+```text
+VS1838B/1838B OUT -> P3.2
+VS1838B/1838B VCC -> 3.3V 或模块要求电源
+VS1838B/1838B GND -> GND
+```
+
+烧录：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ir_nec_rx
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+预期：
+
+- 空闲时周期输出 `level=1`。
+- 按 NEC 遥控器按键时输出 `frame addr=0x.. cmd=0x..`。
+- 长按同一按键时输出 `repeat`。
+
+实测：
+
+- 已烧录成功。
+- 已确认 P3.2 空闲状态输出 `level=1`。
+- 已确认普通帧可解码，曾读到 `frame addr=0x01 cmd=0x11`、`cmd=0x22`、`cmd=0x33`。
+- 已确认另一次遥控器长按读到 `frame addr=0x00 cmd=0x19`，随后连续输出 `repeat`。
+
+说明：
+
+- 当前示例采用 Timer0 12T 自由运行计数和轮询边沿测量，不启用 INT0 中断。
+- 轮询实现适合作为硬件验证示例；业务项目如需降低 CPU 占用，可在板级捕获层改为外部中断 + Timer 测宽。
+- VS1838B/HS0038 类接收头通常为空闲高电平、mark 低电平，`drv_ir_rx` 按此低有效语义解码。
