@@ -658,7 +658,7 @@ _stc8h_timer_clear_flag
 - 已完成烧录实测。
 - 串口输出已验证：启动后输出 `Timer0 1ms tick`，随后每约 1 秒输出 `tick`。
 - Timer0 中断、全局中断、UART1/Timer1 并行工作已验证。
-- P1.2 LED 每约 500ms 翻转仍需人工目视确认。
+- P1.2 LED 每约 500ms 翻转已确认。
 
 ## 12. PlatformIO `soft_timer_tick` 示例
 

@@ -698,7 +698,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `timer_tick` 已烧录成功。
 - `timer_tick` 串口实测通过：启动后输出 `Timer0 1ms tick`，随后每约 1 秒输出 `tick`。
 - `timer_tick` 已验证 Timer0 中断、全局中断、UART1/Timer1 并行工作。
-- `timer_tick` 的 P1.2 LED 每约 500ms 翻转仍需人工目视确认。
+- `timer_tick` 的 P1.2 LED 每约 500ms 翻转已确认。
 - `soft_timer_tick` 已烧录实测通过：串口启动后输出 `soft timer tick`，随后每约 1 秒输出 `soft tick`；P1.2 LED 每约 250ms 翻转。
 - `ring_buffer_demo` 已烧录实测通过：串口 115200 连续输出 `ring buffer ok`。
 - `pwm_output` 已烧录实测通过：串口输出 `pwm output ok`，P1.2 指示灯呈现逐渐变亮、逐渐变暗的呼吸效果。
