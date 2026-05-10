@@ -1548,3 +1548,87 @@ _stc8h_uart_write_code
 - 已完成 SDCC 编译和资源检查。
 - 协议自检已烧录实测通过：串口 115200 可读到连续 `ir nec ok`。
 - 降频版本已复烧确认：串口 115200 在约 4 秒内读到 2 行 `ir nec ok`，不再刷屏。
+
+## 23. PlatformIO `ir_nec_tx` 示例
+
+路径：
+
+```text
+examples/platformio/ir_nec_tx
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 使用 `drv_ir_tx` 生成 NEC `mark/space` 序列。
+- 使用 P1.0 / PWMA channel 1 输出约 38kHz 红外发射载波。
+- 串口启动后输出 `ir nec tx P10`，随后每约 1 秒输出 `ir tx ok`。
+
+资料依据：
+
+- STC 官方 PWM 资料和官方 `STC8H_PWM.c/.h`：PWMA channel 1 默认输出到 P1.0/PWM1P。
+- Infineon 官方红外遥控应用笔记：NEC 协议使用约 38kHz 载波和 `mark/space` 脉宽编码。
+
+设计取舍：
+
+- 板级发射层使用已有 `stc8h_pwm` HAL，不新增 Timer 载波实现。
+- mark 时打开 PWM，space 时关闭 PWM 并把 P1.0 拉低为空闲电平。
+- 当前示例只验证发射，不做接收闭环。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 2569 bytes |
+| Stack start | 0x2a |
+| Internal RAM 边界 | 栈从 0x2a 开始，当前静态/参数/overlay 占用到 0x29 |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用；PWMA 自身计数器用于 38kHz 载波 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| GPIO | P1.0 空闲电平控制 |
+| PWM | PWMA channel 1 / P1.0，周期 `290`，占空比约 1/3 |
+| IR | NEC TX 编码器 |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC/SPI/EEPROM/TM1637 | 未使用 |
+| Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/drv_ir_tx_wrap.rel
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_delay_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_pwm_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_drv_ir_tx_nec_begin
+_drv_ir_tx_nec_next
+_stc8h_pwm_init
+_stc8h_pwm_set_duty
+_stc8h_pwm_enable
+_stc8h_pwm_disable
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR RX、utils 或除法/取模库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 已烧录实测，串口 115200 读到 `ir tx ok`。
+- 已用示波器在 P1.0 观察到约 38.5kHz 发射载波。

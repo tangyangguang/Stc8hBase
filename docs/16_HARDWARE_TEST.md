@@ -30,6 +30,7 @@ examples/platformio/spi_loopback/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/soft_timer_tick/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ring_buffer_demo/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ir_nec_demo/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/ir_nec_tx/.pio/build/STC8H1K08/firmware.hex
 ```
 
 ## 2. 板级默认配置
@@ -751,3 +752,43 @@ ir nec ok
 - 本示例是协议自检，不验证 38kHz 载波和红外接收头硬件。
 - 后续真实硬件接收需要接 VS1838B/HS0038，并由板级捕获层测量边沿间隔。
 - 后续真实硬件发射需要红外 LED 外接三极管或 MOS 管驱动，并由板级发送层控制 38kHz 载波。
+
+## 4.23 红外 NEC 发射 `ir_nec_tx`
+
+目标：
+
+- 验证 P1.0 / PWMA channel 1 能输出红外发射所需约 38kHz 载波。
+- 验证 `drv_ir_tx` 的 NEC `mark/space` 序列可以驱动板级 PWM 发射层。
+
+当前测试接线：
+
+```text
+红外发射头 -> P1.0
+GND        -> GND
+```
+
+烧录：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ir_nec_tx
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+预期：
+
+- 串口输出 `ir nec tx P10`，随后每约 1 秒输出 `ir tx ok`。
+- 示波器在 P1.0 可观察到 NEC 脉冲包络。
+- 放大到载波细节后，P1.0 mark 段内应为约 38kHz PWM。
+
+实测：
+
+- 已烧录成功。
+- 串口已读到 `ir tx ok`。
+- 示波器在 P1.0 已观察到约 38.5kHz 发射载波。
+
+说明：
+
+- 本示例使用 P1.0 / PWMA channel 1，周期 `290`，占空比约 1/3。
+- 每约 1 秒发送一次 NEC `address=0x00`、`command=0x45`。
+- 当前只确认发射载波和发送程序运行；完整端到端遥控效果需接收设备或 VS1838B/HS0038 接收头验证。
