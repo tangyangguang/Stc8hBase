@@ -130,6 +130,18 @@ reload = 65536 - MAIN_Fosc / 4 / baud
 
 本库 `stc8h_eeprom` 遵守这个触发保护方式，并要求示例显式定义测试地址范围；默认构建不执行写擦。
 
+### PWM
+
+官方 PWM 库要点：
+
+- STC8H 高级 PWM 分为 `PWMA` 和 `PWMB` 两组。
+- `PWMA` 1..4 默认可映射到 P1.0/P1.1、P1.2/P1.3、P1.4/P1.5、P1.6/P1.7。
+- PWM mode 1 对应 `CCMRn_PWM_MODE1 = 0x60`。
+- `PWMA_ENO` 控制输出使能，`PWMA_CCERx` 控制捕获/比较输出使能和极性。
+- `PWMA_ARRH/L` 设置周期，`PWMA_CCRnH/L` 设置占空比，`PWMA_BKR.MOE` 需要打开主输出。
+
+本库第一版只实现 `PWMA` 1..4 基础 P 输出，不启用互补输出、死区、刹车、中断和 `PWMB`。
+
 ## 4. 后续模块参考清单
 
 | 后续模块 | 优先参考官方文件 |
@@ -145,4 +157,4 @@ reload = 65536 - MAIN_Fosc / 4 / baud
 
 ## 5. 当前结论
 
-当前本库的 GPIO、UART1、软件 I2C、ADC、Timer0、SPI、EEPROM/IAP 实现方向与官方库和官方手册核对后没有发现需要推倒重来的问题。后续模块应在开工前先查本记录列出的官方文件，再结合 STC8H1K08 TSSOP20 的实际资源裁剪实现。
+当前本库的 GPIO、UART1、软件 I2C、ADC、Timer0、SPI、EEPROM/IAP、PWM 实现方向与官方库和官方手册核对后没有发现需要推倒重来的问题。后续模块应在开工前先查本记录列出的官方文件，再结合 STC8H1K08 TSSOP20 的实际资源裁剪实现。

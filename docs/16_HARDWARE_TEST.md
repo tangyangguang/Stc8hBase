@@ -558,6 +558,38 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - CLK/DIO 默认使用开漏输出，并启用 P1 内部上拉；如模块已有上拉也可工作。
 - 当前示例默认不和 SPI 同时使用，因为 P1.5 同时是 SPI 默认 SCLK。
 
+## 4.21 PWM `pwm_output`
+
+目的：
+
+- 验证 `PWMA` channel 2 基础 PWM 输出。
+- 使用当前核心板 P1.2 LED 观察明暗变化。
+
+默认接线：
+
+```text
+P1.2 -> 板载/外接 LED，高电平点亮
+```
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/pwm_output
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+预期：
+
+- 串口启动时输出 `pwm output ok`。
+- P1.2 LED 呈现周期性明暗变化。
+
+说明：
+
+- 示例使用 P1.2/PWM2P，会接管普通 GPIO LED 闪烁。
+- 当前 PWM HAL 只启用 `PWMA` 基础输出，不启用 PWM 中断。
+- 可用示波器观察 P1.2 的 PWM 波形和占空比变化。
+
 ## 5. 本机工具状态
 
 当前本机已发现：

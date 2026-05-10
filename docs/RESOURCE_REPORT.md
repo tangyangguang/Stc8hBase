@@ -1366,3 +1366,88 @@ _stc8h_uart_write_code
 
 - 已完成 SDCC 编译和资源检查。
 - 等待连接 TM1637 模块后烧录实测。
+
+## 21. PlatformIO `pwm_output` 示例
+
+路径：
+
+```text
+examples/platformio/pwm_output
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 验证 `PWMA` channel 2 基础 PWM 输出。
+- 默认 P1.2/PWM2P 输出，直接驱动当前核心板 LED。
+- UART1 启动时输出 `pwm output ok` 或 `pwm output error`。
+
+资料依据：
+
+- STC8H 官方 PWM 资料和官方 `STC8H_PWM.c/.h`。
+- `PWMA` 1..4 默认 P1 引脚组。
+- `PWMA_ARRH/L` 设置周期，`PWMA_CCR2H/L` 设置 channel 2 占空比。
+- `PWMA_ENO`、`PWMA_CCER1` 和 `PWMA_BKR.MOE` 共同打开 PWM2P 输出。
+
+设计取舍：
+
+- 第一版只实现 `PWMA` 1..4 基础 P 输出。
+- 不实现互补输出、死区、刹车、中断、PWMB 和运行期引脚自动适配。
+- `PWMA` 1..4 共用一个周期。
+- 示例使用 P1.2 LED 做明暗变化验证。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 1987 bytes |
+| Stack start | 0x21 |
+| Internal RAM 边界 | 栈从 0x21 开始，当前静态/参数/overlay 占用到 0x20 |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用；PWMA 自身计数器用于 PWM |
+| 中断 | 未使用 |
+| UART | UART1 |
+| GPIO | P1.2 设置为推挽输出 |
+| PWM | PWMA channel 2 / P1.2 PWM2P |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| SPI/EEPROM/IR | 未使用 |
+| Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_delay_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_pwm_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_stc8h_pwm_init
+_stc8h_pwm_set_duty
+_stc8h_pwm_enable
+_stc8h_pwm_disable
+_stc8h_gpio_set_mode
+_stc8h_delay_ms
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR、utils 或除法/取模库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 等待烧录实测 P1.2 LED 明暗变化。

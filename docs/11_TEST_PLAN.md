@@ -166,6 +166,13 @@ docs/RESOURCE_REPORT.md
 - 示例不启用 SPI 中断，不使用 DMA，不保存 RX 缓冲。
 - 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、EEPROM、IR、utils 等未使用模块符号。
 
+### 6.4.2 PWM 验收
+
+- `pwm_output` 示例使用 `PWMA` channel 2 正向输出，即 P1.2/PWM2P。
+- P1.2 LED 应呈现周期性明暗变化。
+- 第一版不启用 PWM 中断，不使用互补输出、死区、刹车或 PWMB。
+- 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、SPI、EEPROM、IR、utils 等未使用模块符号。
+
 ### 6.5 LCD1602 验收
 
 - 能完成初始化。

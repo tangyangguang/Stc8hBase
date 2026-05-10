@@ -73,6 +73,7 @@ docs/vendor/titan/TM1637_TitanMicro.pdf
 - ADC 当前实现按官方 STC8H ADC 资料校准：STC8H1K08 为 10-bit ADC，P3.3 对应 ADC11；ADC 引脚需配置为高阻输入；ADC 上电后等待约 1ms；`ADCTIM` 推荐 `0x3f`；10-bit ADC 速度不高于 500kHz。
 - SPI 当前实现按官方 STC8H SPI 资料校准：`SPSTAT/SPCTL/SPDAT` 为普通 SFR，`P_SW1[3:2]` 选择引脚组，`SPIF/WCOL` 写 1 清除；第一版采用硬件 SPI 主机轮询，不启用中断和 DMA。
 - EEPROM/IAP 当前实现按官方 STC8H 资料和官方库校准：STC8H1K08 为 4KB EEPROM/IAP，地址 `0x0000..0x0FFF`，512 字节扇区擦除，IAP 触发序列为 `0x5A`、`0xA5`，触发窗口临时关闭全局中断。
+- PWM 当前实现按官方 STC8H PWM 资料和 `STC8H_PWM.c/.h` 校准：第一版仅使用 `PWMA` 1..4、PWM mode 1、P 输出、默认 P1 引脚组，不启用互补输出、死区、刹车、中断或 PWMB。
 - STC8G/STC8H 官方库函数包用于核对库函数层面的外设初始化顺序。已解压到临时目录分析，不把展开源码纳入仓库；仓库仅保留官方压缩包和吸收记录。
 - PCF8574 资料用于核对 LCD1602 I2C 背包的 I/O 扩展器行为。
 - HD44780 资料用于核对 LCD1602 初始化、命令和显示地址行为。
@@ -156,6 +157,7 @@ docs/vendor/stc/stc8g-stc8h-lib-demo-code.rar
 - EEPROM/IAP 官方库在触发 IAP 前关闭全局中断，并按 `0x5A`、`0xA5` 顺序写 `IAP_TRIG`；本库 `stc8h_eeprom` 沿用这个保护思路，并要求示例默认不执行写擦。
 - 软件 I2C 官方示例每个相位都有短延时，ACK 通过释放 SDA 后读电平判断；本库继续保留板级宏绑定，并要求 SDA/SCL 释放后能读到高电平。
 - TM1637 数据手册说明其二线接口不是标准 I2C，无从地址；本库 `drv_tm1637` 采用独立 bit-bang 时序，不复用 `stc8h_i2c`。
+- PWM 官方库覆盖 PWMA/PWMB、互补输出、死区、刹车和中断；本库第一版只吸收基础输出所需寄存器顺序和位定义。
 - 硬件 I2C、SPI、PWM、DMA 的官方库可作为后续模块寄存器顺序参考，但本库第一版仍只实现实际用到且验证过的最小能力。
 
 不直接采用的点：

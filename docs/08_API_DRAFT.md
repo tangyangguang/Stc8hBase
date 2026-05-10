@@ -322,11 +322,19 @@ void stc8h_spi_write(const STC8H_DATA stc8h_u8 *data, stc8h_u8 len);
 接口方向：
 
 ```c
-void stc8h_pwm_init(stc8h_u8 channel, stc8h_u16 period);
-void stc8h_pwm_set_duty(stc8h_u8 channel, stc8h_u16 duty);
-void stc8h_pwm_enable(stc8h_u8 channel);
-void stc8h_pwm_disable(stc8h_u8 channel);
+stc8h_status_t stc8h_pwm_init(stc8h_u8 channel, stc8h_u16 period);
+stc8h_status_t stc8h_pwm_set_duty(stc8h_u8 channel, stc8h_u16 duty);
+stc8h_status_t stc8h_pwm_enable(stc8h_u8 channel);
+stc8h_status_t stc8h_pwm_disable(stc8h_u8 channel);
 ```
+
+取舍：
+
+- 第一版实现 `PWMA` 1..4 的基础 PWM mode 1 输出。
+- 默认引脚选择为官方默认 P1 组：PWM1P/P1.0、PWM2P/P1.2、PWM3P/P1.4、PWM4P/P1.6。
+- `PWMA` 1..4 共用同一个周期；重新初始化任一通道会更新 `PWMA` 周期。
+- 第一版不实现互补输出、死区、刹车、中断、PWMB 和运行期引脚自动适配。
+- 用于红外发射载波和无源蜂鸣器时，必须在资源策略中声明占用。
 
 ### 3.7 `stc8h_adc`
 
