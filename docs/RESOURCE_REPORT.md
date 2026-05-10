@@ -1281,7 +1281,7 @@ _stc8h_uart_write_code
 验证状态：
 
 - 已完成 SDCC 编译和资源检查。
-- 等待烧录实测串口输出。
+- 已烧录实测通过：串口 115200 连续输出 `output levels ok`。
 
 ## 20. PlatformIO `tm1637_number` 示例
 

@@ -67,6 +67,7 @@
 - 已新增 `stc8h_eeprom` HAL 和 PlatformIO `eeprom_rw` 示例，并完成 SDCC 编译和资源检查。
 - `eeprom_rw` 默认环境不执行写擦；真实写擦测试需明确确认测试扇区 `0x0000..0x01FF` 可擦除后再使用 `STC8H1K08_write_test` 环境。
 - 已新增 `drv_led`、`drv_buzzer`、`drv_relay` 有效电平辅助驱动，以及 PlatformIO `output_levels` 示例，并完成 SDCC 编译和资源检查。
+- 已烧录实测 `output_levels`，串口 115200 连续输出 `output levels ok`。
 - 已归档 TM1637 Titan Micro datasheet 权威镜像。
 - 已新增 `drv_tm1637` 驱动和 PlatformIO `tm1637_number` 示例，并完成 SDCC 编译和资源检查。
 - 已按 STC 官方 PWM 库和手册寄存器定义核对 PWM。
@@ -80,7 +81,7 @@
 - 红外真实硬件接收层尚未实现：后续需要接 VS1838B/HS0038 后，按 STC 官方资料选择外部中断 + Timer 捕获或固定周期采样方案。
 - 红外真实硬件发射层尚未实现：后续需要接红外发射管和驱动三极管/MOS 管后，按 STC 官方资料选择 PWM 或 Timer 产生 38kHz 载波。
 - Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
-- 进行 STC8H1K08 TSSOP20 后续硬件实测：短接 P1.3/P1.4 后测试 `spi_loopback`，确认 EEPROM 测试扇区后测试 `eeprom_rw` 写擦环境，连接 TM1637 后测试 `tm1637_number`，以及 `output_levels` 串口输出、`uart_echo_buffered` 回显、`ring_buffer_demo` 串口输出、`soft_timer_tick` 串口输出和 P1.2 LED 250ms 翻转；`timer_tick` 的 P1.2 LED 500ms 翻转需人工目视确认。
+- 进行 STC8H1K08 TSSOP20 后续硬件实测：短接 P1.3/P1.4 后测试 `spi_loopback`，确认 EEPROM 测试扇区后测试 `eeprom_rw` 写擦环境，连接 TM1637 后测试 `tm1637_number`，以及 `uart_echo_buffered` 回显、`ring_buffer_demo` 串口输出、`soft_timer_tick` 串口输出和 P1.2 LED 250ms 翻转；`timer_tick` 的 P1.2 LED 500ms 翻转需人工目视确认。
 
 ## 2. 待优化项
 

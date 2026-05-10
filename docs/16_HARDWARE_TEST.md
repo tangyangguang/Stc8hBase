@@ -670,6 +670,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `uart_echo_buffered` 已编译通过，等待烧录实测。
 - `crc_demo` 已烧录实测通过：串口 115200 连续输出 `crc ok`。
 - `filter_demo` 已烧录实测通过：串口 115200 连续输出 `filter ok`。
+- `output_levels` 已烧录实测通过：串口 115200 连续输出 `output levels ok`。
 - `spi_loopback` 已编译通过，等待短接 P1.3/P1.4 后烧录实测。
 - `i2c_scan` 曾出现 `0x08` 到 `0x77` 全地址 ACK；经 `i2c_lines` 诊断，原因为 SDA 开漏释放后仍读 0，即总线缺少有效上拉导致 ACK 假阳性。
 - 已按官方资料启用 P1.7/P3.2 数字输入和内部 4.1K 上拉；`i2c_lines` 复测通过：`release SDA=1 SCL=1`，各拉低状态均正确。
