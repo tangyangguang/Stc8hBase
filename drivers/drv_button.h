@@ -4,7 +4,7 @@
 #include "stc8h_config.h"
 
 #ifndef DRV_BUTTON_DEBOUNCE_MS
-#define DRV_BUTTON_DEBOUNCE_MS 20u
+#define DRV_BUTTON_DEBOUNCE_MS 10u
 #endif
 
 #ifndef DRV_BUTTON_LONG_PRESS_MS

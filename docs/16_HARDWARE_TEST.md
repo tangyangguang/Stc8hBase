@@ -221,6 +221,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - 默认快速旋转阈值为 30ms，触发后每定位格输出 `+10/-10`。
 - 当前演示板通过 `DRV_EC11_REVERSE=1` 校正方向。
 - 当前默认每定位格有效跳变数为 `4`；测试例程使用 1ms 扫描和 100ms 汇总打印减少漏扫。
+- SW 按钮使用独立 `drv_button`，默认消抖 10ms，长按阈值 800ms。
 
 PlatformIO 测试命令：
 

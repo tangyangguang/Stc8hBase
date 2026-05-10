@@ -98,6 +98,32 @@ https://docs.platformio.org/en/latest/boards/intel_mcs51/STC8H1K08.html
 - 基础库源码不依赖 PlatformIO。
 - 如果 PlatformIO 和 Makefile 行为不一致，以 Makefile 的透明构建结果作为基础验证。
 
+### 3.4 按键和 EC11 行为参考
+
+参考来源：
+
+```text
+https://docs.qmk.fm/features/encoders
+https://docs.qmk.fm/feature_debounce_type
+https://docs.splitkb.com/troubleshooting/encoder-skipping
+https://main.rmk.rs/guide/input_devices/encoder
+docs/vendor/stc/STC8H-en.pdf
+```
+
+用途：
+
+- 校准 EC11 方向、每定位格跳变数、快速旋转加速和按钮消抖的设计边界。
+- 核对 STC8H 官方硬件正交编码器模式，判断是否适合本项目第一版 EC11 UI 输入。
+
+吸收结论：
+
+- EC11 的 A/B 相旋转和 SW 按压是两个独立输入能力。`drv_ec11` 只处理 A/B 相方向和增量，SW 通过 `drv_button` 组合实现短按、长按和释放事件。
+- EC11 旋转漏格的常见调节点不是按钮消抖，而是每定位格有效跳变数。QMK 使用 `ENCODER_RESOLUTION`，RMK 使用 `resolution`；本库对应为 `DRV_EC11_STEPS_PER_DETENT` 和 `drv_ec11_set_steps_per_detent`。
+- 方向反转应可配置。QMK 使用方向翻转宏，本库对应为 `DRV_EC11_REVERSE` 和 `drv_ec11_set_reverse`。
+- 按钮消抖应是时间参数，默认 10ms，且允许项目宏和运行时 API 覆盖。长按阈值默认 800ms。
+- 示例程序不能逐格阻塞打印，否则快速旋转会因为 UART 阻塞导致漏扫。`ec11_counter` 采用 1ms 扫描、100ms 汇总打印。
+- STC8H 官方手册提供 PWMA/TIM1 硬件正交编码器模式，适合高速编码器或电机类输入；第一版 EC11 人机输入继续采用轻量轮询状态机，避免占用高级定时器/PWM 资源。
+
 ## 4. 吸收为本库建设要求
 
 ### 4.1 编译器差异必须集中隔离

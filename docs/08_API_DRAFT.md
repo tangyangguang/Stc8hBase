@@ -398,7 +398,7 @@ stc8h_u16 drv_button_get_press_ms(const drv_button_t *button);
 - 扫描频率由应用项目决定。
 - 驱动不保存 `port/pin`，不直接读 GPIO。
 - 板级代码或示例通过编译期宏读取引脚，然后把 `raw_level` 传入扫描函数。
-- 默认消抖时间由 `DRV_BUTTON_DEBOUNCE_MS` 配置，建议 20ms。
+- 默认消抖时间由 `DRV_BUTTON_DEBOUNCE_MS` 配置，建议 10ms。
 - 默认长按阈值由 `DRV_BUTTON_LONG_PRESS_MS` 配置，建议 800ms。
 - `drv_button_set_timing` 可在运行中修改当前按钮对象的消抖时间和长按阈值。
 - 长按事件在稳定按下超过阈值时输出；如果主循环未及时取到事件，释放时仍应避免被误判为短按。
