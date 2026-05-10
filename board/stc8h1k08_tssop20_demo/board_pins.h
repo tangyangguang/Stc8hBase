@@ -29,5 +29,6 @@
 #define BOARD_I2C_SCL_HIGH() do { P1 |= BOARD_I2C_SCL_MASK; } while (0)
 #define BOARD_I2C_SCL_LOW() do { P1 &= (stc8h_u8)~BOARD_I2C_SCL_MASK; } while (0)
 #define BOARD_I2C_SDA_READ() ((P3 & BOARD_I2C_SDA_MASK) ? 1u : 0u)
+#define BOARD_I2C_SCL_READ() ((P1 & BOARD_I2C_SCL_MASK) ? 1u : 0u)
 
 #endif

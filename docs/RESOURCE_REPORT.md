@@ -185,10 +185,10 @@ board/stc8h1k08_tssop20_demo/board_init.c
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 1850 bytes |
+| ROM/EPROM/FLASH | 1891 bytes |
 | Stack start | 0x1c |
 | Internal RAM 边界 | 栈从 0x1c 开始，当前静态/参数/overlay 占用到 0x1b |
-| XDATA/PDATA | 未分配应用数据 |
+| XDATA/PDATA | XFR 扩展寄存器访问，用于 `P1PU/P3PU/P1IE/P3IE` |
 | Timer | Timer1 由 UART1 初始化使用 |
 | UART | UART1 |
 | I2C | 软件 I2C，SDA/SCL 由 `board_pins.h` 宏绑定 |
@@ -236,7 +236,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 1786 bytes |
+| ROM/EPROM/FLASH | 1827 bytes |
 | Stack start | 0x1c |
 | Internal RAM 边界 | 栈从 0x1c 开始，当前静态/参数/overlay 占用到 0x1b |
 | XDATA/PDATA | 未分配应用数据 |
@@ -277,7 +277,39 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 | I2C | 未使用 |
 | LCD1602 | 未使用 |
 
-## 6. PlatformIO `lcd1602_text` 示例
+## 6. PlatformIO `i2c_lines` 示例
+
+路径：
+
+```text
+examples/platformio/i2c_lines
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- UART1 输出 SDA/SCL 释放和拉低状态。
+- 独立验证 I2C 引脚、开漏模式、数字输入使能和内部上拉。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 1727 bytes |
+| Stack start | 0x1c |
+| Internal RAM 边界 | 栈从 0x1c 开始，当前静态/参数/overlay 占用到 0x1b |
+| XDATA/PDATA | XFR 扩展寄存器访问，用于 `P1PU/P3PU/P1IE/P3IE` |
+| Timer | Timer1 由 UART1 初始化使用 |
+| UART | UART1 |
+| I2C | 不调用 I2C 状态机，只直接操作 SDA/SCL 板级宏 |
+| LCD1602 | 未使用 |
+
+## 7. PlatformIO `lcd1602_text` 示例
 
 路径：
 
@@ -301,16 +333,16 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 2192 bytes |
+| ROM/EPROM/FLASH | 2233 bytes |
 | Stack start | 0x23 |
 | Internal RAM 边界 | 栈从 0x23 开始，当前静态/参数/overlay 占用到 0x22 |
-| XDATA/PDATA | 未分配应用数据 |
+| XDATA/PDATA | XFR 扩展寄存器访问，用于 `P1PU/P3PU/P1IE/P3IE` |
 | Timer | Timer1 由 UART1 初始化使用 |
 | UART | UART1 |
 | I2C | 软件 I2C，SDA/SCL 由 `board_pins.h` 宏绑定 |
 | LCD1602 | I2C 地址使用 `BOARD_LCD1602_ADDR7` |
 
-## 7. `milestone1_demo` 示例
+## 8. `milestone1_demo` 示例
 
 路径：
 
@@ -359,10 +391,10 @@ board/stc8h1k08_tssop20_demo/board_init.c
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 2256 bytes |
+| ROM/EPROM/FLASH | 2297 bytes |
 | Stack start | 0x23 |
 | Internal RAM 边界 | 栈从 0x23 开始，当前静态/参数/overlay 占用到 0x22 |
-| XDATA/PDATA | 未分配应用数据 |
+| XDATA/PDATA | XFR 扩展寄存器访问，用于 `P1PU/P3PU/P1IE/P3IE` |
 | Timer | Timer1 由 UART1 初始化使用 |
 | UART | UART1 |
 | I2C | 软件 I2C，SDA/SCL 由 `board_pins.h` 宏绑定 |
@@ -406,3 +438,4 @@ Keil C51 验证状态：
 - `milestone1_demo` 当前 ROM 约 2.2K，低于 8K。
 - UART 初始化已改为编译期 reload，map/sym 文件未发现 `__divulong`。
 - UART1 已按官方 STC8H 串口示例核对：Timer1 作为波特率发生器，Timer1 1T，Timer1 mode0 16 位自动重装，11.0592MHz / 115200 reload 为 `0xFFE8`。
+- I2C 板级初始化已按官方 STC8H GPIO/XFR 资料核对：开漏模式需要上拉；P1.7/P3.2 已启用数字输入和内部 4.1K 上拉。

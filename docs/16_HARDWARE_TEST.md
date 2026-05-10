@@ -17,6 +17,7 @@ examples/make/milestone1_demo/build/milestone1_demo.ihx
 ```text
 examples/platformio/gpio_blink/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/uart_hello/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/i2c_lines/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_scan/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/lcd1602_text/.pio/build/STC8H1K08/firmware.hex
 ```
@@ -112,7 +113,37 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 默认配置为 `11.0592MHz / 115200`。
 - 如果此示例无输出，下一步优先用示波器看 P3.1/TXD 是否有波形，以区分 MCU 端 UART 和 USB 转串口接收链路问题。
 
-### 4.3 `i2c_scan`
+### 4.3 `i2c_lines`
+
+目的：
+
+- 独立验证软件 I2C 使用的 SDA/SCL 两根线是否能释放为高、主动拉低。
+- 排查 I2C 扫描全地址 ACK 或无 ACK 时，是总线电平问题还是 I2C 状态机问题。
+
+预期输出：
+
+```text
+release SDA=1 SCL=1
+sda_low SDA=0 SCL=1
+scl_low SDA=1 SCL=0
+both_low SDA=0 SCL=0
+```
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/i2c_lines
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+说明：
+
+- STC8H 开漏输出的内部上拉默认关闭；如果外部没有有效上拉，SDA/SCL 释放后可能读不到高电平。
+- `P1PU/P3PU` 和 `P1IE/P3IE` 是 XFR 扩展寄存器，访问前必须设置 `P_SW2.EAXFR=1`。
+- 当前板级初始化已为 P1.7/SCL、P3.2/SDA 启用数字输入和内部 4.1K 上拉。
+
+### 4.4 `i2c_scan`
 
 目的：
 
@@ -155,7 +186,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 用示波器看 SCL/SDA 是否有波形。
 - 如果扫描到 `0x3F`，把 `BOARD_LCD1602_ADDR7` 改为 `0x3Fu` 后再测 `milestone1_demo`。
 
-### 4.4 `lcd1602_text`
+### 4.5 `lcd1602_text`
 
 目的：
 
@@ -249,3 +280,6 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - 已新增 PlatformIO `uart_hello` 最小串口示例，等待先独立验证 UART1。
 - 已再次核对官方 UART1 公式，修正 11.0592MHz / 115200 reload 为 `0xFFE8`，并补齐 `AUXR.S1ST2`、`P_SW1`、`INTCLKO`、P3.0/P3.1 模式设置。
 - `uart_hello` 已硬件实测通过：串口监视器 115200 8N1 可连续收到 `UART hello 115200`。
+- `i2c_scan` 曾出现 `0x08` 到 `0x77` 全地址 ACK；经 `i2c_lines` 诊断，原因为 SDA 开漏释放后仍读 0，即总线缺少有效上拉导致 ACK 假阳性。
+- 已按官方资料启用 P1.7/P3.2 数字输入和内部 4.1K 上拉；`i2c_lines` 复测通过：`release SDA=1 SCL=1`，各拉低状态均正确。
+- 内部上拉启用后，`i2c_scan` 不再全地址 ACK，当前结果为 `none`，说明还未收到 LCD1602 背包 ACK；下一步检查 LCD1602 地址、接线、供电或背包类型。

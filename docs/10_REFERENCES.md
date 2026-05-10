@@ -8,9 +8,20 @@
 
 不直接照搬外部库的整体架构。
 
-## 2. 主要参考
+## 2. 资料使用原则
 
-### 2.1 FwLib_STC8
+- 涉及芯片、寄存器、特殊功能寄存器、外设协议、电气特性、时序和下载工具行为时，必须先查官方资料。
+- 找不到官方资料时，必须使用权威资料，例如芯片厂家资料、器件 datasheet、主流工具官方文档或可交叉验证的成熟开源实现，并在本文档记录来源。
+- 编码和调试时不凭经验猜寄存器位、地址、引脚复用、时序公式和电气约束。
+- 如果实测现象与当前实现冲突，先回到资料核对硬件事实，再修改代码。
+- 高频使用且体积合理的资料可以存入 `docs/vendor/`；低频、体积大或容易过期的资料只记录链接。
+- 本地资料需要记录来源、用途、下载日期和校验值。
+- `docs/vendor/README.md` 是本地资料总索引，新增本地资料必须同步更新该文件。
+- 不把 STC-ISP、IDE 安装包、示例压缩包、无关原理图等大文件放入仓库，除非它们成为实现或验收的必要依据。
+
+## 3. 主要参考
+
+### 3.1 FwLib_STC8
 
 项目地址：
 
@@ -35,7 +46,7 @@ https://github.com/IOsetting/FwLib_STC8
 - 本库需要包含常用项目级外设驱动，如按钮、EC11、I2C LCD1602、TM1637。
 - 本库 API 和目录按自己的项目习惯设计。
 
-### 2.2 STC 官方资料
+### 3.2 STC 官方资料
 
 参考来源：
 
@@ -43,6 +54,8 @@ https://github.com/IOsetting/FwLib_STC8
 https://www.stcmicro.com/cn/stc/stc8h1k08.html
 docs/vendor/stc/STC8H1K08_Features.pdf
 docs/vendor/stc/STC8H-en.pdf
+docs/vendor/ti/PCF8574_TI.pdf
+docs/vendor/lcd/HD44780_Hitachi_via_Adafruit.pdf
 ```
 
 用途：
@@ -52,6 +65,9 @@ docs/vendor/stc/STC8H-en.pdf
 - 确认 IAP/EEPROM 写入规则。
 - 校准官方示例中的初始化顺序和寄存器配置。
 - UART1 默认实现按官方 STC8H 串口示例校准：Timer1 作为波特率发生器，`AUXR.S1ST2=0`，Timer1 1T，Timer1 mode0 16 位自动重装，`BRT = 65536 - FOSC / baud / 4`。
+- I2C 当前板级配置按官方 STC8H GPIO 资料校准：开漏输出需要上拉；`P1PU/P3PU` 内部 4.1K 上拉和 `P1IE/P3IE` 数字输入使能均属于 XFR 扩展寄存器，访问前必须设置 `P_SW2.EAXFR=1`。
+- PCF8574 资料用于核对 LCD1602 I2C 背包的 I/O 扩展器行为。
+- HD44780 资料用于核对 LCD1602 初始化、命令和显示地址行为。
 
 原则：
 
@@ -60,7 +76,7 @@ docs/vendor/stc/STC8H-en.pdf
 - 当本库实现与官方寄存器示例冲突时，先修正寄存器事实，再重新评估 API。
 - 已把必要官方 PDF 归档到 `docs/vendor/stc/`，用于离线复核；实现前仍应留意官网是否有新版。
 
-### 2.3 PlatformIO STC8H1K08 支持
+### 3.3 PlatformIO STC8H1K08 支持
 
 参考来源：
 
@@ -80,9 +96,9 @@ https://docs.platformio.org/en/latest/boards/intel_mcs51/STC8H1K08.html
 - 基础库源码不依赖 PlatformIO。
 - 如果 PlatformIO 和 Makefile 行为不一致，以 Makefile 的透明构建结果作为基础验证。
 
-## 3. 吸收为本库建设要求
+## 4. 吸收为本库建设要求
 
-### 3.1 编译器差异必须集中隔离
+### 4.1 编译器差异必须集中隔离
 
 本库必须提供 `core/stc8h_compiler.h`。
 
@@ -103,7 +119,7 @@ https://docs.platformio.org/en/latest/boards/intel_mcs51/STC8H1K08.html
 
 所有这些都通过编译期宏处理，不能产生运行期开销。
 
-### 3.2 Makefile 是基础验证入口
+### 4.2 Makefile 是基础验证入口
 
 第一版必须提供 Makefile 示例或构建入口。
 
@@ -114,7 +130,7 @@ https://docs.platformio.org/en/latest/boards/intel_mcs51/STC8H1K08.html
 - 不绑定 IDE。
 - 适合 macOS 命令行开发。
 
-### 3.3 PlatformIO 是辅助工程入口
+### 4.3 PlatformIO 是辅助工程入口
 
 第一版可以提供 PlatformIO 示例。
 
@@ -124,7 +140,7 @@ https://docs.platformio.org/en/latest/boards/intel_mcs51/STC8H1K08.html
 - 示例只加入实际用到的模块。
 - 不让基础库源码依赖 PlatformIO 目录结构。
 
-### 3.4 Keil C51 接入必须保留
+### 4.4 Keil C51 接入必须保留
 
 老项目仍然以 Keil C51 为主。
 
@@ -134,7 +150,7 @@ https://docs.platformio.org/en/latest/boards/intel_mcs51/STC8H1K08.html
 - 通过预处理宏切换 Keil 关键字。
 - 不要求老项目迁移到 SDCC 才能使用。
 
-### 3.5 配置参数集中化
+### 4.5 配置参数集中化
 
 芯片、频率、时钟分频、UART 默认波特率、模块开关等配置必须集中。
 
@@ -147,7 +163,7 @@ core/stc8h_config.h
 board/board_config.h
 ```
 
-### 3.6 VS Code/SDCC 语法兼容要有说明
+### 4.6 VS Code/SDCC 语法兼容要有说明
 
 SDCC 的 8051 语法可能导致 VS Code C/C++ 插件误报。
 
@@ -157,7 +173,7 @@ SDCC 的 8051 语法可能导致 VS Code C/C++ 插件误报。
 - 如何添加语法兼容宏。
 - 编辑器误报不等于编译失败。
 
-### 3.7 不扩大芯片范围
+### 4.7 不扩大芯片范围
 
 参考库支持更多 STC8 型号，但本库不跟随扩大范围。
 
@@ -170,7 +186,7 @@ SDCC 的 8051 语法可能导致 VS Code C/C++ 插件误报。
 
 其他型号只有在真实项目需要时再加入。
 
-## 4. 参考库评估结论
+## 5. 参考库评估结论
 
 本库继续自己实现。
 

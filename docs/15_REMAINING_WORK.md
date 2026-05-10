@@ -32,6 +32,9 @@
 - 已新增 PlatformIO `uart_hello` 最小示例。
 - 已复测 PlatformIO `uart_hello`，确认 UART1 115200 输出。
 - 已下载必要 STC 官方 PDF 到 `docs/vendor/stc/`，用于离线复核寄存器和芯片资源事实。
+- 已补充项目规则：芯片、寄存器和外设实现/调试必须先参考官方或权威资料，并维护参考资料列表。
+- 已补充本地资料总索引 `docs/vendor/README.md`，并归档 PCF8574 官方资料、HD44780 权威镜像资料，用于 LCD1602 I2C 背包和字符屏驱动核对。
+- 已用 `i2c_lines` 诊断确认：当前板级 I2C 开漏模式需要启用 P1.7/P3.2 内部上拉和数字输入使能。
 - 复测 PlatformIO `i2c_scan`，确认 LCD1602 I2C 地址。
 - Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
 - 进行 STC8H1K08 TSSOP20 后续硬件实测：UART1、软件 I2C、LCD1602。
