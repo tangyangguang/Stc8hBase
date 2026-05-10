@@ -21,10 +21,11 @@
 #define BOARD_POT_ADC_PORT 3u
 #define BOARD_POT_ADC_PIN 3u
 
+/* Current hardware-test wiring, not a recommended default pinout. */
 #define BOARD_TM1637_CLK_PORT 1u
-#define BOARD_TM1637_CLK_PIN 6u
-#define BOARD_TM1637_DIO_PORT 1u
-#define BOARD_TM1637_DIO_PIN 5u
+#define BOARD_TM1637_CLK_PIN 7u
+#define BOARD_TM1637_DIO_PORT 3u
+#define BOARD_TM1637_DIO_PIN 2u
 
 #define BOARD_I2C_SDA_MASK 0x04u
 #define BOARD_I2C_SCL_MASK 0x80u
@@ -32,8 +33,8 @@
 #define BOARD_EC11_B_MASK 0x02u
 #define BOARD_EC11_SW_MASK 0x10u
 #define BOARD_POT_ADC_MASK 0x08u
-#define BOARD_TM1637_CLK_MASK 0x40u
-#define BOARD_TM1637_DIO_MASK 0x20u
+#define BOARD_TM1637_CLK_MASK 0x80u
+#define BOARD_TM1637_DIO_MASK 0x04u
 
 #define BOARD_I2C_SDA_HIGH() do { P3 |= BOARD_I2C_SDA_MASK; } while (0)
 #define BOARD_I2C_SDA_LOW() do { P3 &= (stc8h_u8)~BOARD_I2C_SDA_MASK; } while (0)
@@ -47,8 +48,8 @@
 
 #define BOARD_TM1637_CLK_HIGH() do { P1 |= BOARD_TM1637_CLK_MASK; } while (0)
 #define BOARD_TM1637_CLK_LOW() do { P1 &= (stc8h_u8)~BOARD_TM1637_CLK_MASK; } while (0)
-#define BOARD_TM1637_DIO_HIGH() do { P1 |= BOARD_TM1637_DIO_MASK; } while (0)
-#define BOARD_TM1637_DIO_LOW() do { P1 &= (stc8h_u8)~BOARD_TM1637_DIO_MASK; } while (0)
-#define BOARD_TM1637_DIO_READ() ((P1 & BOARD_TM1637_DIO_MASK) ? 1u : 0u)
+#define BOARD_TM1637_DIO_HIGH() do { P3 |= BOARD_TM1637_DIO_MASK; } while (0)
+#define BOARD_TM1637_DIO_LOW() do { P3 &= (stc8h_u8)~BOARD_TM1637_DIO_MASK; } while (0)
+#define BOARD_TM1637_DIO_READ() ((P3 & BOARD_TM1637_DIO_MASK) ? 1u : 0u)
 
 #endif

@@ -1304,7 +1304,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 功能：
 
 - 验证 TM1637 二线 bit-bang 写显示数据。
-- 默认 P1.6 为 CLK，P1.5 为 DIO。
+- 当前临时测试接线为 P1.7/CLK、P3.2/DIO。
 - 周期显示递增数字，UART1 输出 `tm1637 ok` 或 `tm1637 error`。
 
 资料依据：
@@ -1326,14 +1326,14 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 1976 bytes |
-| Stack start | 0x2b |
-| Internal RAM 边界 | 栈从 0x2b 开始，当前静态/参数/overlay 占用到 0x2a |
+| ROM/EPROM/FLASH | 2238 bytes |
+| Stack start | 0x3d |
+| Internal RAM 边界 | 栈从 0x3d 开始，当前静态/参数/overlay 占用到 0x3c |
 | XDATA/PDATA | 未使用 |
 | Timer | Timer1 由 UART1 初始化使用 |
 | 中断 | 未使用 |
 | UART | UART1 |
-| GPIO | P1.6/CLK、P1.5/DIO，开漏输出 |
+| GPIO | P1.7/CLK、P3.2/DIO，开漏输出 |
 | TM1637 | 二线 bit-bang，ACK 检查 |
 | I2C/LCD1602 | 未使用 |
 | Button/EC11 | 未使用 |
@@ -1371,7 +1371,8 @@ _stc8h_uart_write_code
 验证状态：
 
 - 已完成 SDCC 编译和资源检查。
-- 等待连接 TM1637 模块后烧录实测。
+- 已按当前临时接线 DIO/SDA=P3.2、CLK=P1.7 烧录实测，串口 115200 连续输出 `tm1637 ok`。
+- 已确认模块依次显示 `8888`、`0123`、`4567`，随后从 `0000` 起递增。
 
 ## 21. PlatformIO `pwm_output` 示例
 
