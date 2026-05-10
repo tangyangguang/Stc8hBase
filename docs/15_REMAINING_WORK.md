@@ -51,6 +51,7 @@
 - 已烧录 `timer_tick` 并验证串口输出：启动行 `Timer0 1ms tick`，之后每约 1 秒输出 `tick`。
 - 已新增 `util_soft_timer`，使用 16-bit tick，单个对象占 4 字节 RAM。
 - 已新增 PlatformIO `soft_timer_tick` 示例，并完成 SDCC 编译和 16-bit 回绕宿主机测试。
+- 已烧录实测 `soft_timer_tick`，串口输出 `soft timer tick` / `soft tick`，P1.2 LED 每约 250ms 翻转。
 - 已新增 `util_ring_buffer`，使用 DATA RAM 缓冲，保留一个空位区分空/满。
 - 已新增 PlatformIO `ring_buffer_demo` 示例，并完成 SDCC 编译和回绕宿主机测试。
 - 已烧录实测 `ring_buffer_demo`，串口 115200 连续输出 `ring buffer ok`。
@@ -82,7 +83,7 @@
 - 红外真实硬件接收层尚未实现：后续需要接 VS1838B/HS0038 后，按 STC 官方资料选择外部中断 + Timer 捕获或固定周期采样方案。
 - 红外真实硬件发射层尚未实现：后续需要接红外发射管和驱动三极管/MOS 管后，按 STC 官方资料选择 PWM 或 Timer 产生 38kHz 载波。
 - Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
-- 进行 STC8H1K08 TSSOP20 后续硬件实测：短接 P1.3/P1.4 后测试 `spi_loopback`，确认 EEPROM 测试扇区后测试 `eeprom_rw` 写擦环境，连接 TM1637 后测试 `tm1637_number`，以及 `uart_echo_buffered` 回显、`soft_timer_tick` 串口输出和 P1.2 LED 250ms 翻转；`timer_tick` 的 P1.2 LED 500ms 翻转需人工目视确认。
+- 进行 STC8H1K08 TSSOP20 后续硬件实测：短接 P1.3/P1.4 后测试 `spi_loopback`，确认 EEPROM 测试扇区后测试 `eeprom_rw` 写擦环境，连接 TM1637 后测试 `tm1637_number`，以及 `uart_echo_buffered` 回显；`timer_tick` 的 P1.2 LED 500ms 翻转需人工目视确认。
 
 ## 2. 待优化项
 

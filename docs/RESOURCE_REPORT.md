@@ -736,7 +736,8 @@ _stc8h_timer_clear_flag
 
 - 已完成 SDCC 编译和资源检查。
 - 已完成宿主机 16-bit 回绕测试。
-- 等待烧录实测。
+- 已烧录实测通过：串口启动后输出 `soft timer tick`，随后每约 1 秒输出 `soft tick`。
+- 已目视确认 P1.2 LED 每约 250ms 翻转。
 
 ## 13. PlatformIO `ring_buffer_demo` 示例
 
