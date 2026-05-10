@@ -301,14 +301,17 @@ stc8h_status_t stc8h_i2c_read(stc8h_u8 addr7, stc8h_u8 *data, stc8h_u8 len);
 ```c
 void stc8h_spi_init(void);
 stc8h_u8 stc8h_spi_transfer(stc8h_u8 value);
-void stc8h_spi_write(const stc8h_u8 *data, stc8h_u8 len);
+void stc8h_spi_write(const STC8H_DATA stc8h_u8 *data, stc8h_u8 len);
 ```
 
 取舍：
 
 - 第一版只承诺 SPI 基础收发能力。
-- 具体采用硬件 SPI 还是软件 SPI，在确认测试板引脚后决定。
-- 不同时维护硬件 SPI 和软件 SPI 两套实现，避免过度设计。
+- 第一版冻结为硬件 SPI 主机轮询实现，不维护软件 SPI 双实现。
+- 默认使用 P1.3/P1.4/P1.5 引脚组。
+- 硬件 SS 使用 `SSIG=1` 忽略，不占用当前 P1.2 LED；片选由板级或应用代码自行控制。
+- 默认 SPI mode 0，MSB first，主机模式，`SYSclk/4`。
+- 不启用 SPI 中断和 DMA。
 
 ### 3.6 `stc8h_pwm`
 

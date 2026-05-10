@@ -26,6 +26,7 @@ examples/platformio/lcd1602_text/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ec11_counter/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/adc_pot/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/timer_tick/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/spi_loopback/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/soft_timer_tick/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ring_buffer_demo/.pio/build/STC8H1K08/firmware.hex
 ```
@@ -415,6 +416,39 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - `shift=0` 表示立即跟随输入。
 - 输入接近当前值时仍至少移动 1，避免滤波值永久卡住。
 
+### 4.13 `spi_loopback`
+
+目的：
+
+- 验证硬件 SPI 主机轮询收发。
+- 验证 SPI 默认 P1 引脚组。
+
+接线：
+
+```text
+P1.3 / MOSI  <->  P1.4 / MISO
+```
+
+预期：
+
+- 短接 P1.3/P1.4 后，串口周期输出 `spi loopback ok`。
+- 未短接或接线错误时，串口周期输出 `spi loopback error`。
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/spi_loopback
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+说明：
+
+- SPI 第一版使用硬件 SPI 主机轮询实现。
+- 默认 P1.3/P1.4/P1.5；硬件 SS 使用 `SSIG=1` 忽略，不占用 P1.2 LED。
+- 默认 mode 0、MSB first、`SYSclk/4`。
+- 片选由板级或应用代码自行控制。
+
 ## 5. 本机工具状态
 
 当前本机已发现：
@@ -494,6 +528,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `uart_echo_buffered` 已编译通过，等待烧录实测。
 - `crc_demo` 已编译通过，已完成宿主机标准向量测试，等待烧录实测。
 - `filter_demo` 已编译通过，已完成宿主机边界测试，等待烧录实测。
+- `spi_loopback` 已编译通过，等待短接 P1.3/P1.4 后烧录实测。
 - `i2c_scan` 曾出现 `0x08` 到 `0x77` 全地址 ACK；经 `i2c_lines` 诊断，原因为 SDA 开漏释放后仍读 0，即总线缺少有效上拉导致 ACK 假阳性。
 - 已按官方资料启用 P1.7/P3.2 数字输入和内部 4.1K 上拉；`i2c_lines` 复测通过：`release SDA=1 SCL=1`，各拉低状态均正确。
 - 内部上拉启用后，`i2c_scan` 不再全地址 ACK，首次结果为 `none`；检查后发现 LCD1602 有一根线接错。

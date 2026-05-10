@@ -88,6 +88,22 @@ reload = 65536 - MAIN_Fosc / 4 / baud
 - ISR 由示例或板级文件显式绑定，Timer HAL 不默认占用中断向量。
 - UART1 使用 Timer1，`timer_tick` 示例同时验证 Timer0 与 Timer1 可并行使用。
 
+### SPI
+
+官方 SPI 库要点：
+
+- SPI 状态寄存器为 `SPSTAT=0xCD`，控制寄存器为 `SPCTL=0xCE`，数据寄存器为 `SPDAT=0xCF`。
+- `SPCTL` bit7 为 `SSIG`，bit6 为 SPI 使能，bit5 为 MSB/LSB 顺序，bit4 为主/从模式，bit3/bit2 为 CPOL/CPHA，bit1..0 为速度选择。
+- `SPSTAT` bit7 为 `SPIF`，bit6 为 `WCOL`，写 1 清除。
+- SPI 引脚组通过 `P_SW1[3:2]` 选择，官方库提供 P1、P2、P5/P4、P3 多组引脚。
+
+本库当前做法：
+
+- 第一版冻结为硬件 SPI 主机轮询实现。
+- 默认 P1.3/P1.4/P1.5，`SSIG=1` 忽略硬件 SS，避免占用当前 P1.2 LED。
+- 不启用 SPI 中断，不保存 RX 缓冲，不做主从自动切换。
+- 片选由板级或应用代码自行控制，避免在 HAL 中保存运行期 CS 引脚。
+
 ### 软件 I2C
 
 官方软件 I2C：
@@ -124,4 +140,4 @@ reload = 65536 - MAIN_Fosc / 4 / baud
 
 ## 5. 当前结论
 
-当前本库的 GPIO、UART1、软件 I2C、ADC、Timer0 实现方向与官方库和官方手册核对后没有发现需要推倒重来的问题。后续模块应在开工前先查本记录列出的官方文件，再结合 STC8H1K08 TSSOP20 的实际资源裁剪实现。
+当前本库的 GPIO、UART1、软件 I2C、ADC、Timer0、SPI 实现方向与官方库和官方手册核对后没有发现需要推倒重来的问题。后续模块应在开工前先查本记录列出的官方文件，再结合 STC8H1K08 TSSOP20 的实际资源裁剪实现。

@@ -70,6 +70,7 @@ docs/vendor/encoder/ALPS_Alpine_EC11E_Series.pdf
 - Timer0 当前实现按官方 STC8H Timer0 mode0 16-bit auto-reload 示例校准：11.0592MHz/12T/1ms reload 为 `0xFC66`，中断向量为 1。
 - I2C 当前板级配置按官方 STC8H GPIO 资料校准：开漏输出需要上拉；`P1PU/P3PU` 内部 4.1K 上拉和 `P1IE/P3IE` 数字输入使能均属于 XFR 扩展寄存器，访问前必须设置 `P_SW2.EAXFR=1`。
 - ADC 当前实现按官方 STC8H ADC 资料校准：STC8H1K08 为 10-bit ADC，P3.3 对应 ADC11；ADC 引脚需配置为高阻输入；ADC 上电后等待约 1ms；`ADCTIM` 推荐 `0x3f`；10-bit ADC 速度不高于 500kHz。
+- SPI 当前实现按官方 STC8H SPI 资料校准：`SPSTAT/SPCTL/SPDAT` 为普通 SFR，`P_SW1[3:2]` 选择引脚组，`SPIF/WCOL` 写 1 清除；第一版采用硬件 SPI 主机轮询，不启用中断和 DMA。
 - STC8G/STC8H 官方库函数包用于核对库函数层面的外设初始化顺序。已解压到临时目录分析，不把展开源码纳入仓库；仓库仅保留官方压缩包和吸收记录。
 - PCF8574 资料用于核对 LCD1602 I2C 背包的 I/O 扩展器行为。
 - HD44780 资料用于核对 LCD1602 初始化、命令和显示地址行为。

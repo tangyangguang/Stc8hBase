@@ -58,8 +58,11 @@
 - 已新增 PlatformIO `crc_demo` 示例，并完成 SDCC 编译和宿主机标准向量测试。
 - 已新增 `util_filter`，包含限幅和移位式 IIR 平滑，不使用除法。
 - 已新增 PlatformIO `filter_demo` 示例，并完成 SDCC 编译和宿主机边界测试。
+- 已按 STC 官方 SPI 库和手册寄存器定义核对 SPI。
+- 已冻结 SPI 第一版为硬件 SPI 主机轮询实现，默认 P1.3/P1.4/P1.5，忽略硬件 SS，不占用 P1.2 LED。
+- 已新增 `stc8h_spi` HAL 和 PlatformIO `spi_loopback` 示例，并完成 SDCC 编译和资源检查。
 - Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
-- 进行 STC8H1K08 TSSOP20 后续硬件实测：`filter_demo` 串口输出、`crc_demo` 串口输出、`uart_echo_buffered` 回显、`ring_buffer_demo` 串口输出、`soft_timer_tick` 串口输出和 P1.2 LED 250ms 翻转；`timer_tick` 的 P1.2 LED 500ms 翻转需人工目视确认。
+- 进行 STC8H1K08 TSSOP20 后续硬件实测：短接 P1.3/P1.4 后测试 `spi_loopback`，以及 `filter_demo` 串口输出、`crc_demo` 串口输出、`uart_echo_buffered` 回显、`ring_buffer_demo` 串口输出、`soft_timer_tick` 串口输出和 P1.2 LED 250ms 翻转；`timer_tick` 的 P1.2 LED 500ms 翻转需人工目视确认。
 
 ## 2. 待优化项
 

@@ -64,6 +64,7 @@ Stc8hBase/
 - Button / EC11。
 - ADC。
 - Timer0 1ms tick。
+- SPI 硬件主机轮询基础收发已完成编译和资源检查。
 - 16-bit soft timer 工具已完成编译和回绕测试。
 - Ring buffer 工具已完成编译和回绕测试。
 - CRC/checksum 工具已完成编译和标准向量测试。

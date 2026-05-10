@@ -156,6 +156,15 @@ docs/RESOURCE_REPORT.md
 - 软件 I2C 默认目标速率不超过 100kHz。
 - 记录 SCL 高电平时间、低电平时间和实测频率。
 
+### 6.4.1 SPI 验收
+
+- `spi_loopback` 示例使用硬件 SPI 主机轮询模式。
+- 默认短接 P1.3/MOSI 和 P1.4/MISO 后，串口应输出 `spi loopback ok`。
+- 不短接或接线错误时，应输出 `spi loopback error`。
+- SPI 默认使用 P1.3/P1.4/P1.5，硬件 SS 被忽略，不占用 P1.2 LED。
+- 示例不启用 SPI 中断，不使用 DMA，不保存 RX 缓冲。
+- 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、EEPROM、IR、utils 等未使用模块符号。
+
 ### 6.5 LCD1602 验收
 
 - 能完成初始化。

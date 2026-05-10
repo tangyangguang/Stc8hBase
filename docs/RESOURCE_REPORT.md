@@ -1025,3 +1025,82 @@ _stc8h_uart_write_code
 - 已完成宿主机边界测试。
 - 已完成 SDCC 编译和资源检查。
 - 等待烧录实测。
+
+## 17. PlatformIO `spi_loopback` 示例
+
+路径：
+
+```text
+examples/platformio/spi_loopback
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 验证硬件 SPI 主机轮询收发。
+- 短接 P1.3/MOSI 和 P1.4/MISO 后，发送字节应原样读回。
+- UART1 周期输出 `spi loopback ok` 或 `spi loopback error`。
+
+资料依据：
+
+- STC 官方手册和官方 SPI 库：`SPSTAT=0xCD`、`SPCTL=0xCE`、`SPDAT=0xCF`。
+- `SPCTL` bit7 为 `SSIG`，bit6 为 SPI 使能，bit4 为主机模式，bit3/bit2 为 CPOL/CPHA，bit1..0 为速度选择。
+- `SPSTAT` bit7 为 `SPIF`，bit6 为 `WCOL`，写 1 清除。
+- SPI 引脚组通过 `P_SW1[3:2]` 选择。
+
+设计取舍：
+
+- 第一版冻结为硬件 SPI 主机轮询实现。
+- 默认 P1.3/P1.4/P1.5，硬件 SS 使用 `SSIG=1` 忽略，不占用当前 P1.2 LED。
+- 默认 mode 0、MSB first、`SYSclk/4`。
+- 不启用 SPI 中断，不使用 DMA，不保存 RX 缓冲。
+- 片选由板级或应用代码自行控制，HAL 不保存 CS 引脚。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 563 bytes |
+| Stack start | 0x0f |
+| Internal RAM 边界 | 栈从 0x0f 开始，当前静态/参数/overlay 占用到 0x0e |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| SPI | 硬件 SPI 主机轮询，P1.3/P1.4/P1.5 |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_spi_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_stc8h_spi_init
+_stc8h_spi_transfer
+_stc8h_spi_write
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、EEPROM、TM1637、IR、utils 或除法/取模库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 等待短接 P1.3/P1.4 后烧录实测。
