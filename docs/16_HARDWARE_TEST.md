@@ -235,6 +235,8 @@ c51 / C51 / uv4 / UV4 / wine
 ```text
 串口：/dev/cu.usbserial-110
 LED：P1.2，高电平点亮
+LCD1602 背包：8574T / PCF8574T 兼容
+LCD1602 I2C 地址：0x27
 ```
 
 已完成：
@@ -282,4 +284,6 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `uart_hello` 已硬件实测通过：串口监视器 115200 8N1 可连续收到 `UART hello 115200`。
 - `i2c_scan` 曾出现 `0x08` 到 `0x77` 全地址 ACK；经 `i2c_lines` 诊断，原因为 SDA 开漏释放后仍读 0，即总线缺少有效上拉导致 ACK 假阳性。
 - 已按官方资料启用 P1.7/P3.2 数字输入和内部 4.1K 上拉；`i2c_lines` 复测通过：`release SDA=1 SCL=1`，各拉低状态均正确。
-- 内部上拉启用后，`i2c_scan` 不再全地址 ACK，当前结果为 `none`，说明还未收到 LCD1602 背包 ACK；下一步检查 LCD1602 地址、接线、供电或背包类型。
+- 内部上拉启用后，`i2c_scan` 不再全地址 ACK，首次结果为 `none`；检查后发现 LCD1602 有一根线接错。
+- 修正 LCD1602 接线后，`i2c_scan` 已扫描到 `0x27`。
+- `lcd1602_text` 已硬件实测通过：串口输出 `LCD1602 test`，LCD 显示 `Stc8hBase` / `LCD1602 OK`。

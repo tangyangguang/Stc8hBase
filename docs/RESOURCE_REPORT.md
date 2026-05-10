@@ -179,6 +179,11 @@ board/stc8h1k08_tssop20_demo/board_init.c
 
 - UART1 输出 I2C 地址扫描结果。
 - 软件 I2C 扫描 `0x08` 到 `0x77` 的 7-bit 地址。
+
+硬件实测：
+
+- LCD1602 背包芯片为 8574T / PCF8574T 兼容。
+- 修正接线后扫描到 `0x27`。
 - LED 翻转表示程序仍在运行。
 
 资源占用：
@@ -328,6 +333,11 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 - UART1 输出测试提示。
 - I2C LCD1602 显示固定文本。
 - LED 翻转表示程序仍在运行。
+
+硬件实测：
+
+- 串口输出 `LCD1602 test`。
+- LCD 显示 `Stc8hBase` / `LCD1602 OK`。
 
 资源占用：
 
