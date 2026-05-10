@@ -24,6 +24,9 @@
 - 已补充并验证 PlatformIO `i2c_scan` 示例。
 - 已补充并验证 PlatformIO `lcd1602_text` 示例。
 - 已按当前接线更新板级宏：LCD1602 SDA=P3.2、SCL=P1.7，EC11=P1.0/P1.1/P5.4，电位器=P3.3。
+- 已把 PlatformIO 示例上传配置改为 `stc8g + 38400 + -t 11059.2`，确保芯片运行频率与库默认 `11.0592MHz` 一致。
+- 已把 PlatformIO `i2c_scan` 改为每约 2 秒重复输出扫描结果，避免打开串口监视器后错过启动输出。
+- 复测 PlatformIO `i2c_scan`，确认 UART1 115200 输出和 LCD1602 I2C 地址。
 - Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
 - 进行 STC8H1K08 TSSOP20 后续硬件实测：UART1、软件 I2C、LCD1602。
 

@@ -105,6 +105,12 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
 
+说明：
+
+- PlatformIO 示例上传时使用 `stc8g + 38400 + -t 11059.2`。
+- `-t 11059.2` 的单位是 kHz，用于把 STC8H1K08 内部 RC 修调到 11.0592MHz，使运行频率与 `STC8H_SYSCLK_HZ`、UART1 115200 配置一致。
+- `i2c_scan` 会每约 2 秒重复输出一次扫描结果，打开串口监视器后不需要抢上电瞬间。
+
 如果显示 `none`：
 
 - 检查 SDA/SCL 是否接反。
@@ -199,3 +205,6 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `38400` 作为当前默认下载速度。
 - 暂不继续提高到 `57600` 或 `115200`，避免为少量速度收益牺牲稳定性。
 - `gpio_blink` 已完成硬件验证：P1.2 LED 快闪/慢闪正常。
+- `i2c_scan` 已成功烧录到一块当前频率约 6MHz 的 STC8H1K08；首次版本打开 monitor 后无输出。
+- 原因判断：首次版本只在启动时输出一次，且上传时未修调芯片到 11.0592MHz，运行频率与 UART1 115200 配置不一致。
+- 已把 PlatformIO 示例改为上传时修调到 `11059.2kHz`，并让 `i2c_scan` 每约 2 秒重复输出扫描结果，等待复测。
