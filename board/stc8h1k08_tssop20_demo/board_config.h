@@ -7,5 +7,6 @@
 
 #define BOARD_LCD1602_ADDR7 0x27u
 #define DRV_EC11_REVERSE 1u
+#define BOARD_POT_ADC_CHANNEL 11u
 
 #endif

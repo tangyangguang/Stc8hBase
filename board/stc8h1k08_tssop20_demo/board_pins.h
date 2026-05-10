@@ -26,6 +26,7 @@
 #define BOARD_EC11_A_MASK 0x01u
 #define BOARD_EC11_B_MASK 0x02u
 #define BOARD_EC11_SW_MASK 0x10u
+#define BOARD_POT_ADC_MASK 0x08u
 
 #define BOARD_I2C_SDA_HIGH() do { P3 |= BOARD_I2C_SDA_MASK; } while (0)
 #define BOARD_I2C_SDA_LOW() do { P3 &= (stc8h_u8)~BOARD_I2C_SDA_MASK; } while (0)

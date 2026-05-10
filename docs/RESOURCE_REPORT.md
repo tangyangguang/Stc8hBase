@@ -522,3 +522,63 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 - EC11 每定位格有效跳变数默认保持 `4`；测试例程已改为 1ms 扫描、100ms 汇总打印，避免串口逐格打印拖慢 EC11 扫描。
 - 慢速旋转复测通过：顺时针主要输出 `+1`，逆时针主要输出 `-1`。
 - 快速旋转复测通过：顺时针出现 `delta=30`，逆时针出现 `delta=-30`。
+
+## 10. PlatformIO `adc_pot` 示例
+
+路径：
+
+```text
+examples/platformio/adc_pot
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- UART1 周期输出 P3.3/ADC11 的 10-bit ADC 原始值。
+- LED 翻转表示主循环仍在运行。
+
+资料依据：
+
+- STC 官方手册：STC8H1K08 为 10-bit ADC，P3.3 对应 ADC11；ADC 引脚需配置为高阻输入；ADC 上电后等待约 1ms；`ADCTIM=0x3f`；10-bit ADC 速度不高于 500kHz。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 1582 bytes |
+| Stack start | 0x21 |
+| Internal RAM 边界 | 栈从 0x21 开始，当前静态/参数/overlay 占用到 0x20 |
+| XDATA/PDATA | XFR 扩展寄存器访问，用于 `ADCTIM` 和 P3.3 数字输入控制 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| UART | UART1 |
+| ADC | P3.3/ADC11，轮询转换 |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| SPI/PWM/IR | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/board_init_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_adc_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_delay_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_interrupt`、SPI、EEPROM、TM1637、IR、ring buffer、soft timer、CRC、filter 或除法库符号。
+
+硬件验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 已完成烧录实测。
+- P3.3/ADC11 输出覆盖低端、中间和高端，观察到 `0`、`47`、`235`、`334`、`503`、`511`、`657`、`826`、`1023` 等读数。
+- 旋转 10K 电位器时 ADC 原始值随位置变化。

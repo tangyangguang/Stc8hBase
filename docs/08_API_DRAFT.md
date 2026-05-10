@@ -334,6 +334,14 @@ void stc8h_adc_init(void);
 stc8h_u16 stc8h_adc_read(stc8h_u8 channel);
 ```
 
+实现约束：
+
+- 第一版按 STC8H1K08 10-bit ADC 实现。
+- 默认使用右对齐结果，返回范围 `0..1023`。
+- ADC 初始化按官方建议设置 `ADCTIM=0x3f`，ADC 时钟默认 `SYSclk/2/16`，上电后等待约 1ms。
+- 应用或板级代码必须把 ADC 引脚配置为高阻输入，并关闭不需要的数字输入和上拉。
+- 无效通道或转换超时返回 `STC8H_ADC_INVALID_VALUE`。
+
 ### 3.8 `stc8h_eeprom`
 
 职责：

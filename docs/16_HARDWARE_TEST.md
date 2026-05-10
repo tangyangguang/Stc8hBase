@@ -21,6 +21,7 @@ examples/platformio/i2c_lines/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_scan/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/lcd1602_text/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ec11_counter/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/adc_pot/.pio/build/STC8H1K08/firmware.hex
 ```
 
 ## 2. 板级默认配置
@@ -231,6 +232,27 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
 
+### 4.7 `adc_pot`
+
+目的：
+
+- 验证 P3.3/ADC11 采样。
+- 验证 10K 电位器输入能得到 0..1023 的 10-bit ADC 原始值。
+
+预期：
+
+- 串口周期输出 `adc=...`。
+- 旋转电位器时数值应单调变化。
+- 接近 GND 时读数接近 0，接近 VCC 时读数接近 1023。
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/adc_pot
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
 ## 5. 本机工具状态
 
 当前本机已发现：
@@ -321,3 +343,6 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `ec11_counter` 首轮旋转偶发漏格；已把测试例程改为 1ms 扫描、100ms 汇总打印。
 - 复测已通过：慢速顺时针主要输出 `+1`，慢速逆时针主要输出 `-1`；`delta=2/-2` 表示 100ms 汇总窗口内转过两格。
 - 快速旋转复测已通过：快速顺时针出现 `delta=30`，快速逆时针出现 `delta=-30`，说明 30ms 阈值和 10 步进加速生效。
+- `adc_pot` 已烧录实测通过。
+- P3.3/ADC11 输出覆盖低端、中间和高端：已观察到 `0`、`47`、`235`、`334`、`503`、`511`、`657`、`826`、`1023` 等读数。
+- 旋转 10K 电位器时 ADC 原始值随位置变化，10-bit 右对齐读取有效。
