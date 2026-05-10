@@ -41,6 +41,7 @@ void drv_ec11_init(drv_ec11_t *ec11)
     ec11->last_state = 0u;
     ec11->has_last_detent = 0u;
     ec11->reverse = DRV_EC11_REVERSE ? 1u : 0u;
+    ec11->steps_per_detent = DRV_EC11_STEPS_PER_DETENT;
     ec11->step_accum = 0;
     ec11->fast_step = DRV_EC11_FAST_STEP;
     ec11->detent_elapsed_ms = 0xFFFFu;
@@ -67,6 +68,20 @@ void drv_ec11_set_reverse(drv_ec11_t *ec11, stc8h_u8 reverse)
     ec11->reverse = reverse ? 1u : 0u;
 }
 
+void drv_ec11_set_steps_per_detent(drv_ec11_t *ec11, stc8h_u8 steps_per_detent)
+{
+    if (ec11 == 0) {
+        return;
+    }
+
+    if (steps_per_detent < 1u) {
+        steps_per_detent = 1u;
+    } else if (steps_per_detent > 4u) {
+        steps_per_detent = 4u;
+    }
+    ec11->steps_per_detent = steps_per_detent;
+}
+
 void drv_ec11_scan(drv_ec11_t *ec11, stc8h_u8 a_level, stc8h_u8 b_level, stc8h_u16 elapsed_ms)
 {
     stc8h_u8 current;
@@ -88,7 +103,7 @@ void drv_ec11_scan(drv_ec11_t *ec11, stc8h_u8 a_level, stc8h_u8 b_level, stc8h_u
     }
 
     ec11->step_accum = (stc8h_s8)(ec11->step_accum + step);
-    if (ec11->step_accum >= 4) {
+    if (ec11->step_accum >= (stc8h_s8)ec11->steps_per_detent) {
         output_step = drv_ec11_step_value(ec11);
         ec11->delta = (ec11->reverse != 0u) ?
             (stc8h_s16)(ec11->delta - output_step) :
@@ -96,7 +111,7 @@ void drv_ec11_scan(drv_ec11_t *ec11, stc8h_u8 a_level, stc8h_u8 b_level, stc8h_u
         ec11->step_accum = 0;
         ec11->has_last_detent = 1u;
         ec11->detent_elapsed_ms = 0u;
-    } else if (ec11->step_accum <= -4) {
+    } else if (ec11->step_accum <= (stc8h_s8)(0 - ec11->steps_per_detent)) {
         output_step = drv_ec11_step_value(ec11);
         ec11->delta = (ec11->reverse != 0u) ?
             (stc8h_s16)(ec11->delta + output_step) :

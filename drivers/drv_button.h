@@ -32,7 +32,9 @@ typedef struct {
 } drv_button_t;
 
 void drv_button_init(drv_button_t *button, stc8h_u8 active_level);
+void drv_button_set_timing(drv_button_t *button, stc8h_u16 debounce_ms, stc8h_u16 long_press_ms);
 void drv_button_scan(drv_button_t *button, stc8h_u8 raw_level, stc8h_u16 elapsed_ms);
 drv_button_event_t drv_button_get_event(drv_button_t *button);
+stc8h_u16 drv_button_get_press_ms(const drv_button_t *button);
 
 #endif

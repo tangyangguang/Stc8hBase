@@ -467,7 +467,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 功能：
 
 - UART1 输出 EC11 旋转方向和累计计数。
-- EC11 默认支持快速旋转加速：两次有效定位格间隔小于等于 50ms 时，每格输出 `+10/-10`。
+- EC11 默认支持快速旋转加速：两次有效定位格间隔小于等于 30ms 时，每格输出 `+10/-10`。
 - EC11 A/B 使用 P1.0/P1.1，按键 SW 使用 P5.4。
 - 按键事件输出 `press`、`short`、`long`、`release`。
 - LED 翻转表示主循环仍在运行。
@@ -481,15 +481,15 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 3843 bytes |
-| Stack start | 0x52 |
-| Internal RAM 边界 | 栈从 0x52 开始，当前静态/参数/overlay 占用到 0x51 |
+| ROM/EPROM/FLASH | 4465 bytes |
+| Stack start | 0x59 |
+| Internal RAM 边界 | 栈从 0x59 开始，当前静态/参数/overlay 占用到 0x58 |
 | XDATA/PDATA | XFR 扩展寄存器访问，用于 `P1PU/P5PU/P1IE/P5IE` 等 |
 | Timer | Timer1 由 UART1 初始化使用 |
 | UART | UART1 |
 | Button | SW=P5.4，轮询扫描 |
 | EC11 | A=P1.0，B=P1.1，轮询扫描 |
-| EC11 运行时配置 | 快速阈值、快速步进值、方向可通过 API 修改 |
+| EC11 运行时配置 | 快速阈值、快速步进值、方向、每定位格跳变数可通过 API 修改 |
 | I2C | 未使用 |
 | LCD1602 | 未使用 |
 | ADC | 未使用 |
@@ -518,4 +518,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 - 慢速顺时针输出 `+1`，慢速逆时针输出 `-1`。
 - 快速顺时针已触发 `+10` 步进。
 - EC11 SW 短按已输出 `SW press` / `SW short`。
-- EC11 SW 长按事件尚待单独复测。
+- EC11 SW 长按复测通过，输出 `SW long ms=800`，松开输出 `SW release ms=1067`。
+- EC11 每定位格有效跳变数默认保持 `4`；测试例程已改为 1ms 扫描、100ms 汇总打印，避免串口逐格打印拖慢 EC11 扫描。
+- 慢速旋转复测通过：顺时针主要输出 `+1`，逆时针主要输出 `-1`。
+- 快速旋转复测通过：顺时针出现 `delta=30`，逆时针出现 `delta=-30`。
