@@ -953,6 +953,7 @@ _stc8h_uart_write_code
 
 - 已完成宿主机标准向量测试：`"123456789"` 的 `checksum8=0xDD`，`crc16_modbus=0x4B37`。
 - 已完成 SDCC 编译和资源检查。
+- 已烧录实测通过：串口 115200 连续输出 `crc ok`。
 - 等待烧录实测。
 
 ## 16. PlatformIO `filter_demo` 示例

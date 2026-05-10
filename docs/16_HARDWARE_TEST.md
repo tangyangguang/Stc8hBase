@@ -668,7 +668,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - 已再次核对官方 UART1 公式，修正 11.0592MHz / 115200 reload 为 `0xFFE8`，并补齐 `AUXR.S1ST2`、`P_SW1`、`INTCLKO`、P3.0/P3.1 模式设置。
 - `uart_hello` 已硬件实测通过：串口监视器 115200 8N1 可连续收到 `UART hello 115200`。
 - `uart_echo_buffered` 已编译通过，等待烧录实测。
-- `crc_demo` 已编译通过，已完成宿主机标准向量测试，等待烧录实测。
+- `crc_demo` 已烧录实测通过：串口 115200 连续输出 `crc ok`。
 - `filter_demo` 已编译通过，已完成宿主机边界测试，等待烧录实测。
 - `spi_loopback` 已编译通过，等待短接 P1.3/P1.4 后烧录实测。
 - `i2c_scan` 曾出现 `0x08` 到 `0x77` 全地址 ACK；经 `i2c_lines` 诊断，原因为 SDA 开漏释放后仍读 0，即总线缺少有效上拉导致 ACK 假阳性。
