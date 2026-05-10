@@ -49,11 +49,13 @@ https://www.stcmicro.com/cn/stc/stc8h1k08.html
 - 确认 Flash、RAM、I/O、定时器、UART、SPI、I2C、PWM、ADC 等资源。
 - 确认 IAP/EEPROM 写入规则。
 - 校准官方示例中的初始化顺序和寄存器配置。
+- UART1 默认实现按官方 STC8H 串口示例校准：Timer1 作为波特率发生器，`AUXR.S1ST2=0`，Timer1 1T，Timer1 mode0 16 位自动重装，`BRT = 65536 - FOSC / baud / 4`。
 
 原则：
 
 - 官方资料作为硬件事实来源。
 - 官方示例可以参考，但不直接决定本库 API。
+- 当本库实现与官方寄存器示例冲突时，先修正寄存器事实，再重新评估 API。
 
 ### 2.3 PlatformIO STC8H1K08 支持
 

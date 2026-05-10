@@ -106,8 +106,10 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 说明：
 
 - UART1 已按 STC8H 官方示例口径改为 Timer1 16 位自动重装方式。
+- 11.0592MHz / 115200 的 reload 为 `0xFFE8`，来自 `65536 - FOSC / baud / 4`。
+- UART 初始化会显式选择 Timer1 作为 UART1 波特率源、关闭 Timer1 时钟输出、选择 UART1 默认 P3.0/P3.1 引脚组，并把 P3.0/P3.1 设为标准模式。
 - 默认配置为 `11.0592MHz / 115200`。
-- 如果此示例无输出，优先检查核心板 USB 转串口是否连接到应用运行时的 UART1 引脚。
+- 如果此示例无输出，下一步优先用示波器看 P3.1/TXD 是否有波形，以区分 MCU 端 UART 和 USB 转串口接收链路问题。
 
 ### 4.3 `i2c_scan`
 
@@ -244,3 +246,4 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `i2c_scan` 复测时上传日志已确认运行频率修调到 `11.054MHz`，但 monitor 仍无输出。
 - 已根据 STC8H 官方 UART 示例口径，把 UART1 从 Timer1 8 位 reload 改为 Timer1 16 位自动重装方式。
 - 已新增 PlatformIO `uart_hello` 最小串口示例，等待先独立验证 UART1。
+- 已再次核对官方 UART1 公式，修正 11.0592MHz / 115200 reload 为 `0xFFE8`，并补齐 `AUXR.S1ST2`、`P_SW1`、`INTCLKO`、P3.0/P3.1 模式设置。

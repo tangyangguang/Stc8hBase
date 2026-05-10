@@ -28,6 +28,7 @@
 - 已把 PlatformIO `i2c_scan` 改为每约 2 秒重复输出扫描结果，避免打开串口监视器后错过启动输出。
 - 已复测 PlatformIO `i2c_scan`，上传时已修调到约 `11.054MHz`，但 UART monitor 仍无输出。
 - 已按 STC8H 官方 UART 示例口径修正 UART1：Timer1 使用 16 位自动重装方式。
+- 已再次核对官方 UART1 公式，修正 11.0592MHz / 115200 reload 为 `0xFFE8`，并补齐 Timer1 波特率源、UART1 默认引脚组和 P3.0/P3.1 模式设置。
 - 已新增 PlatformIO `uart_hello` 最小示例。
 - 复测 PlatformIO `uart_hello`，确认 UART1 115200 输出。
 - UART1 通过后，复测 PlatformIO `i2c_scan`，确认 LCD1602 I2C 地址。

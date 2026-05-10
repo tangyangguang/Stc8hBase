@@ -185,7 +185,7 @@ board/stc8h1k08_tssop20_demo/board_init.c
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 1834 bytes |
+| ROM/EPROM/FLASH | 1850 bytes |
 | Stack start | 0x1c |
 | Internal RAM 边界 | 栈从 0x1c 开始，当前静态/参数/overlay 占用到 0x1b |
 | XDATA/PDATA | 未分配应用数据 |
@@ -236,7 +236,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 1770 bytes |
+| ROM/EPROM/FLASH | 1786 bytes |
 | Stack start | 0x1c |
 | Internal RAM 边界 | 栈从 0x1c 开始，当前静态/参数/overlay 占用到 0x1b |
 | XDATA/PDATA | 未分配应用数据 |
@@ -245,7 +245,39 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 | I2C | 软件 I2C，SDA/SCL 由 `board_pins.h` 宏绑定 |
 | LCD1602 | 未使用 |
 
-## 5. PlatformIO `lcd1602_text` 示例
+## 5. PlatformIO `uart_hello` 示例
+
+路径：
+
+```text
+examples/platformio/uart_hello
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- UART1 每约 1 秒输出固定文本。
+- 独立验证 UART1，不混入 I2C/LCD。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 463 bytes |
+| Stack start | 0x0e |
+| Internal RAM 边界 | 栈从 0x0e 开始，当前静态/参数/overlay 占用到 0x0d |
+| XDATA/PDATA | 未分配应用数据 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| UART | UART1 |
+| I2C | 未使用 |
+| LCD1602 | 未使用 |
+
+## 6. PlatformIO `lcd1602_text` 示例
 
 路径：
 
@@ -269,7 +301,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 2176 bytes |
+| ROM/EPROM/FLASH | 2192 bytes |
 | Stack start | 0x23 |
 | Internal RAM 边界 | 栈从 0x23 开始，当前静态/参数/overlay 占用到 0x22 |
 | XDATA/PDATA | 未分配应用数据 |
@@ -278,7 +310,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 | I2C | 软件 I2C，SDA/SCL 由 `board_pins.h` 宏绑定 |
 | LCD1602 | I2C 地址使用 `BOARD_LCD1602_ADDR7` |
 
-## 6. `milestone1_demo` 示例
+## 7. `milestone1_demo` 示例
 
 路径：
 
@@ -327,7 +359,7 @@ board/stc8h1k08_tssop20_demo/board_init.c
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 2240 bytes |
+| ROM/EPROM/FLASH | 2256 bytes |
 | Stack start | 0x23 |
 | Internal RAM 边界 | 栈从 0x23 开始，当前静态/参数/overlay 占用到 0x22 |
 | XDATA/PDATA | 未分配应用数据 |
@@ -373,3 +405,4 @@ Keil C51 验证状态：
 - SDCC `.mem` 中 `No spare internal RAM space left` 是栈区显示方式；本报告以 `Stack starts at` 作为当前内部 RAM 使用边界。
 - `milestone1_demo` 当前 ROM 约 2.2K，低于 8K。
 - UART 初始化已改为编译期 reload，map/sym 文件未发现 `__divulong`。
+- UART1 已按官方 STC8H 串口示例核对：Timer1 作为波特率发生器，Timer1 1T，Timer1 mode0 16 位自动重装，11.0592MHz / 115200 reload 为 `0xFFE8`。
