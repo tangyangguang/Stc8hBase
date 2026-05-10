@@ -76,7 +76,40 @@ board/stc8h1k08_tssop20_demo/
 - 新版快闪/慢闪节奏已确认可见。
 - 该项验证通过。
 
-### 4.2 `i2c_scan`
+### 4.2 `uart_hello`
+
+目的：
+
+- 独立验证 UART1 发送。
+- 避免 I2C 扫描结果和 UART 输出问题混在一起判断。
+
+串口参数：
+
+```text
+115200 8N1
+```
+
+预期输出：
+
+```text
+UART hello 115200
+```
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/uart_hello
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+说明：
+
+- UART1 已按 STC8H 官方示例口径改为 Timer1 16 位自动重装方式。
+- 默认配置为 `11.0592MHz / 115200`。
+- 如果此示例无输出，优先检查核心板 USB 转串口是否连接到应用运行时的 UART1 引脚。
+
+### 4.3 `i2c_scan`
 
 目的：
 
@@ -119,7 +152,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 用示波器看 SCL/SDA 是否有波形。
 - 如果扫描到 `0x3F`，把 `BOARD_LCD1602_ADDR7` 改为 `0x3Fu` 后再测 `milestone1_demo`。
 
-### 4.3 `lcd1602_text`
+### 4.4 `lcd1602_text`
 
 目的：
 
@@ -208,3 +241,6 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - `i2c_scan` 已成功烧录到一块当前频率约 6MHz 的 STC8H1K08；首次版本打开 monitor 后无输出。
 - 原因判断：首次版本只在启动时输出一次，且上传时未修调芯片到 11.0592MHz，运行频率与 UART1 115200 配置不一致。
 - 已把 PlatformIO 示例改为上传时修调到 `11059.2kHz`，并让 `i2c_scan` 每约 2 秒重复输出扫描结果，等待复测。
+- `i2c_scan` 复测时上传日志已确认运行频率修调到 `11.054MHz`，但 monitor 仍无输出。
+- 已根据 STC8H 官方 UART 示例口径，把 UART1 从 Timer1 8 位 reload 改为 Timer1 16 位自动重装方式。
+- 已新增 PlatformIO `uart_hello` 最小串口示例，等待先独立验证 UART1。

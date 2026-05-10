@@ -26,7 +26,11 @@
 - 已按当前接线更新板级宏：LCD1602 SDA=P3.2、SCL=P1.7，EC11=P1.0/P1.1/P5.4，电位器=P3.3。
 - 已把 PlatformIO 示例上传配置改为 `stc8g + 38400 + -t 11059.2`，确保芯片运行频率与库默认 `11.0592MHz` 一致。
 - 已把 PlatformIO `i2c_scan` 改为每约 2 秒重复输出扫描结果，避免打开串口监视器后错过启动输出。
-- 复测 PlatformIO `i2c_scan`，确认 UART1 115200 输出和 LCD1602 I2C 地址。
+- 已复测 PlatformIO `i2c_scan`，上传时已修调到约 `11.054MHz`，但 UART monitor 仍无输出。
+- 已按 STC8H 官方 UART 示例口径修正 UART1：Timer1 使用 16 位自动重装方式。
+- 已新增 PlatformIO `uart_hello` 最小示例。
+- 复测 PlatformIO `uart_hello`，确认 UART1 115200 输出。
+- UART1 通过后，复测 PlatformIO `i2c_scan`，确认 LCD1602 I2C 地址。
 - Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
 - 进行 STC8H1K08 TSSOP20 后续硬件实测：UART1、软件 I2C、LCD1602。
 
