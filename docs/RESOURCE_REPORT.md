@@ -735,6 +735,7 @@ _stc8h_timer_clear_flag
 验证状态：
 
 - 已完成 SDCC 编译和资源检查。
+- 已短接 P1.3/MOSI 和 P1.4/MISO 后烧录实测通过：串口 115200 连续输出 `spi loopback ok`。
 - 已完成宿主机 16-bit 回绕测试。
 - 已烧录实测通过：串口启动后输出 `soft timer tick`，随后每约 1 秒输出 `soft tick`。
 - 已目视确认 P1.2 LED 每约 250ms 翻转。
