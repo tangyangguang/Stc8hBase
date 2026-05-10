@@ -118,12 +118,17 @@ reload = 65536 - MAIN_Fosc / 4 / baud
 
 官方 EEPROM/IAP：
 
-- 操作前启用 IAP。
+- STC8X1K08 EEPROM/IAP 容量为 4KB，地址范围 `0x0000..0x0FFF`。
+- 擦除粒度为 512 字节扇区。
+- IAP 寄存器为 `IAP_DATA=0xC2`、`IAP_ADDRH=0xC3`、`IAP_ADDRL=0xC4`、`IAP_CMD=0xC5`、`IAP_TRIG=0xC6`、`IAP_CONTR=0xC7`、`IAP_TPS=0xF5`。
+- 命令值为读 `1`、写 `2`、擦除 `3`。
+- 操作前启用 IAP，并按 `MAIN_Fosc / 1000000` 设置 `IAP_TPS`。
 - 触发前保存并关闭全局中断。
 - 依次写 `IAP_TRIG=0x5A`、`IAP_TRIG=0xA5`。
-- 操作后关闭 IAP 并清理寄存器。
+- 触发后执行两个 `NOP`，再恢复全局中断。
+- 操作后关闭 IAP，清理命令和触发寄存器，并把地址寄存器置为 `0xFFFF`。
 
-后续实现 `stc8h_eeprom` 必须遵守这个触发保护方式，并继续要求示例显式定义测试地址范围。
+本库 `stc8h_eeprom` 遵守这个触发保护方式，并要求示例显式定义测试地址范围；默认构建不执行写擦。
 
 ## 4. 后续模块参考清单
 
@@ -140,4 +145,4 @@ reload = 65536 - MAIN_Fosc / 4 / baud
 
 ## 5. 当前结论
 
-当前本库的 GPIO、UART1、软件 I2C、ADC、Timer0、SPI 实现方向与官方库和官方手册核对后没有发现需要推倒重来的问题。后续模块应在开工前先查本记录列出的官方文件，再结合 STC8H1K08 TSSOP20 的实际资源裁剪实现。
+当前本库的 GPIO、UART1、软件 I2C、ADC、Timer0、SPI、EEPROM/IAP 实现方向与官方库和官方手册核对后没有发现需要推倒重来的问题。后续模块应在开工前先查本记录列出的官方文件，再结合 STC8H1K08 TSSOP20 的实际资源裁剪实现。

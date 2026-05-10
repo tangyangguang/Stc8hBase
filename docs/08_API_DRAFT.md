@@ -358,16 +358,20 @@ stc8h_u16 stc8h_adc_read(stc8h_u8 channel);
 接口方向：
 
 ```c
-stc8h_status_t stc8h_eeprom_read(stc8h_u16 addr, stc8h_u8 *data, stc8h_u16 len);
-stc8h_status_t stc8h_eeprom_write(stc8h_u16 addr, const stc8h_u8 *data, stc8h_u16 len);
-stc8h_status_t stc8h_eeprom_erase_page(stc8h_u16 addr);
+stc8h_status_t stc8h_eeprom_read(stc8h_u16 addr, STC8H_DATA stc8h_u8 *data, stc8h_u16 len);
+stc8h_status_t stc8h_eeprom_write(stc8h_u16 addr, const STC8H_DATA stc8h_u8 *data, stc8h_u16 len);
+stc8h_status_t stc8h_eeprom_erase_sector(stc8h_u16 addr);
 ```
 
-实现前要求：
+实现约束：
 
-- 先确认 STC8H1K08 EEPROM/IAP 页大小和地址规则。
+- STC8H1K08 EEPROM/IAP 按官方资料确认为 4KB，地址范围 `0x0000..0x0FFF`。
+- 擦除粒度为 512 字节扇区，`stc8h_eeprom_erase_sector()` 的地址必须 512 字节对齐。
+- 读写函数不隐式擦除；写入前由调用方明确擦除对应扇区。
+- IAP 触发按官方流程写 `0x5A`、`0xA5`，触发窗口内临时关闭全局中断，完成后恢复。
+- `IAP_TPS` 按系统时钟编译期确定；第一版默认支持 `11.0592MHz` 和 `12MHz`。
 - 遵守 `docs/14_EEPROM_IAP_POLICY.md`。
-- 示例必须显式定义测试地址范围。
+- 示例必须显式定义测试地址范围，默认构建不执行写擦。
 
 ## 4. Drivers
 

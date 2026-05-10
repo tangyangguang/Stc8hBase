@@ -71,6 +71,7 @@ docs/vendor/encoder/ALPS_Alpine_EC11E_Series.pdf
 - I2C 当前板级配置按官方 STC8H GPIO 资料校准：开漏输出需要上拉；`P1PU/P3PU` 内部 4.1K 上拉和 `P1IE/P3IE` 数字输入使能均属于 XFR 扩展寄存器，访问前必须设置 `P_SW2.EAXFR=1`。
 - ADC 当前实现按官方 STC8H ADC 资料校准：STC8H1K08 为 10-bit ADC，P3.3 对应 ADC11；ADC 引脚需配置为高阻输入；ADC 上电后等待约 1ms；`ADCTIM` 推荐 `0x3f`；10-bit ADC 速度不高于 500kHz。
 - SPI 当前实现按官方 STC8H SPI 资料校准：`SPSTAT/SPCTL/SPDAT` 为普通 SFR，`P_SW1[3:2]` 选择引脚组，`SPIF/WCOL` 写 1 清除；第一版采用硬件 SPI 主机轮询，不启用中断和 DMA。
+- EEPROM/IAP 当前实现按官方 STC8H 资料和官方库校准：STC8H1K08 为 4KB EEPROM/IAP，地址 `0x0000..0x0FFF`，512 字节扇区擦除，IAP 触发序列为 `0x5A`、`0xA5`，触发窗口临时关闭全局中断。
 - STC8G/STC8H 官方库函数包用于核对库函数层面的外设初始化顺序。已解压到临时目录分析，不把展开源码纳入仓库；仓库仅保留官方压缩包和吸收记录。
 - PCF8574 资料用于核对 LCD1602 I2C 背包的 I/O 扩展器行为。
 - HD44780 资料用于核对 LCD1602 初始化、命令和显示地址行为。
@@ -150,7 +151,7 @@ docs/vendor/stc/stc8g-stc8h-lib-demo-code.rar
 - GPIO 模式位与本库一致：准双向 `M1=0/M0=0`，高阻输入 `M1=1/M0=0`，开漏 `M1=1/M0=1`，推挽 `M1=0/M0=1`。
 - UART1 可按 `MAIN_Fosc / 4 / baud` 计算 1T 定时器重装值；官方库运行期计算，本库为节省 ROM 对常用 11.0592MHz/115200 等配置使用编译期表。
 - ADC 官方库使用 `ADCTIM` 设置采样时序，`ADC_CONTR` 启动转换并轮询 `ADC_FLAG`，错误值返回 4096；本库对应使用 `ADCTIM=0x3f`、右对齐 10-bit 结果、超时返回 `STC8H_ADC_INVALID_VALUE`。
-- EEPROM/IAP 官方库在触发 IAP 前关闭全局中断，并按 `0x5A`、`0xA5` 顺序写 `IAP_TRIG`；后续实现 EEPROM 模块必须沿用这个保护思路，并遵守本项目 EEPROM/IAP 策略。
+- EEPROM/IAP 官方库在触发 IAP 前关闭全局中断，并按 `0x5A`、`0xA5` 顺序写 `IAP_TRIG`；本库 `stc8h_eeprom` 沿用这个保护思路，并要求示例默认不执行写擦。
 - 软件 I2C 官方示例每个相位都有短延时，ACK 通过释放 SDA 后读电平判断；本库继续保留板级宏绑定，并要求 SDA/SCL 释放后能读到高电平。
 - 硬件 I2C、SPI、PWM、DMA 的官方库可作为后续模块寄存器顺序参考，但本库第一版仍只实现实际用到且验证过的最小能力。
 

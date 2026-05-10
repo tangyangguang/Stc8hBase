@@ -449,6 +449,55 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 默认 mode 0、MSB first、`SYSclk/4`。
 - 片选由板级或应用代码自行控制。
 
+## 4.18 EEPROM/IAP `eeprom_rw`
+
+目的：
+
+- 验证 STC8H1K08 片内 EEPROM/IAP 读、写、扇区擦除。
+- 验证示例不会在默认环境下误擦写 EEPROM。
+
+擦写范围：
+
+```text
+默认写擦测试地址：0x0000
+默认写擦测试大小：512 字节
+实际擦除范围：0x0000..0x01FF
+```
+
+重要保护：
+
+- 默认 `STC8H1K08` 环境只打印 `eeprom write disabled`，不执行擦写。
+- 真实写擦必须显式使用 `STC8H1K08_write_test` 环境。
+- 烧录写擦环境前，必须确认 `0x0000..0x01FF` 没有需要保留的数据。
+
+默认安全测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/eeprom_rw
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+写擦测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/eeprom_rw
+pio run -e STC8H1K08_write_test -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+预期：
+
+- 默认环境周期输出 `eeprom write disabled`。
+- 写擦环境周期输出 `eeprom ok`。
+
+说明：
+
+- EEPROM/IAP 第一版按官方资料限定为 4KB，地址 `0x0000..0x0FFF`。
+- 擦除粒度为 512 字节扇区。
+- IAP 触发窗口临时关闭全局中断。
+- 不在红外等严格时序任务运行期间执行 EEPROM/IAP 写擦。
+
 ## 5. 本机工具状态
 
 当前本机已发现：

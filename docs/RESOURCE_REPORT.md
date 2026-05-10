@@ -1104,3 +1104,98 @@ _stc8h_uart_write_code
 
 - 已完成 SDCC 编译和资源检查。
 - 等待短接 P1.3/P1.4 后烧录实测。
+
+## 18. PlatformIO `eeprom_rw` 示例
+
+路径：
+
+```text
+examples/platformio/eeprom_rw
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 验证 STC8H1K08 EEPROM/IAP 读、写、扇区擦除。
+- 默认环境只验证编译和串口提示，不执行 EEPROM 写擦。
+- 写擦环境 `STC8H1K08_write_test` 擦除 `0x0000..0x01FF`，写入 4 字节并读回校验。
+
+资料依据：
+
+- STC8H1K08 EEPROM/IAP 容量为 4KB，地址范围 `0x0000..0x0FFF`。
+- 擦除粒度为 512 字节扇区。
+- IAP 寄存器为 `IAP_DATA=0xC2`、`IAP_ADDRH=0xC3`、`IAP_ADDRL=0xC4`、`IAP_CMD=0xC5`、`IAP_TRIG=0xC6`、`IAP_CONTR=0xC7`、`IAP_TPS=0xF5`。
+- IAP 触发序列为 `0x5A`、`0xA5`，触发窗口临时关闭全局中断。
+
+设计取舍：
+
+- HAL 只提供 `read`、`write`、`erase_sector`，不定义应用参数格式。
+- 写入函数不隐式擦除，调用方必须先明确擦除扇区。
+- 示例默认不执行写擦，避免误伤 EEPROM 中已有数据。
+- 第一版只支持 `11.0592MHz` 和 `12MHz` 的 `IAP_TPS` 编译期配置。
+
+默认安全环境资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| 环境 | `STC8H1K08` |
+| ROM/EPROM/FLASH | 816 bytes |
+| Stack start | 0x15 |
+| Internal RAM 边界 | 栈从 0x15 开始，当前静态/参数/overlay 占用到 0x14 |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| 中断 | 未启用；IAP 触发函数存在但默认环境不调用 |
+| UART | UART1 |
+| EEPROM/IAP | 编译入库，默认环境不执行写擦 |
+
+写擦环境资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| 环境 | `STC8H1K08_write_test` |
+| ROM/EPROM/FLASH | 952 bytes |
+| Stack start | 0x1d |
+| Internal RAM 边界 | 栈从 0x1d 开始，当前静态/参数/overlay 占用到 0x1c |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| 中断 | IAP 触发窗口临时关闭全局中断，未启用 ISR |
+| UART | UART1 |
+| EEPROM/IAP | 擦除 `0x0000..0x01FF`，写入/读回 `0x0000..0x0003` |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| SPI/PWM/IR | 未使用 |
+| Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08_write_test/src/main.rel
+.pio/build/STC8H1K08_write_test/src/stc8h_eeprom_wrap.rel
+.pio/build/STC8H1K08_write_test/src/stc8h_uart_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_stc8h_eeprom_read
+_stc8h_eeprom_write
+_stc8h_eeprom_erase_sector
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、TM1637、IR、utils 或除法/取模库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 默认安全环境可直接烧录，预期输出 `eeprom write disabled`。
+- 写擦环境等待用户确认 `0x0000..0x01FF` 可擦除后再烧录实测。
