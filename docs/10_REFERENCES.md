@@ -54,6 +54,7 @@ https://github.com/IOsetting/FwLib_STC8
 https://www.stcmicro.com/cn/stc/stc8h1k08.html
 docs/vendor/stc/STC8H1K08_Features.pdf
 docs/vendor/stc/STC8H-en.pdf
+docs/vendor/stc/stc8g-stc8h-lib-demo-code.rar
 docs/vendor/ti/PCF8574_TI.pdf
 docs/vendor/lcd/HD44780_Hitachi_via_Adafruit.pdf
 docs/vendor/encoder/ALPS_Alpine_EC11E_Series.pdf
@@ -68,6 +69,7 @@ docs/vendor/encoder/ALPS_Alpine_EC11E_Series.pdf
 - UART1 默认实现按官方 STC8H 串口示例校准：Timer1 作为波特率发生器，`AUXR.S1ST2=0`，Timer1 1T，Timer1 mode0 16 位自动重装，`BRT = 65536 - FOSC / baud / 4`。
 - I2C 当前板级配置按官方 STC8H GPIO 资料校准：开漏输出需要上拉；`P1PU/P3PU` 内部 4.1K 上拉和 `P1IE/P3IE` 数字输入使能均属于 XFR 扩展寄存器，访问前必须设置 `P_SW2.EAXFR=1`。
 - ADC 当前实现按官方 STC8H ADC 资料校准：STC8H1K08 为 10-bit ADC，P3.3 对应 ADC11；ADC 引脚需配置为高阻输入；ADC 上电后等待约 1ms；`ADCTIM` 推荐 `0x3f`；10-bit ADC 速度不高于 500kHz。
+- STC8G/STC8H 官方库函数包用于核对库函数层面的外设初始化顺序。已解压到临时目录分析，不把展开源码纳入仓库；仓库仅保留官方压缩包和吸收记录。
 - PCF8574 资料用于核对 LCD1602 I2C 背包的 I/O 扩展器行为。
 - HD44780 资料用于核对 LCD1602 初始化、命令和显示地址行为。
 - Alps Alpine EC11E 资料用于核对 EC11 系列旋转编码器两相 A/B 输出、额定参数、定位数/脉冲数。用户手头 EC11 模块不一定是 Alps 原厂同型号，驱动只依赖通用两相增量输出和按键触点行为。
@@ -124,6 +126,37 @@ docs/vendor/stc/STC8H-en.pdf
 - 按钮消抖应是时间参数，默认 10ms，且允许项目宏和运行时 API 覆盖。长按阈值默认 800ms。
 - 示例程序不能逐格阻塞打印，否则快速旋转会因为 UART 阻塞导致漏扫。`ec11_counter` 采用 1ms 扫描、100ms 汇总打印。
 - STC8H 官方手册提供 PWMA/TIM1 硬件正交编码器模式，适合高速编码器或电机类输入；第一版 EC11 人机输入继续采用轻量轮询状态机，避免占用高级定时器/PWM 资源。
+
+### 3.5 STC8G/STC8H 官方库函数包
+
+参考来源：
+
+```text
+https://www.stcmicro.com/slcx.html
+https://www.stcmicro.com/rar/demo/stc8g-stc8h-lib-demo-code.rar
+docs/vendor/stc/stc8g-stc8h-lib-demo-code.rar
+```
+
+包内主要内容：
+
+- `库函数/`：GPIO、Timer、UART、ADC、EEPROM、SPI、硬件 I2C、软件 I2C、PWM、PCA、比较器、DMA、RTC、WDT 等库函数。
+- `独立程序/`：GPIO 跑马灯、Timer、外部中断、UART、ADC、EEPROM、PWM、SPI、I2C、RTC、DMA 等独立例程。
+- `STC8G-8H库函数使用说明-20240429.pdf`：官方库函数说明文档，已随压缩包保存。
+
+已吸收的实现事实：
+
+- GPIO 模式位与本库一致：准双向 `M1=0/M0=0`，高阻输入 `M1=1/M0=0`，开漏 `M1=1/M0=1`，推挽 `M1=0/M0=1`。
+- UART1 可按 `MAIN_Fosc / 4 / baud` 计算 1T 定时器重装值；官方库运行期计算，本库为节省 ROM 对常用 11.0592MHz/115200 等配置使用编译期表。
+- ADC 官方库使用 `ADCTIM` 设置采样时序，`ADC_CONTR` 启动转换并轮询 `ADC_FLAG`，错误值返回 4096；本库对应使用 `ADCTIM=0x3f`、右对齐 10-bit 结果、超时返回 `STC8H_ADC_INVALID_VALUE`。
+- EEPROM/IAP 官方库在触发 IAP 前关闭全局中断，并按 `0x5A`、`0xA5` 顺序写 `IAP_TRIG`；后续实现 EEPROM 模块必须沿用这个保护思路，并遵守本项目 EEPROM/IAP 策略。
+- 软件 I2C 官方示例每个相位都有短延时，ACK 通过释放 SDA 后读电平判断；本库继续保留板级宏绑定，并要求 SDA/SCL 释放后能读到高电平。
+- 硬件 I2C、SPI、PWM、DMA 的官方库可作为后续模块寄存器顺序参考，但本库第一版仍只实现实际用到且验证过的最小能力。
+
+不直接采用的点：
+
+- 官方库为通用实验箱/多型号/多外设设计，结构体配置和运行期分派较多；本库继续坚持按需编译、低占用、板级显式绑定。
+- 官方库包含大量全局缓冲区和中断模式示例；本库只有在应用确实需要时才引入 ring buffer 或中断驱动。
+- 官方独立示例面向 Keil 工程组织；本库保留 SDCC/PlatformIO/Makefile 透明构建入口，同时保持 Keil C51 源码兼容目标。
 
 ## 4. 吸收为本库建设要求
 
