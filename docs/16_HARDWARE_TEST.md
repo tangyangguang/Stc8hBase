@@ -17,6 +17,7 @@ examples/make/milestone1_demo/build/milestone1_demo.ihx
 ```text
 examples/platformio/gpio_blink/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/uart_hello/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/uart_echo_buffered/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_lines/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_scan/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/lcd1602_text/.pio/build/STC8H1K08/firmware.hex
@@ -147,6 +148,33 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - STC8H 开漏输出的内部上拉默认关闭；如果外部没有有效上拉，SDA/SCL 释放后可能读不到高电平。
 - `P1PU/P3PU` 和 `P1IE/P3IE` 是 XFR 扩展寄存器，访问前必须设置 `P_SW2.EAXFR=1`。
 - 当前板级初始化已为 P1.7/SCL、P3.2/SDA 启用数字输入和内部 4.1K 上拉。
+
+### 4.3.1 `uart_echo_buffered`
+
+目的：
+
+- 验证 UART1 轮询接收。
+- 验证 `util_ring_buffer` 用于低速串口回显。
+- 避免 UART RI/TI 共用中断带来的 TX/RX 状态机复杂度。
+
+预期：
+
+- 串口启动后输出 `uart echo buffered`。
+- 在串口监视器输入普通 ASCII 字符后，MCU 回显相同字符。
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/uart_echo_buffered
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+说明：
+
+- 当前示例使用 16 字节 DATA RAM 数组，实际可缓冲 15 字节。
+- 当前示例不启用 UART 中断，不占用串口中断向量。
+- 该示例用于人工输入或低速输入验证，不作为高吞吐连续接收方案。
 
 ### 4.4 `i2c_scan`
 
@@ -412,6 +440,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - 已新增 PlatformIO `uart_hello` 最小串口示例，等待先独立验证 UART1。
 - 已再次核对官方 UART1 公式，修正 11.0592MHz / 115200 reload 为 `0xFFE8`，并补齐 `AUXR.S1ST2`、`P_SW1`、`INTCLKO`、P3.0/P3.1 模式设置。
 - `uart_hello` 已硬件实测通过：串口监视器 115200 8N1 可连续收到 `UART hello 115200`。
+- `uart_echo_buffered` 已编译通过，等待烧录实测。
 - `i2c_scan` 曾出现 `0x08` 到 `0x77` 全地址 ACK；经 `i2c_lines` 诊断，原因为 SDA 开漏释放后仍读 0，即总线缺少有效上拉导致 ACK 假阳性。
 - 已按官方资料启用 P1.7/P3.2 数字输入和内部 4.1K 上拉；`i2c_lines` 复测通过：`release SDA=1 SCL=1`，各拉低状态均正确。
 - 内部上拉启用后，`i2c_scan` 不再全地址 ACK，首次结果为 `none`；检查后发现 LCD1602 有一根线接错。

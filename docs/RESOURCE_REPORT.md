@@ -810,3 +810,76 @@ _stc8h_uart_write_code
 - 已完成 SDCC 编译和资源检查。
 - 已完成宿主机回绕测试。
 - 等待烧录实测。
+
+## 14. PlatformIO `uart_echo_buffered` 示例
+
+路径：
+
+```text
+examples/platformio/uart_echo_buffered
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- UART1 轮询接收。
+- 接收字节先进入 `util_ring_buffer`，再由主循环弹出并回显。
+- 用于验证 ring buffer 在 UART RX 场景中的低速使用方式。
+
+设计取舍：
+
+- 当前示例不启用 UART 中断，避免 RI/TI 共用中断导致 TX/RX 状态机复杂化。
+- 适合人工输入或低速输入回显。
+- 高吞吐连续接收后续需要单独设计 UART 中断收发状态机。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 925 bytes |
+| Stack start | 0x2f |
+| Internal RAM 边界 | 栈从 0x2f 开始，当前静态/参数/overlay 占用到 0x2e |
+| DATA buffer | 示例使用 16 字节数组，实际可存 15 字节 |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| 中断 | 未使用 |
+| UART | UART1，轮询接收 |
+| Ring Buffer | `util_ring_buffer` |
+| I2C/LCD1602 | 未使用 |
+| Button/EC11 | 未使用 |
+| ADC | 未使用 |
+| SPI/PWM/IR | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+.pio/build/STC8H1K08/src/util_ring_buffer_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_stc8h_uart_init
+_stc8h_uart_readable
+_stc8h_uart_getc
+_stc8h_uart_putc
+_util_ring_buffer_init
+_util_ring_buffer_push
+_util_ring_buffer_pop
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR、soft timer、CRC、filter 或除法/取模库符号。
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 等待烧录实测。
