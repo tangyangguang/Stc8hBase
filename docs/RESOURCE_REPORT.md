@@ -1450,7 +1450,7 @@ _stc8h_uart_write_code
 验证状态：
 
 - 已完成 SDCC 编译和资源检查。
-- 等待烧录实测 P1.2 LED 明暗变化。
+- 已烧录实测通过：串口输出 `pwm output ok`，P1.2 指示灯呈现逐渐变亮、逐渐变暗的呼吸效果。
 
 ## 22. PlatformIO `ir_nec_demo` 示例
 
