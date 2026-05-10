@@ -56,6 +56,7 @@ docs/vendor/stc/STC8H1K08_Features.pdf
 docs/vendor/stc/STC8H-en.pdf
 docs/vendor/ti/PCF8574_TI.pdf
 docs/vendor/lcd/HD44780_Hitachi_via_Adafruit.pdf
+docs/vendor/encoder/ALPS_Alpine_EC11E_Series.pdf
 ```
 
 用途：
@@ -68,6 +69,7 @@ docs/vendor/lcd/HD44780_Hitachi_via_Adafruit.pdf
 - I2C 当前板级配置按官方 STC8H GPIO 资料校准：开漏输出需要上拉；`P1PU/P3PU` 内部 4.1K 上拉和 `P1IE/P3IE` 数字输入使能均属于 XFR 扩展寄存器，访问前必须设置 `P_SW2.EAXFR=1`。
 - PCF8574 资料用于核对 LCD1602 I2C 背包的 I/O 扩展器行为。
 - HD44780 资料用于核对 LCD1602 初始化、命令和显示地址行为。
+- Alps Alpine EC11E 资料用于核对 EC11 系列旋转编码器两相 A/B 输出、额定参数、定位数/脉冲数。用户手头 EC11 模块不一定是 Alps 原厂同型号，驱动只依赖通用两相增量输出和按键触点行为。
 
 原则：
 

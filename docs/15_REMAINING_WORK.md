@@ -38,8 +38,12 @@
 - 已确认 LCD1602 背包芯片为 8574T / PCF8574T 兼容。
 - 已复测 PlatformIO `i2c_scan`，确认 LCD1602 I2C 地址为 `0x27`。
 - 已复测 PlatformIO `lcd1602_text`，确认 LCD 显示 `Stc8hBase` / `LCD1602 OK`。
+- 已新增 EC11 和按键驱动，并归档 Alps Alpine EC11E 官方资料作为两相 A/B 输出参考。
+- 已新增 PlatformIO `ec11_counter` 示例。
+- 已确认 EC11 慢速顺时针为 `+1`、慢速逆时针为 `-1`，快速顺时针可触发 `+10` 加速步进。
+- 已确认 EC11 SW 短按输出 `SW press` / `SW short`。
 - Keil C51 最小编译验证：本机无 Keil 工具，已记录为待人工验证项。
-- 进行 STC8H1K08 TSSOP20 后续硬件实测：EC11、P5.4 按键、P3.3 ADC。
+- 进行 STC8H1K08 TSSOP20 后续硬件实测：EC11 SW 长按事件、P3.3 ADC。
 
 ## 2. 待优化项
 

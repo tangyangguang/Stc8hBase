@@ -6,5 +6,6 @@
 #define STC8H_UART1_BAUD 115200UL
 
 #define BOARD_LCD1602_ADDR7 0x27u
+#define DRV_EC11_REVERSE 1u
 
 #endif

@@ -66,8 +66,10 @@ STC8H_SFR(P5M1, 0xC9);
 
 #define P1IE STC8H_SFRX(0xFE31u)
 #define P3IE STC8H_SFRX(0xFE33u)
+#define P5IE STC8H_SFRX(0xFE35u)
 #define P1PU STC8H_SFRX(0xFE11u)
 #define P3PU STC8H_SFRX(0xFE13u)
+#define P5PU STC8H_SFRX(0xFE15u)
 
 #endif
 

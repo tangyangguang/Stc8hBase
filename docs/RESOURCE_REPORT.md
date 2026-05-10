@@ -449,3 +449,73 @@ Keil C51 验证状态：
 - UART 初始化已改为编译期 reload，map/sym 文件未发现 `__divulong`。
 - UART1 已按官方 STC8H 串口示例核对：Timer1 作为波特率发生器，Timer1 1T，Timer1 mode0 16 位自动重装，11.0592MHz / 115200 reload 为 `0xFFE8`。
 - I2C 板级初始化已按官方 STC8H GPIO/XFR 资料核对：开漏模式需要上拉；P1.7/P3.2 已启用数字输入和内部 4.1K 上拉。
+
+## 9. PlatformIO `ec11_counter` 示例
+
+路径：
+
+```text
+examples/platformio/ec11_counter
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- UART1 输出 EC11 旋转方向和累计计数。
+- EC11 默认支持快速旋转加速：两次有效定位格间隔小于等于 50ms 时，每格输出 `+10/-10`。
+- EC11 A/B 使用 P1.0/P1.1，按键 SW 使用 P5.4。
+- 按键事件输出 `press`、`short`、`long`、`release`。
+- LED 翻转表示主循环仍在运行。
+
+资料依据：
+
+- STC 官方手册：P1/P5 数字输入使能、内部上拉、GPIO 模式寄存器。
+- Alps Alpine EC11E 官方资料：EC11 系列旋转编码器为两相 A/B 增量输出；具体器件以实物和实际型号为准。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 3843 bytes |
+| Stack start | 0x52 |
+| Internal RAM 边界 | 栈从 0x52 开始，当前静态/参数/overlay 占用到 0x51 |
+| XDATA/PDATA | XFR 扩展寄存器访问，用于 `P1PU/P5PU/P1IE/P5IE` 等 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| UART | UART1 |
+| Button | SW=P5.4，轮询扫描 |
+| EC11 | A=P1.0，B=P1.1，轮询扫描 |
+| EC11 运行时配置 | 快速阈值、快速步进值、方向可通过 API 修改 |
+| I2C | 未使用 |
+| LCD1602 | 未使用 |
+| ADC | 未使用 |
+| SPI/PWM/IR | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/board_init_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_delay_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+.pio/build/STC8H1K08/src/drv_button_wrap.rel
+.pio/build/STC8H1K08/src/drv_ec11_wrap.rel
+```
+
+未使用模块检查：
+
+- 已检查 PlatformIO 构建产物，未发现 I2C、LCD1602、`stc8h_interrupt`、SPI、PWM、ADC、EEPROM、TM1637、IR、ring buffer、soft timer、CRC、filter 或除法库符号。
+
+硬件验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 已完成烧录实测。
+- 慢速顺时针输出 `+1`，慢速逆时针输出 `-1`。
+- 快速顺时针已触发 `+10` 步进。
+- EC11 SW 短按已输出 `SW press` / `SW short`。
+- EC11 SW 长按事件尚待单独复测。

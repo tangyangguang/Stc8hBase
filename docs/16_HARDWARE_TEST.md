@@ -20,6 +20,7 @@ examples/platformio/uart_hello/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_lines/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/i2c_scan/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/lcd1602_text/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/ec11_counter/.pio/build/STC8H1K08/firmware.hex
 ```
 
 ## 2. 板级默认配置
@@ -206,6 +207,28 @@ cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/lcd1602_text
 pio run -t upload --upload-port /dev/cu.usbserial-110
 ```
 
+### 4.6 `ec11_counter`
+
+目的：
+
+- 验证 EC11 A/B 相方向、慢速计数和快速旋转加速。
+- 验证 EC11 SW 按键短按、长按事件。
+
+预期：
+
+- 慢速顺时针每定位格输出 `+1`。
+- 慢速逆时针每定位格输出 `-1`。
+- 默认快速旋转阈值为 50ms，触发后每定位格输出 `+10/-10`。
+- 当前演示板通过 `DRV_EC11_REVERSE=1` 校正方向。
+
+PlatformIO 测试命令：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ec11_counter
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
 ## 5. 本机工具状态
 
 当前本机已发现：
@@ -287,3 +310,8 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - 内部上拉启用后，`i2c_scan` 不再全地址 ACK，首次结果为 `none`；检查后发现 LCD1602 有一根线接错。
 - 修正 LCD1602 接线后，`i2c_scan` 已扫描到 `0x27`。
 - `lcd1602_text` 已硬件实测通过：串口输出 `LCD1602 test`，LCD 显示 `Stc8hBase` / `LCD1602 OK`。
+- `ec11_counter` 已编译通过，Flash `3843 bytes / 8192 bytes`，Stack start `0x52`。
+- `ec11_counter` 已烧录成功，慢速顺时针输出 `+1`，慢速逆时针输出 `-1`。
+- `ec11_counter` 快速顺时针已触发加速，实测输出 `+10` 步进。
+- `ec11_counter` 短按已输出 `SW press` / `SW short`。
+- `ec11_counter` 长按事件尚未完成有效确认；已看到按下事件，需单独延长监视窗口复测 `SW long` / `SW release`。

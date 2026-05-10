@@ -412,11 +412,19 @@ drv_button_event_t drv_button_get_event(drv_button_t *button);
 ```c
 typedef struct {
     stc8h_u8 last_state;
+    stc8h_u8 has_last_detent;
+    stc8h_u8 reverse;
+    stc8h_s8 step_accum;
+    stc8h_s8 fast_step;
+    stc8h_u16 detent_elapsed_ms;
+    stc8h_u16 fast_threshold_ms;
     stc8h_s16 delta;
 } drv_ec11_t;
 
 void drv_ec11_init(drv_ec11_t *ec11);
-void drv_ec11_scan(drv_ec11_t *ec11, stc8h_u8 a_level, stc8h_u8 b_level);
+void drv_ec11_set_fast(drv_ec11_t *ec11, stc8h_u16 threshold_ms, stc8h_s8 fast_step);
+void drv_ec11_set_reverse(drv_ec11_t *ec11, stc8h_u8 reverse);
+void drv_ec11_scan(drv_ec11_t *ec11, stc8h_u8 a_level, stc8h_u8 b_level, stc8h_u16 elapsed_ms);
 stc8h_s16 drv_ec11_get_delta(drv_ec11_t *ec11);
 ```
 
@@ -426,6 +434,12 @@ stc8h_s16 drv_ec11_get_delta(drv_ec11_t *ec11);
 - 板级代码通过编译期宏读取 A/B 电平后传入。
 - 这样 EC11 高频扫描路径不依赖运行期端口分派。
 - 默认每个定位格输出 `+1` 或 `-1`。
+- 支持轻量加速：两次有效定位格间隔小于等于 `DRV_EC11_FAST_THRESHOLD_MS` 时，当前定位格输出 `DRV_EC11_FAST_STEP` 倍增量。
+- 默认 `DRV_EC11_FAST_THRESHOLD_MS=50ms`，`DRV_EC11_FAST_STEP=10`；两个值均可在项目配置中覆盖。
+- 方向可通过 `DRV_EC11_REVERSE` 配置。驱动默认 `0`，当前演示板在 `board_config.h` 中配置为 `1`，使实测顺时针输出为正数。
+- 运行中可用 `drv_ec11_set_fast` 修改当前对象的快速阈值和快速步进值。
+- 运行中可用 `drv_ec11_set_reverse` 修改当前对象方向；通常只在初始化或用户设置变更时调用，不建议在旋转过程中频繁切换。
+- 加速只影响输出增量，不改变 A/B 相解码逻辑。
 - `drv_ec11_get_delta` 读取后清零累计增量。
 
 ### 4.3 `drv_lcd1602`
