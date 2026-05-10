@@ -2,25 +2,43 @@
 #include "stc8h_gpio.h"
 #include "stc8h_config.h"
 
-void board_init(void)
+void board_led_init(void)
+{
+    stc8h_gpio_set_mode(BOARD_LED_PORT, BOARD_LED_PIN, STC8H_GPIO_MODE_PUSH_PULL);
+}
+
+void board_i2c_init(void)
 {
     P_SW2 |= 0x80u;
-    P1IE |= (BOARD_I2C_SCL_MASK | BOARD_EC11_A_MASK | BOARD_EC11_B_MASK);
+    P1IE |= BOARD_I2C_SCL_MASK;
     P3IE |= BOARD_I2C_SDA_MASK;
-    P5IE |= BOARD_EC11_SW_MASK;
-    P1PU |= (BOARD_I2C_SCL_MASK | BOARD_EC11_A_MASK | BOARD_EC11_B_MASK);
+    P1PU |= BOARD_I2C_SCL_MASK;
     P3PU |= BOARD_I2C_SDA_MASK;
-    P5PU |= BOARD_EC11_SW_MASK;
-    P3IE &= (stc8h_u8)~BOARD_POT_ADC_MASK;
-    P3PU &= (stc8h_u8)~BOARD_POT_ADC_MASK;
 
-    stc8h_gpio_set_mode(BOARD_LED_PORT, BOARD_LED_PIN, STC8H_GPIO_MODE_PUSH_PULL);
     stc8h_gpio_set_mode(BOARD_I2C_SDA_PORT, BOARD_I2C_SDA_PIN, STC8H_GPIO_MODE_OPEN_DRAIN);
     stc8h_gpio_set_mode(BOARD_I2C_SCL_PORT, BOARD_I2C_SCL_PIN, STC8H_GPIO_MODE_OPEN_DRAIN);
+    BOARD_I2C_SDA_HIGH();
+    BOARD_I2C_SCL_HIGH();
+}
+
+void board_ec11_init(void)
+{
+    P_SW2 |= 0x80u;
+    P1IE |= (BOARD_EC11_A_MASK | BOARD_EC11_B_MASK);
+    P5IE |= BOARD_EC11_SW_MASK;
+    P1PU |= (BOARD_EC11_A_MASK | BOARD_EC11_B_MASK);
+    P5PU |= BOARD_EC11_SW_MASK;
+
     stc8h_gpio_set_mode(BOARD_EC11_A_PORT, BOARD_EC11_A_PIN, STC8H_GPIO_MODE_INPUT_ONLY);
     stc8h_gpio_set_mode(BOARD_EC11_B_PORT, BOARD_EC11_B_PIN, STC8H_GPIO_MODE_INPUT_ONLY);
     stc8h_gpio_set_mode(BOARD_EC11_SW_PORT, BOARD_EC11_SW_PIN, STC8H_GPIO_MODE_INPUT_ONLY);
+}
+
+void board_adc_init(void)
+{
+    P_SW2 |= 0x80u;
+    P3IE &= (stc8h_u8)~BOARD_POT_ADC_MASK;
+    P3PU &= (stc8h_u8)~BOARD_POT_ADC_MASK;
+
     stc8h_gpio_set_mode(BOARD_POT_ADC_PORT, BOARD_POT_ADC_PIN, STC8H_GPIO_MODE_INPUT_ONLY);
-    BOARD_I2C_SDA_HIGH();
-    BOARD_I2C_SCL_HIGH();
 }

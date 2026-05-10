@@ -31,7 +31,7 @@ void main(void)
     util_soft_timer_t uart_timer;
     stc8h_u16 now;
 
-    board_init();
+    board_led_init();
     (void)stc8h_uart_init(STC8H_UART1);
 
     stc8h_uart_write_code(STC8H_UART1, "soft timer tick\r\n");

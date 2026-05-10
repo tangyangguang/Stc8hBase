@@ -80,7 +80,7 @@ void timer0_isr(void) interrupt STC8H_VECTOR_TIMER0 using 1
 void timer0_isr(void) __interrupt(STC8H_VECTOR_TIMER0)
 ```
 
-如果 SDCC 目标不支持 register bank 语法，`STC8H_INTERRUPT_USING` 在 SDCC 下退化为普通中断声明，并在文档中说明。
+当前 SDCC mcs51 已编译验证 `STC8H_INTERRUPT_USING(name, vector, reg_bank)` 展开为 `__interrupt(vector) __using(reg_bank)`；Keil C51 展开为 `interrupt vector using reg_bank`，真实 Keil 编译仍按 `docs/18_KEIL_C51_VALIDATION.md` 验证。
 
 ### 2.2 `stc8h_types`
 

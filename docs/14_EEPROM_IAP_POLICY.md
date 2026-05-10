@@ -37,7 +37,9 @@ EEPROM/IAP 涉及片内非易失数据，必须先明确地址边界，再写实
 
 未定义测试地址范围时，`eeprom_rw` 示例不得编译通过。
 
-`eeprom_rw` 默认构建环境不执行写擦，只输出禁用提示。真实写擦测试必须显式选择 `STC8H1K08_write_test` 环境，并在烧录前确认测试扇区可以被擦除。
+`eeprom_rw` 的 `platformio.ini` 必须设置 `default_envs = STC8H1K08`，保证普通 `pio run` 和 `pio run -t upload` 只构建/上传禁用写擦的安全环境。
+
+真实写擦测试必须显式选择 `STC8H1K08_write_test` 环境，例如 `pio run -e STC8H1K08_write_test -t upload`，并在烧录前确认测试扇区可以被擦除。示例默认测试地址使用最后一个 EEPROM 扇区 `0x0E00..0x0FFF`，应用项目不得把该示例地址视为通用参数区约定。
 
 示例必须检查：
 
@@ -55,6 +57,7 @@ EEPROM/IAP 示例必须：
 - 不假设应用参数区存在。
 - 不做旧格式迁移。
 - 默认环境不得执行写擦；写擦环境必须有显式启用宏。
+- PlatformIO 示例必须设置 `default_envs`，避免写擦环境被普通命令隐式构建或上传。
 
 ## 5. 应用项目规则
 

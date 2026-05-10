@@ -76,7 +76,8 @@ void main(void)
     stc8h_u16 led_ms;
     drv_button_event_t event;
 
-    board_init();
+    board_led_init();
+    board_ec11_init();
     (void)stc8h_uart_init(STC8H_UART1);
     drv_ec11_init(&ec11);
     drv_ec11_set_fast(&ec11, 30u, 10);

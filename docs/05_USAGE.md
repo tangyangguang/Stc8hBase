@@ -99,6 +99,8 @@ MyProject/
 - UART 默认通道和波特率。
 - LCD1602 I2C 地址。
 
+`board_init.c` 不应提供“一次初始化全部外设”的隐藏入口。推荐按资源拆分为 `board_led_init()`、`board_i2c_init()`、`board_ec11_init()`、`board_adc_init()` 这类小函数，应用只调用实际使用的初始化函数。
+
 ## 5. 老 Keil C51 项目接入
 
 老项目可以继续使用 Keil C51。

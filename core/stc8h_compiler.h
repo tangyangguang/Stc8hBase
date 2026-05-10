@@ -18,7 +18,7 @@
 #define STC8H_SFR16X(addr) (*((volatile STC8H_XDATA unsigned int *)(addr)))
 
 #define STC8H_INTERRUPT(name, vector) void name(void) __interrupt(vector)
-#define STC8H_INTERRUPT_USING(name, vector, reg_bank) void name(void) __interrupt(vector)
+#define STC8H_INTERRUPT_USING(name, vector, reg_bank) void name(void) __interrupt(vector) __using(reg_bank)
 #define STC8H_NOP() __asm nop __endasm
 
 #elif defined(__C51__) || defined(__CX51__)

@@ -70,8 +70,8 @@
 - 已短接 P1.3/MOSI 和 P1.4/MISO 后烧录实测 `spi_loopback`，串口 115200 连续输出 `spi loopback ok`。
 - 已按 STC 官方 EEPROM/IAP 库和手册寄存器定义核对 EEPROM/IAP。
 - 已新增 `stc8h_eeprom` HAL 和 PlatformIO `eeprom_rw` 示例，并完成 SDCC 编译和资源检查。
-- `eeprom_rw` 默认环境不执行写擦；真实写擦测试需明确确认测试扇区 `0x0000..0x01FF` 可擦除后再使用 `STC8H1K08_write_test` 环境。
-- 已在用户确认后烧录实测 `eeprom_rw` 写擦环境，擦除 `0x0000..0x01FF`，写入并读回 `0x0000..0x0003`，串口连续输出 `eeprom ok`。
+- `eeprom_rw` 已设置 `default_envs = STC8H1K08`；普通 `pio run` / `pio run -t upload` 只构建/上传禁用写擦的安全环境。真实写擦测试必须显式选择 `-e STC8H1K08_write_test`。
+- 已在用户确认后烧录实测旧版 `eeprom_rw` 写擦环境，擦除 `0x0000..0x01FF`，写入并读回 `0x0000..0x0003`，串口连续输出 `eeprom ok`；当前写擦测试地址已改为最后一个扇区 `0x0E00..0x0FFF`，需要重新写擦实测时必须再次确认。
 - 已新增 `drv_led`、`drv_buzzer`、`drv_relay` 有效电平辅助驱动，以及 PlatformIO `output_levels` 示例，并完成 SDCC 编译和资源检查。
 - 已烧录实测 `output_levels`，串口 115200 连续输出 `output levels ok`。
 - 已归档 TM1637 Titan Micro datasheet 权威镜像。
@@ -92,6 +92,7 @@
 - 已新增 Keil C51 模块编译验证入口 `examples/keil_c51/module_compile_check/`。
 - Keil C51 实际编译验证：本机无 Keil 工具，需在 Windows + Keil C51 环境运行 `build_c51.bat`。
 - 已按当前临时接线 DIO/SDA=P3.2、CLK=P1.7 烧录实测 `tm1637_number`，确认依次显示 `8888`、`0123`、`4567`，随后 `0000` 起递增。
+- 已新增 `tools/check_examples.sh`，用于全量构建 PlatformIO/Make 示例，并检查关键示例的禁止符号前缀。
 
 ## 2. 待优化项
 

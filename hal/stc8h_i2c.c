@@ -115,6 +115,9 @@ stc8h_status_t stc8h_i2c_write(stc8h_u8 addr7, const stc8h_u8 *data, stc8h_u8 le
 {
     stc8h_u8 i;
 
+    if (addr7 > 0x7Fu) {
+        return STC8H_ERROR;
+    }
     if ((data == 0) && (len != 0u)) {
         return STC8H_ERROR;
     }
@@ -140,6 +143,9 @@ stc8h_status_t stc8h_i2c_read(stc8h_u8 addr7, stc8h_u8 *data, stc8h_u8 len)
 {
     stc8h_u8 i;
 
+    if (addr7 > 0x7Fu) {
+        return STC8H_ERROR;
+    }
     if ((data == 0) && (len != 0u)) {
         return STC8H_ERROR;
     }
@@ -161,6 +167,10 @@ stc8h_status_t stc8h_i2c_read(stc8h_u8 addr7, stc8h_u8 *data, stc8h_u8 len)
 stc8h_u8 stc8h_i2c_probe(stc8h_u8 addr7)
 {
     stc8h_u8 ack;
+
+    if (addr7 > 0x7Fu) {
+        return 0u;
+    }
 
     stc8h_i2c_start();
     ack = stc8h_i2c_write_byte((stc8h_u8)(addr7 << 1));

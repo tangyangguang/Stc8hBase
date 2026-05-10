@@ -28,7 +28,7 @@ board/stc8h1k08_tssop20_demo/
 
 - `board_config.h`：芯片、时钟、默认波特率、I2C 地址等。
 - `board_pins.h`：所有测试外设引脚。
-- `board_init.c`：基础引脚模式和板级初始化。
+- `board_init.c`：按外设拆分的板级初始化函数，例如 LED、I2C、EC11、ADC；示例只调用实际需要的函数。
 
 ## 3. 默认配置
 

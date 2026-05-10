@@ -462,16 +462,16 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 擦写范围：
 
 ```text
-默认写擦测试地址：0x0000
+当前默认写擦测试地址：0x0E00
 默认写擦测试大小：512 字节
-实际擦除范围：0x0000..0x01FF
+当前实际擦除范围：0x0E00..0x0FFF
 ```
 
 重要保护：
 
-- 默认 `STC8H1K08` 环境只打印 `eeprom write disabled`，不执行擦写。
+- 默认 `STC8H1K08` 环境只打印 `eeprom write disabled`，不执行擦写；普通 `pio run` 和 `pio run -t upload` 只使用该安全环境。
 - 真实写擦必须显式使用 `STC8H1K08_write_test` 环境。
-- 烧录写擦环境前，必须确认 `0x0000..0x01FF` 没有需要保留的数据。
+- 烧录写擦环境前，必须确认 `0x0E00..0x0FFF` 没有需要保留的数据。
 
 默认安全测试命令：
 
@@ -503,9 +503,9 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 
 实测结果：
 
-- 已在用户确认测试扇区可擦除后烧录 `STC8H1K08_write_test` 环境。
-- 已确认串口连续输出 `eeprom ok`。
-- 该项验证通过。
+- 已在用户确认测试扇区可擦除后烧录旧版 `STC8H1K08_write_test` 环境。
+- 旧版实测已确认串口连续输出 `eeprom ok`。
+- 当前写擦测试地址已改为 `0x0E00..0x0FFF`；如需重新烧录写擦环境，必须再次确认该扇区可擦除。
 
 ## 4.19 输出电平辅助 `output_levels`
 
@@ -641,7 +641,7 @@ LCD1602 I2C 地址：0x27
 已完成：
 
 - `gpio_blink` 已按 P1.2 重新编译。
-- PlatformIO `gpio_blink` 已重新编译，Flash `927 bytes / 8192 bytes`。
+- PlatformIO `gpio_blink` 已重新编译通过；资源数字以 `docs/RESOURCE_REPORT.md` 为准。
 - 已尝试执行：
 
 ```text
@@ -691,7 +691,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 - 内部上拉启用后，`i2c_scan` 不再全地址 ACK，首次结果为 `none`；检查后发现 LCD1602 有一根线接错。
 - 修正 LCD1602 接线后，`i2c_scan` 已扫描到 `0x27`。
 - `lcd1602_text` 已硬件实测通过：串口输出 `LCD1602 test`，LCD 显示 `Stc8hBase` / `LCD1602 OK`。
-- `ec11_counter` 已编译通过，Flash `3843 bytes / 8192 bytes`，Stack start `0x52`。
+- `ec11_counter` 已编译通过；资源数字以 `docs/RESOURCE_REPORT.md` 为准。
 - `ec11_counter` 已烧录成功，慢速顺时针输出 `+1`，慢速逆时针输出 `-1`。
 - `ec11_counter` 快速顺时针已触发加速，实测输出 `+10` 步进。
 - `ec11_counter` 短按已输出 `SW press` / `SW short`。

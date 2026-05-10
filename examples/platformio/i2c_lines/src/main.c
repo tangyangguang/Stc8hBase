@@ -55,7 +55,7 @@ static void print_quasi_sda(void)
 
 void main(void)
 {
-    board_init();
+    board_i2c_init();
     (void)stc8h_uart_init(STC8H_UART1);
 
     stc8h_uart_write_code(STC8H_UART1, "I2C lines test\r\n");

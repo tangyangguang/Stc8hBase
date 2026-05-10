@@ -6,7 +6,8 @@
 
 void main(void)
 {
-    board_init();
+    board_led_init();
+    board_i2c_init();
     (void)stc8h_uart_init(STC8H_UART1);
     stc8h_uart_write_code(STC8H_UART1, "LCD1602 test\r\n");
 

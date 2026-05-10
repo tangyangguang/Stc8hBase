@@ -25,7 +25,7 @@ STC8H_INTERRUPT(timer0_isr, STC8H_VECTOR_TIMER0)
 
 void main(void)
 {
-    board_init();
+    board_led_init();
     (void)stc8h_uart_init(STC8H_UART1);
 
     stc8h_uart_write_code(STC8H_UART1, "Timer0 1ms tick\r\n");

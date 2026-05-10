@@ -30,7 +30,8 @@ void main(void)
 {
     stc8h_u16 value;
 
-    board_init();
+    board_led_init();
+    board_adc_init();
     (void)stc8h_uart_init(STC8H_UART1);
     stc8h_adc_init();
 

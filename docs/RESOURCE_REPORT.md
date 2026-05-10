@@ -1,5 +1,19 @@
 # 资源报告
 
+自动化检查入口：
+
+```sh
+tools/check_examples.sh
+```
+
+该脚本会构建全部 PlatformIO 示例、显式编译 EEPROM 写擦环境、构建 3 个 Makefile 示例，并检查关键示例中不应出现的符号前缀。
+
+最近一次检查：
+
+```text
+2026-05-10：tools/check_examples.sh 通过。
+```
+
 ## 1. `gpio_blink` 示例
 
 路径：
@@ -190,7 +204,7 @@ board/stc8h1k08_tssop20_demo/board_init.c
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 1891 bytes |
+| ROM/EPROM/FLASH | 2017 bytes |
 | Stack start | 0x1c |
 | Internal RAM 边界 | 栈从 0x1c 开始，当前静态/参数/overlay 占用到 0x1b |
 | XDATA/PDATA | XFR 扩展寄存器访问，用于 `P1PU/P3PU/P1IE/P3IE` |
@@ -241,7 +255,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 1827 bytes |
+| ROM/EPROM/FLASH | 1953 bytes |
 | Stack start | 0x1c |
 | Internal RAM 边界 | 栈从 0x1c 开始，当前静态/参数/overlay 占用到 0x1b |
 | XDATA/PDATA | 未分配应用数据 |
@@ -343,7 +357,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 2233 bytes |
+| ROM/EPROM/FLASH | 2423 bytes |
 | Stack start | 0x23 |
 | Internal RAM 边界 | 栈从 0x23 开始，当前静态/参数/overlay 占用到 0x22 |
 | XDATA/PDATA | XFR 扩展寄存器访问，用于 `P1PU/P3PU/P1IE/P3IE` |
@@ -401,7 +415,7 @@ board/stc8h1k08_tssop20_demo/board_init.c
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 2297 bytes |
+| ROM/EPROM/FLASH | 2359 bytes |
 | Stack start | 0x23 |
 | Internal RAM 边界 | 栈从 0x23 开始，当前静态/参数/overlay 占用到 0x22 |
 | XDATA/PDATA | XFR 扩展寄存器访问，用于 `P1PU/P3PU/P1IE/P3IE` |
@@ -482,7 +496,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 4465 bytes |
+| ROM/EPROM/FLASH | 4504 bytes |
 | Stack start | 0x59 |
 | Internal RAM 边界 | 栈从 0x59 开始，当前静态/参数/overlay 占用到 0x58 |
 | XDATA/PDATA | XFR 扩展寄存器访问，用于 `P1PU/P5PU/P1IE/P5IE` 等 |
@@ -551,7 +565,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 1582 bytes |
+| ROM/EPROM/FLASH | 1595 bytes |
 | Stack start | 0x21 |
 | Internal RAM 边界 | 栈从 0x21 开始，当前静态/参数/overlay 占用到 0x20 |
 | XDATA/PDATA | XFR 扩展寄存器访问，用于 `ADCTIM` 和 P3.3 数字输入控制 |
@@ -614,7 +628,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 1473 bytes |
+| ROM/EPROM/FLASH | 1483 bytes |
 | Stack start | 0x21 |
 | Internal RAM 边界 | 栈从 0x21 开始，当前静态/参数/overlay 占用到 0x20 |
 | XDATA/PDATA | 未使用 |
@@ -691,7 +705,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 1694 bytes |
+| ROM/EPROM/FLASH | 1704 bytes |
 | Stack start | 0x25 |
 | Internal RAM 边界 | 栈从 0x25 开始，当前静态/参数/overlay 占用到 0x24 |
 | XDATA/PDATA | 未使用 |
@@ -1130,7 +1144,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 - 验证 STC8H1K08 EEPROM/IAP 读、写、扇区擦除。
 - 默认环境只验证编译和串口提示，不执行 EEPROM 写擦。
-- 写擦环境 `STC8H1K08_write_test` 擦除 `0x0000..0x01FF`，写入 4 字节并读回校验。
+- 写擦环境 `STC8H1K08_write_test` 擦除当前测试扇区 `0x0E00..0x0FFF`，写入 4 字节并读回校验。
 
 资料依据：
 
@@ -1172,7 +1186,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 | Timer | Timer1 由 UART1 初始化使用 |
 | 中断 | IAP 触发窗口临时关闭全局中断，未启用 ISR |
 | UART | UART1 |
-| EEPROM/IAP | 擦除 `0x0000..0x01FF`，写入/读回 `0x0000..0x0003` |
+| EEPROM/IAP | 擦除 `0x0E00..0x0FFF`，写入/读回 `0x0E00..0x0E03` |
 | I2C/LCD1602 | 未使用 |
 | Button/EC11 | 未使用 |
 | ADC | 未使用 |
@@ -1204,9 +1218,10 @@ _stc8h_uart_write_code
 验证状态：
 
 - 已完成 SDCC 编译和资源检查。
+- `platformio.ini` 已设置 `default_envs = STC8H1K08`，普通 `pio run` 和 `pio run -t upload` 只构建/上传默认安全环境；写擦环境必须显式指定 `-e STC8H1K08_write_test`。
 - 默认安全环境可直接烧录，预期输出 `eeprom write disabled`。
-- 已在用户确认测试扇区可擦除后烧录 `STC8H1K08_write_test` 环境。
-- 已确认写擦环境擦除 `0x0000..0x01FF`，写入并读回 `0x0000..0x0003`，串口连续输出 `eeprom ok`。
+- 已在用户确认测试扇区可擦除后烧录旧版 `STC8H1K08_write_test` 环境，旧版地址为 `0x0000..0x01FF`。
+- 当前写擦测试地址已改为最后一个扇区 `0x0E00..0x0FFF`；需要重新写擦实测时必须再次确认。
 
 ## 19. PlatformIO `output_levels` 示例
 

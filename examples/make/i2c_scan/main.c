@@ -26,7 +26,8 @@ void main(void)
     stc8h_u8 addr7;
     stc8h_u8 found;
 
-    board_init();
+    board_led_init();
+    board_i2c_init();
     stc8h_i2c_init();
     (void)stc8h_uart_init(STC8H_UART1);
 

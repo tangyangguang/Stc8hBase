@@ -135,6 +135,7 @@ docs/RESOURCE_REPORT.md
 
 ### 6.2 资源验收
 
+- 自动化入口为 `tools/check_examples.sh`；脚本会构建全部 PlatformIO 示例、显式编译 EEPROM 写擦环境、构建 3 个 Makefile 示例，并检查关键示例中不应出现的符号前缀。
 - 每个示例记录 ROM/code 占用。
 - 每个示例记录 RAM/data/idata/xdata 占用。
 - 每个示例记录 Timer、PWM、UART、I2C、SPI、ADC、中断占用。
