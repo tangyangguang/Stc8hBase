@@ -836,3 +836,46 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 当前示例采用 Timer0 12T 自由运行计数和轮询边沿测量，不启用 INT0 中断。
 - 轮询实现适合作为硬件验证示例；业务项目如需降低 CPU 占用，可在板级捕获层改为外部中断 + Timer 测宽。
 - VS1838B/HS0038 类接收头通常为空闲高电平、mark 低电平，`drv_ir_rx` 按此低有效语义解码。
+
+## 4.25 红外 NEC 中断接收与休眠唤醒 `ir_nec_rx_int_sleep`
+
+目标：
+
+- 验证 P3.2 / INT0 可用上升/下降沿中断捕获红外接收头输出。
+- 验证 INT0 中断 + Timer0 自由运行测宽可驱动 `drv_ir_rx` NEC 解码状态机。
+- 验证接收到红外信号后运行约 3 秒，之后进入休眠，并可由下一次红外信号唤醒。
+
+当前测试接线：
+
+```text
+VS1838B/1838B OUT -> P3.2 / INT0
+VS1838B/1838B VCC -> 3.3V 或模块要求电源
+VS1838B/1838B GND -> GND
+```
+
+烧录：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ir_nec_rx_int_sleep
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+预期：
+
+- 启动后输出 `ir nec rx int sleep P32`。
+- 约 3 秒无红外信号后输出 `sleep`。
+- 休眠后按 NEC 遥控器按键，输出 `wake`，随后输出 `frame addr=0x.. cmd=0x..` 或 `repeat`。
+- 每次唤醒后若约 3 秒内无新的红外信号，应再次输出 `sleep`。
+
+实测：
+
+- 已烧录成功。
+- 串口已读到唤醒和命令输出，例如 `wake`、`frame addr=0x00 cmd=0x44`、`cmd=0x45`、`cmd=0x46`、`repeat`。
+- 已确认约 3 秒空闲后输出 `sleep`，再次按遥控器可唤醒并继续打印命令。
+
+说明：
+
+- STC 官方资料中 P3.2 可作为 INT0；`IT0=0` 为 INT0 上升/下降沿模式；`PCON |= 0x02` 进入休眠，可由 INT0 唤醒。
+- 本示例使用 INT0 捕获边沿，Timer0 仅做 16-bit 12T 自由运行脉宽计时，不启用 Timer0 中断。
+- ISR 中只做边沿时间戳和 NEC 解码状态机喂入，不做 UART 打印；UART 打印在主循环中完成。
