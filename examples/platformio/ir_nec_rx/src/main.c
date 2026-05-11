@@ -1,6 +1,7 @@
 #include "drv_ir_rx.h"
 #include "stc8h_gpio.h"
 #include "stc8h_sfr.h"
+#include "stc8h_timer.h"
 #include "stc8h_uart.h"
 
 #define IR_RX_MASK 0x04u
@@ -11,42 +12,9 @@ static drv_ir_rx_t ir_rx;
 static stc8h_u8 last_feed_level;
 static stc8h_u16 last_feed_width_us;
 
-static stc8h_u16 timer0_read(void)
-{
-    stc8h_u8 high1;
-    stc8h_u8 low;
-    stc8h_u8 high2;
-
-    do {
-        high1 = TH0;
-        low = TL0;
-        high2 = TH0;
-    } while (high1 != high2);
-
-    return (stc8h_u16)(((stc8h_u16)high1 << 8) | low);
-}
-
-static stc8h_u16 timer0_ticks_to_us(stc8h_u16 ticks)
-{
-    return (stc8h_u16)(ticks + (ticks >> 4) + (ticks >> 6) + (ticks >> 7));
-}
-
 static stc8h_u8 ir_rx_level(void)
 {
     return ((P3 & IR_RX_MASK) != 0u) ? 1u : 0u;
-}
-
-static void timer0_init_free_run(void)
-{
-    TR0 = 0;
-    ET0 = 0;
-    TMOD = (stc8h_u8)((TMOD & (stc8h_u8)~0x0Fu) | 0x01u);
-    AUXR &= (stc8h_u8)~0x80u;
-    INTCLKO &= (stc8h_u8)~0x01u;
-    TH0 = 0u;
-    TL0 = 0u;
-    TF0 = 0;
-    TR0 = 1;
 }
 
 static void ir_rx_board_init(void)
@@ -55,7 +23,8 @@ static void ir_rx_board_init(void)
     P3IE |= IR_RX_MASK;
     P3PU |= IR_RX_MASK;
     stc8h_gpio_set_mode(3u, 2u, STC8H_GPIO_MODE_INPUT_ONLY);
-    timer0_init_free_run();
+    (void)stc8h_timer0_init_free_run_12t();
+    stc8h_timer_start(STC8H_TIMER0);
 }
 
 static void uart_write_hex8(stc8h_u8 value)
@@ -138,22 +107,22 @@ void main(void)
 
     last_level = ir_rx_level();
     idle_chunks = 0u;
-    last_ticks = timer0_read();
+    last_ticks = stc8h_timer0_read();
     stc8h_uart_write_code(STC8H_UART1, "ir nec rx P32\r\n");
 
     while (1) {
         level = ir_rx_level();
-        now_ticks = timer0_read();
+        now_ticks = stc8h_timer0_read();
         width_ticks = (stc8h_u16)(now_ticks - last_ticks);
 
         if (level != last_level) {
-            feed_pulse(last_level, timer0_ticks_to_us(width_ticks));
+            feed_pulse(last_level, stc8h_timer0_12t_ticks_to_us(width_ticks));
             last_level = level;
             last_ticks = now_ticks;
             idle_chunks = 0u;
             handle_event();
         } else if (width_ticks > IR_RX_IDLE_TIMEOUT_TICKS) {
-            feed_pulse(last_level, timer0_ticks_to_us(width_ticks));
+            feed_pulse(last_level, stc8h_timer0_12t_ticks_to_us(width_ticks));
             last_ticks = now_ticks;
             ++idle_chunks;
             if (idle_chunks >= IR_RX_HEARTBEAT_CHUNKS) {

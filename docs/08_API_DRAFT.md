@@ -216,6 +216,10 @@ typedef enum {
 } stc8h_timer_id_t;
 
 stc8h_status_t stc8h_timer_init_1ms(stc8h_timer_id_t timer);
+stc8h_status_t stc8h_timer0_init_free_run_12t(void);
+void stc8h_timer0_reset(void);
+stc8h_u16 stc8h_timer0_read(void);
+stc8h_u16 stc8h_timer0_12t_ticks_to_us(stc8h_u16 ticks);
 void stc8h_timer_start(stc8h_timer_id_t timer);
 void stc8h_timer_stop(stc8h_timer_id_t timer);
 void stc8h_timer_enable_interrupt(stc8h_timer_id_t timer);
@@ -225,15 +229,17 @@ void stc8h_timer_clear_flag(stc8h_timer_id_t timer);
 
 取舍：
 
-- 第一版优先满足 Timer0 1ms tick 和简单周期任务。
+- 第一版优先满足 Timer0 1ms tick、Timer0 12T 16-bit free-run 和简单周期任务。
 - 不做通用复杂定时器框架。
-- 默认资源建议：Timer0 用作 1ms tick，Timer2 用于红外脉宽计时或备用载波。
+- 默认资源建议：Timer0 用作 1ms tick 或红外接收脉宽 free-run 计时，Timer2 预留给备用载波或后续需求。
 - UART 波特率相关资源由 `stc8h_uart` 管理，具体是否占用某个 Timer 以 STC8H1K08 手册和实现为准。
 - 具体分配以板级配置为准，未使用模块不初始化对应 Timer。
 - 第一版 ISR 由示例或板级文件绑定。
 - Timer HAL 只提供装载、启动、停止、清标志和必要的计数读取能力。
 - 如果示例提供全局 tick 计数，ISR 向量和全局变量必须在资源声明中列明。
-- 当前实现只初始化 Timer0 1ms tick；Timer1 保留给 UART1，Timer2 预留给红外脉宽测量或备用载波。
+- 当前实现支持 Timer0 1ms tick 和 Timer0 12T 16-bit free-run；Timer1 保留给 UART1，Timer2 暂不封装。
+- `stc8h_timer0_read()` 使用 high-low-high 方式稳定读取 16-bit 计数值，适合在 INT0 边沿 ISR 中计算回绕差值。
+- Timer0 12T tick 到 us 的硬件公式为 `us = ticks * 12 * 1000000 / STC8H_SYSCLK_HZ`。常用 6MHz、11.0592MHz、12MHz 走轻量分支；其他主频才使用通用 32-bit 换算。
 
 ### 3.3 `stc8h_uart`
 
@@ -264,6 +270,7 @@ char stc8h_uart_getc(stc8h_uart_id_t uart);
 - `stc8h_uart_write` 默认接收 RAM 字符串。
 - `stc8h_uart_write_code` 用于 `code` 区固定字符串。
 - UART 初始化使用 `STC8H_UART1_BAUD` 和编译期 reload，不做运行期波特率计算。
+- UART1 当前使用 Timer1 mode0 16-bit auto-reload 作为波特率发生器。11.0592MHz 支持 9600/19200/38400/57600/115200 零误差；6MHz 支持 9600/19200/38400/57600/115200，理论误差约 +0.1603%。
 
 ### 3.4 `stc8h_i2c`
 

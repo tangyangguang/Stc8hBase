@@ -156,3 +156,42 @@ PlatformIO 项目管理更完整，适合多个示例、多个板级配置和自
 12MHz 延时和定时计算更直观，保留为可选配置。
 
 第一版示例默认按 11.0592MHz 组织，同时保留 12MHz 配置选项。
+
+6MHz 可用于低功耗调试配置。UART1 使用 Timer1 1T 波特率发生器时，`STC8H_UART1_BAUD` 可选 9600、19200、38400、57600、115200；这些配置的理论误差约 +0.1603%。
+
+## 8. Timer0 free-run 最小用法
+
+红外接收这类边沿脉宽测量可以使用 Timer0 12T 16-bit free-run：
+
+```c
+#include "stc8h_timer.h"
+
+static stc8h_u16 last_ticks;
+
+void board_timer_init(void)
+{
+    (void)stc8h_timer0_init_free_run_12t();
+    last_ticks = stc8h_timer0_read();
+    stc8h_timer_start(STC8H_TIMER0);
+}
+
+void on_edge(void)
+{
+    stc8h_u16 now_ticks;
+    stc8h_u16 width_ticks;
+    stc8h_u16 width_us;
+
+    now_ticks = stc8h_timer0_read();
+    width_ticks = (stc8h_u16)(now_ticks - last_ticks);
+    width_us = stc8h_timer0_12t_ticks_to_us(width_ticks);
+    last_ticks = now_ticks;
+}
+```
+
+12T free-run 的换算公式是：
+
+```text
+us = ticks * 12 * 1000000 / STC8H_SYSCLK_HZ
+```
+
+在 6MHz 下 1 tick = 2us；在 12MHz 下 1 tick = 1us；在 11.0592MHz 下约 1.085us。示例 `examples/platformio/ir_nec_rx` 和 `examples/platformio/ir_nec_rx_int_sleep` 已使用该 HAL，不再在示例业务层复制 Timer0 寄存器配置。

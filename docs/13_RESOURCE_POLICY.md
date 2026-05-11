@@ -68,8 +68,8 @@ Timer 是紧张资源，必须谨慎分配。
 
 | 资源 | 默认用途 |
 | --- | --- |
-| Timer0 | 1ms 系统 tick、按键/EC11 扫描时间基准 |
-| Timer2 | 红外接收脉宽计时或红外发射备用载波 |
+| Timer0 | 1ms 系统 tick、按键/EC11 扫描时间基准，或 12T free-run 红外接收脉宽计时 |
+| Timer2 | 红外发射备用载波或后续项目备用 |
 
 不允许每个模块私自占用一个 Timer。
 
@@ -80,6 +80,8 @@ UART 波特率相关资源由 UART 模块负责，是否占用 Timer 以 STC8H1K
 如果某个项目不使用软件定时器或红外模块，对应 Timer 不应被初始化。
 
 Timer ISR 默认由示例或板级文件绑定。Timer HAL 不默认占用中断向量。
+
+Timer0 free-run 只初始化硬件计数器，不占用 Timer0 中断；调用方在 GPIO/外部中断边沿中读取 `stc8h_timer0_read()` 并使用 16-bit 回绕差值。
 
 如果某示例提供 1ms 全局 tick，资源报告必须记录：
 
