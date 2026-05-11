@@ -15,6 +15,7 @@ examples/keil_c51/module_compile_check/
 验证入口覆盖当前已实现模块：
 
 - `core/stc8h_delay`
+- `core/stc8h_delay_timer0`
 - `core/stc8h_interrupt`
 - `hal/stc8h_gpio`
 - `hal/stc8h_uart`

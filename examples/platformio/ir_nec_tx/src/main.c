@@ -41,7 +41,7 @@ static stc8h_u8 ir_tx_send_nec(stc8h_u8 address, stc8h_u8 command)
         } else {
             ir_tx_carrier_off();
         }
-        stc8h_delay_us(duration_us);
+        stc8h_delay_timer0_1t_us(duration_us);
     }
 }
 
@@ -49,6 +49,7 @@ static void ir_tx_board_init(void)
 {
     stc8h_gpio_set_mode(1u, 0u, STC8H_GPIO_MODE_PUSH_PULL);
     P1 &= (stc8h_u8)~0x01u;
+    (void)stc8h_delay_timer0_1t_init();
     (void)stc8h_pwm_init(IR_TX_PWM_CHANNEL, IR_TX_PWM_PERIOD);
     (void)stc8h_pwm_set_duty(IR_TX_PWM_CHANNEL, 0u);
     ir_tx_carrier_off();

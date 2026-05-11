@@ -195,3 +195,25 @@ us = ticks * 12 * 1000000 / STC8H_SYSCLK_HZ
 ```
 
 在 6MHz 下 1 tick = 2us；在 12MHz 下 1 tick = 1us；在 11.0592MHz 下约 1.085us。示例 `examples/platformio/ir_nec_rx` 和 `examples/platformio/ir_nec_rx_int_sleep` 已使用该 HAL，不再在示例业务层复制 Timer0 寄存器配置。
+
+## 9. Timer0 1T 微秒级阻塞延时
+
+NEC 红外发射这类协议时序不要使用粗略 C 空循环。需要 562us、1687us、2250us、4500us、9000us 这类码元时，使用 Timer0 1T 延时：
+
+```c
+#include "stc8h_delay.h"
+
+void board_ir_tx_init(void)
+{
+    (void)stc8h_delay_timer0_1t_init();
+}
+
+void send_mark(void)
+{
+    /* 打开 38kHz 载波 */
+    stc8h_delay_timer0_1t_us(562u);
+    /* 关闭 38kHz 载波 */
+}
+```
+
+该接口会占用 Timer0，并把 Timer0 配置为 1T 16-bit non-auto-reload，不启用中断。已经使用 Timer0 free-run 接收红外、1ms tick 或其他计时功能的项目，不能同时使用这个阻塞延时；需要在板级资源表中明确二选一。

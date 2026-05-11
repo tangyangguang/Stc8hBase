@@ -24,7 +24,7 @@ Core 模块定义编译器兼容、通用类型和极小的芯片级辅助能力
 | `stc8h_compiler` | 编译器关键字和兼容宏 |
 | `stc8h_types` | 固定宽度类型和通用状态值 |
 | `stc8h_config` | 项目级编译期配置 |
-| `stc8h_delay` | 忙等延时辅助 |
+| `stc8h_delay` | 粗略忙等延时和 Timer0 1T 微秒级阻塞延时 |
 | `stc8h_interrupt` | 小型中断开关辅助 |
 
 Core 必须保持很小，不能演变成框架。

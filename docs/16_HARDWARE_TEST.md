@@ -756,12 +756,49 @@ ir nec ok
 - 后续真实硬件发射需要红外 LED 外接三极管或 MOS 管驱动，并由板级发送层控制 38kHz 载波。
 - repeat 自检覆盖 `drv_ir_tx_nec_repeat_begin()` 输出的 9ms mark、2.25ms space、562us mark。
 
-## 4.23 红外 NEC 发射 `ir_nec_tx`
+## 4.23 微秒级延时探针 `delay_us_probe`
+
+目标：
+
+- 验证 `stc8h_delay_timer0_1t_us()` 可输出 NEC 关键码元长度。
+- 验证 562us、1687us、2250us、4500us、9000us 在逻辑分析仪上落入 NEC 可接受范围。
+
+当前测试接线：
+
+```text
+逻辑分析仪 CH0 -> P1.0
+GND            -> GND
+```
+
+烧录：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/delay_us_probe
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+预期：
+
+- 串口输出 `delay us probe P10`。
+- P1.0 循环输出 562us、1687us、2250us、4500us、9000us 高脉冲，脉冲之间约 2ms 低电平间隔。
+
+实测：
+
+- 待在 STC8H1K08 + 逻辑分析仪上补充。
+
+说明：
+
+- 本示例会把 Timer0 配置为 1T 16-bit non-auto-reload，并由阻塞延时独占 Timer0。
+- 本示例只验证延时，不验证 38kHz PWM 载波。
+
+## 4.24 红外 NEC 发射 `ir_nec_tx`
 
 目标：
 
 - 验证 P1.0 / PWMA channel 1 能输出红外发射所需约 38kHz 载波。
 - 验证 `drv_ir_tx` 的 NEC `mark/space` 序列可以驱动板级 PWM 发射层。
+- 验证 `mark/space` 持续时间使用 Timer0 1T 硬件延时，而不是粗略 C 空循环。
 
 当前测试接线：
 
@@ -783,6 +820,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 串口输出 `ir nec tx P10`，随后每约 1 秒输出 `ir tx ok`。
 - 示波器在 P1.0 可观察到 NEC 脉冲包络。
 - 放大到载波细节后，P1.0 mark 段内应为约 38kHz PWM。
+- 常见 NEC 接收端应能解出配置的地址和命令，不应固定读成异常码。
 
 实测：
 
@@ -796,7 +834,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 每约 1 秒发送一次 NEC `address=0x00`、`command=0x45`。
 - 当前只确认发射载波和发送程序运行；完整端到端遥控效果需接收设备或 VS1838B/HS0038 接收头验证。
 
-## 4.24 红外 NEC 接收 `ir_nec_rx`
+## 4.25 红外 NEC 接收 `ir_nec_rx`
 
 目标：
 
@@ -840,7 +878,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 轮询实现适合作为硬件验证示例；业务项目如需降低 CPU 占用，可在板级捕获层改为 INT0 下降沿中断 + Timer 测宽。
 - VS1838B/HS0038 类接收头通常为空闲高电平、mark 低电平，`drv_ir_rx` 按此低有效语义解码。
 
-## 4.25 红外 NEC 中断接收与休眠唤醒 `ir_nec_rx_int_sleep`
+## 4.26 红外 NEC 中断接收与休眠唤醒 `ir_nec_rx_int_sleep`
 
 目标：
 
@@ -884,7 +922,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - STC 官方资料也列出 `IT0=0` 上升/下降沿模式，但本示例不依赖该模式；红外接收使用下降沿到下降沿间隔解码，避免一帧被拆成多个片段。
 - ISR 中只做下降沿时间戳和 NEC 解码状态机喂入，不做 UART 打印；UART 打印在主循环中完成。
 
-## 4.26 WDT 受控复位测试 `wdt_reset_test`
+## 4.27 WDT 受控复位测试 `wdt_reset_test`
 
 目标：
 

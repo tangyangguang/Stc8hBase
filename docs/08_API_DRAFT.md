@@ -142,13 +142,17 @@ typedef enum {
 ```c
 void stc8h_delay_us(stc8h_u16 us);
 void stc8h_delay_ms(stc8h_u16 ms);
+stc8h_status_t stc8h_delay_timer0_1t_init(void);
+void stc8h_delay_timer0_1t_us(stc8h_u16 us);
 ```
 
 实现要求：
 
 - 基于 `STC8H_SYSCLK_HZ`。
-- 以小代码体积和可预期为主。
-- 延时精度以外设驱动够用为目标，不追求计量级精度。
+- `stc8h_delay_us()` / `stc8h_delay_ms()` 是低成本粗略延时，适合 LCD、I2C 等容差较大的外设等待，不用于红外 NEC 这类协议码元。
+- `stc8h_delay_timer0_1t_init()` 显式占用 Timer0，配置为 1T 16-bit non-auto-reload，不启用 Timer0 中断。
+- `stc8h_delay_timer0_1t_us()` 使用 Timer0 溢出等待，面向协议时序；当前按 6MHz、11.0592MHz、12MHz 做编译期换算，长延时自动拆成短片段。
+- 使用 Timer0 1T 精确延时时，应用不得同时把 Timer0 用作 1ms tick 或红外接收 free-run。
 
 ### 2.5 `stc8h_interrupt`
 

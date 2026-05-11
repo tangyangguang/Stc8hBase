@@ -1585,6 +1585,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 - 使用 `drv_ir_tx` 生成 NEC `mark/space` 序列。
 - 使用 P1.0 / PWMA channel 1 输出约 38kHz 红外发射载波。
+- 使用 Timer0 1T 阻塞延时控制 NEC `mark/space` 码元长度。
 - 串口启动后输出 `ir nec tx P10`，随后每约 1 秒输出 `ir tx ok`。
 
 资料依据：
@@ -1596,17 +1597,18 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 - 板级发射层使用已有 `stc8h_pwm` HAL，不新增 Timer 载波实现。
 - mark 时打开 PWM，space 时关闭 PWM 并把 P1.0 拉低为空闲电平。
+- NEC 码元持续时间使用 `stc8h_delay_timer0_1t_us()`，不使用粗略 C 空循环。
 - 当前示例只验证发射，不做接收闭环。
 
 资源占用：
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 2569 bytes |
+| ROM/EPROM/FLASH | 3170 bytes |
 | Stack start | 0x2a |
 | Internal RAM 边界 | 栈从 0x2a 开始，当前静态/参数/overlay 占用到 0x29 |
 | XDATA/PDATA | 未使用 |
-| Timer | Timer1 由 UART1 初始化使用；PWMA 自身计数器用于 38kHz 载波 |
+| Timer | Timer0 1T 阻塞延时用于 NEC 码元；Timer1 由 UART1 初始化使用；PWMA 自身计数器用于 38kHz 载波 |
 | 中断 | 未使用 |
 | UART | UART1 |
 | GPIO | P1.0 空闲电平控制 |
@@ -1622,6 +1624,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 ```text
 .pio/build/STC8H1K08/src/drv_ir_tx_wrap.rel
 .pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_delay_timer0_wrap.rel
 .pio/build/STC8H1K08/src/stc8h_delay_wrap.rel
 .pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
 .pio/build/STC8H1K08/src/stc8h_pwm_wrap.rel
@@ -1633,6 +1636,8 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 ```text
 _drv_ir_tx_nec_begin
 _drv_ir_tx_nec_next
+_stc8h_delay_timer0_1t_init
+_stc8h_delay_timer0_1t_us
 _stc8h_pwm_init
 _stc8h_pwm_set_duty
 _stc8h_pwm_enable
@@ -1643,13 +1648,14 @@ _stc8h_uart_write_code
 
 未使用模块检查：
 
-- 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR RX、utils 或除法/取模库符号。
+- 已检查 PlatformIO 构建产物，未发现 `stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR RX、utils 或除法/取模库符号。
 
 验证状态：
 
 - 已完成 SDCC 编译和资源检查。
 - 已烧录实测，串口 115200 读到 `ir tx ok`。
 - 已用示波器在 P1.0 观察到约 38.5kHz 发射载波。
+- 当前 Timer0 1T 码元延时版本已完成 SDCC 编译；需重新烧录并用接收端确认地址/命令不再固定解为异常码。
 
 ## 24. PlatformIO `ir_nec_rx` 示例
 
@@ -1970,3 +1976,67 @@ _stc8h_uart_write_code
 - 已完成 SDCC 编译和资源检查。
 - 已烧录实测。
 - 串口已读到 `stop feeding, wait reset` 后自动重启，并在重启后连续输出 `boot reason: wdt`。
+
+## 28. PlatformIO `delay_us_probe` 示例
+
+路径：
+
+```text
+examples/platformio/delay_us_probe
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 初始化 UART1。
+- 将 P1.0 配置为推挽输出。
+- 使用 Timer0 1T 阻塞延时循环输出 562us、1687us、2250us、4500us、9000us 高脉冲。
+
+设计取舍：
+
+- 本示例专门用于逻辑分析仪测量 NEC 关键码元长度。
+- Timer0 由 `stc8h_delay_timer0_1t_init()` 独占，不启用 Timer0 中断。
+- 本示例不验证 38kHz PWM 载波。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 1557 bytes |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer0 1T 阻塞延时；Timer1 由 UART1 初始化使用 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| GPIO | P1.0 输出测试脉冲 |
+| PWM/IR/I2C/LCD1602/Button/EC11/ADC/SPI/EEPROM/TM1637/WDT/Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_delay_timer0_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_delay_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_stc8h_delay_timer0_1t_init
+_stc8h_delay_timer0_1t_us
+_stc8h_gpio_set_mode
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 已确认 `core/stc8h_delay_timer0.c` 可在 `STC8H_SYSCLK_HZ=6000000UL` 和 `12000000UL` 下单独编译通过。
+- 尚未烧录到 STC8H1K08 用逻辑分析仪实测。

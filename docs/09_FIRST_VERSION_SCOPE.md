@@ -28,6 +28,7 @@
 - `core/stc8h_types`
 - `core/stc8h_config`
 - `core/stc8h_delay`
+- `core/stc8h_delay_timer0`
 - `core/stc8h_interrupt`
 - `hal/stc8h_gpio`
 - `hal/stc8h_uart`
@@ -68,6 +69,7 @@ Core：
 - `core/stc8h_types`
 - `core/stc8h_config`
 - `core/stc8h_delay`
+- `core/stc8h_delay_timer0`
 - `core/stc8h_interrupt`
 
 HAL：
