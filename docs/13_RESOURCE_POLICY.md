@@ -154,6 +154,8 @@ EEPROM/IAP 触发窗口会临时关闭全局中断。写擦期间不得同时执
 
 `drv_ir_rx` 是 NEC 解码状态机，不直接占用 GPIO、Timer 或中断。
 
+`drv_ir_rx` 只保留 1 个未读事件，不分配队列。应用未调用 `drv_ir_rx_get_event()` 前，新事件会被丢弃，避免已解出的 `FRAME` 被后续 `REPEAT` 或 `ERROR` 覆盖。
+
 真实硬件接收默认使用：
 
 ```text
@@ -173,7 +175,9 @@ NEC
 - 小状态机 RAM。
 - 不保存完整原始波形数组。
 
-GPIO、中断和 Timer 属于板级捕获层资源。板级捕获层测得 `level + width_us` 后调用 `drv_ir_rx_feed_pulse()`，资源占用必须在具体示例资源报告中记录。
+GPIO、中断和 Timer 属于板级捕获层资源。板级捕获层可以测得 `level + width_us` 后调用 `drv_ir_rx_feed_pulse()`；如果 INT0 双边沿捕获在目标硬件上不稳定，也可以只捕获 NEC 下降沿间隔并调用 `drv_ir_rx_feed_nec_falling_interval()`。
+
+P3.2/INT0 红外低功耗示例默认使用下降沿中断 + Timer0 free-run：下降沿间隔约 13.5ms 为普通帧引导，约 1.125ms/2.25ms 为 bit0/bit1，约 11.25ms 为 repeat。10ms..12.5ms 首间隔不会立即发布 repeat；若后续出现 bit 间隔则优先解完整 frame，空闲超时调用 `drv_ir_rx_finish_nec_falling_interval()` 后才确认单独 repeat。该路径不保存原始波形数组，也不依赖 INT0 双边沿行为。
 
 如果实际引脚无法使用外部中断，允许使用固定周期采样，但必须说明采样周期、CPU 占用和可靠性限制。
 
@@ -193,7 +197,7 @@ GPIO、中断和 Timer 属于板级捕获层资源。板级捕获层测得 `leve
 
 红外发射默认只在发送期间占用载波资源，发送结束后关闭 PWM/Timer 输出。
 
-协议编码层输出 `DRV_IR_TX_MARK` 时打开载波，输出 `DRV_IR_TX_SPACE` 时关闭载波。载波生成和红外 LED 驱动属于板级发送层资源，不能由协议层隐藏初始化。
+协议编码层输出 `DRV_IR_TX_MARK` 时打开载波，输出 `DRV_IR_TX_SPACE` 时关闭载波。普通帧和标准 NEC repeat 帧都由同一个 `drv_ir_tx_nec_next()` 迭代输出；repeat 帧为 9ms mark、2.25ms space、562us mark。载波生成和红外 LED 驱动属于板级发送层资源，不能由协议层隐藏初始化。
 
 ### 4.10 LCD1602
 

@@ -432,7 +432,10 @@ void stc8h_wdt_clear_reset_flag(void);
 ```c
 typedef enum {
     STC8H_EXTI_INT0 = 0,
-    STC8H_EXTI_INT1 = 1
+    STC8H_EXTI_INT1 = 1,
+    STC8H_EXTI_INT2 = 2,
+    STC8H_EXTI_INT3 = 3,
+    STC8H_EXTI_INT4 = 4
 } stc8h_exti_line_t;
 
 typedef enum {
@@ -448,10 +451,13 @@ void stc8h_exti_clear_flag(stc8h_exti_line_t line);
 
 取舍：
 
-- 第一版只封装已核实并已在示例中使用的 INT0/INT1。
+- 封装已核实的 INT0-INT4。
 - 不做 ISR 注册表；ISR 函数仍由板级或应用代码用 `STC8H_INTERRUPT` 显式定义。
 - `BOTH_EDGES` 对应官方资料中的上升/下降沿模式，`FALLING_EDGE` 对应下降沿模式。
-- INT2/INT3/INT4 等扩展中断需要重新核对目标封装和寄存器后再按需加入。
+- `stc8h_exti_configure()` 只接受明确支持的 mode，未知 mode 返回 `STC8H_ERROR`，避免误配置为默认触发方式。
+- NEC 红外接收不依赖 `BOTH_EDGES`；P3.2/INT0 示例使用 `FALLING_EDGE` 加下降沿间隔解码。
+- STC8H1K08 的 INT2(P3.6)、INT3(P3.7)、INT4(P3.0) 只支持下降沿；对这三路配置 `BOTH_EDGES` 返回 `STC8H_ERROR`。
+- INT2/INT3/INT4 使能位在 `INTCLKO` bit4/5/6，请求标志在 `AUXINTIF` bit4/5/6；中断向量分别为 10、11、16。
 
 ### 3.11 `stc8h_power`
 
@@ -733,12 +739,14 @@ typedef struct {
 } drv_ir_tx_nec_t;
 
 void drv_ir_tx_nec_begin(drv_ir_tx_nec_t *tx, stc8h_u8 address, stc8h_u8 command);
+void drv_ir_tx_nec_repeat_begin(drv_ir_tx_nec_t *tx);
 drv_ir_tx_level_t drv_ir_tx_nec_next(drv_ir_tx_nec_t *tx, stc8h_u16 *duration_us);
 ```
 
 取舍：
 
 - 第一版只支持 NEC 普通 8-bit 地址格式：`address`、`~address`、`command`、`~command`。
+- repeat 帧输出标准 NEC repeat 时序：9ms mark、2.25ms space、562us mark。
 - `DRV_IR_TX_MARK` 表示需要输出 38kHz 载波，`DRV_IR_TX_SPACE` 表示关闭载波保持空闲。
 - 38kHz 载波由板级发送层选择 PWM、Timer 或极简软件调制实现，并在资源报告中记录。
 - 本协议编码层本身不占用 GPIO、PWM、Timer 或中断。
@@ -779,6 +787,8 @@ typedef struct {
 void drv_ir_rx_init(drv_ir_rx_t *rx);
 void drv_ir_rx_reset(drv_ir_rx_t *rx);
 void drv_ir_rx_feed_pulse(drv_ir_rx_t *rx, stc8h_u8 level, stc8h_u16 width_us);
+void drv_ir_rx_feed_nec_falling_interval(drv_ir_rx_t *rx, stc8h_u16 width_us);
+void drv_ir_rx_finish_nec_falling_interval(drv_ir_rx_t *rx);
 drv_ir_rx_event_t drv_ir_rx_get_event(drv_ir_rx_t *rx, drv_ir_rx_frame_t *frame);
 ```
 
@@ -790,8 +800,11 @@ drv_ir_rx_event_t drv_ir_rx_get_event(drv_ir_rx_t *rx, drv_ir_rx_frame_t *frame)
 - 第一版优先低 RAM 状态机，不保存完整原始波形数组。
 - 第一版只支持 NEC 普通 8-bit 地址格式，不支持扩展 16-bit 地址格式。
 - 不做学习型遥控码库，不做多协议自动识别，但保留独立模块边界，方便以后新增协议实现。
+- 事件采用单槽锁存策略，不分配事件队列；`event != NONE` 时后续 `FRAME`/`REPEAT`/`ERROR` 事件丢弃，直到应用调用 `drv_ir_rx_get_event()` 清空。这样已解出的 `FRAME` 不会被紧随其后的 repeat 或 error 覆盖。
 - 引脚映射和中断/定时器资源通过板级配置指定，不由 `drv_ir_rx` 隐式占用。
 - ISR/Timer/采样代码属于板级绑定层，负责测量边沿间隔并调用 `drv_ir_rx_feed_pulse(rx, level, width_us)`。
+- 如果硬件捕获层只稳定提供 NEC 下降沿到下降沿间隔，可以调用 `drv_ir_rx_feed_nec_falling_interval(rx, width_us)`；普通帧引导约 13.5ms，bit0 约 1.125ms，bit1 约 2.25ms，repeat 约 11.25ms。
+- 下降沿间隔解码中，10ms..12.5ms 的首间隔先作为候选 repeat 保留；若后续跟随 bit0/bit1 间隔，则优先按完整 frame 解码。应用在空闲超时时调用 `drv_ir_rx_finish_nec_falling_interval()`，此时仍未转入数据位的候选 repeat 才发布 `REPEAT`。
 - NEC 解码状态机不直接访问寄存器。
 
 ## 5. Utils

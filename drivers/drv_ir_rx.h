@@ -27,6 +27,8 @@ typedef struct {
 void drv_ir_rx_init(drv_ir_rx_t *rx);
 void drv_ir_rx_reset(drv_ir_rx_t *rx);
 void drv_ir_rx_feed_pulse(drv_ir_rx_t *rx, stc8h_u8 level, stc8h_u16 width_us);
+void drv_ir_rx_feed_nec_falling_interval(drv_ir_rx_t *rx, stc8h_u16 width_us);
+void drv_ir_rx_finish_nec_falling_interval(drv_ir_rx_t *rx);
 drv_ir_rx_event_t drv_ir_rx_get_event(drv_ir_rx_t *rx, drv_ir_rx_frame_t *frame);
 
 #endif

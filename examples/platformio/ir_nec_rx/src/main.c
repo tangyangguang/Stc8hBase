@@ -9,7 +9,6 @@
 #define IR_RX_HEARTBEAT_CHUNKS 32u
 
 static drv_ir_rx_t ir_rx;
-static stc8h_u8 last_feed_level;
 static stc8h_u16 last_feed_width_us;
 
 static stc8h_u8 ir_rx_level(void)
@@ -77,19 +76,16 @@ static void handle_event(void)
     } else if (event == DRV_IR_RX_EVENT_REPEAT) {
         stc8h_uart_write_code(STC8H_UART1, "repeat\r\n");
     } else if (event == DRV_IR_RX_EVENT_ERROR) {
-        stc8h_uart_write_code(STC8H_UART1, "error level=");
-        stc8h_uart_putc(STC8H_UART1, last_feed_level ? '1' : '0');
-        stc8h_uart_write_code(STC8H_UART1, " width=");
+        stc8h_uart_write_code(STC8H_UART1, "error interval=");
         uart_write_u16(last_feed_width_us);
         stc8h_uart_write_code(STC8H_UART1, "us\r\n");
     }
 }
 
-static void feed_pulse(stc8h_u8 level, stc8h_u16 width_us)
+static void feed_falling_interval(stc8h_u16 width_us)
 {
-    last_feed_level = level;
     last_feed_width_us = width_us;
-    drv_ir_rx_feed_pulse(&ir_rx, level, width_us);
+    drv_ir_rx_feed_nec_falling_interval(&ir_rx, width_us);
 }
 
 void main(void)
@@ -97,7 +93,8 @@ void main(void)
     stc8h_u8 last_level;
     stc8h_u8 level;
     stc8h_u8 idle_chunks;
-    stc8h_u16 last_ticks;
+    stc8h_u8 falling_seen;
+    stc8h_u16 last_falling_ticks;
     stc8h_u16 now_ticks;
     stc8h_u16 width_ticks;
 
@@ -107,23 +104,31 @@ void main(void)
 
     last_level = ir_rx_level();
     idle_chunks = 0u;
-    last_ticks = stc8h_timer0_read();
+    falling_seen = 0u;
+    last_falling_ticks = stc8h_timer0_read();
     stc8h_uart_write_code(STC8H_UART1, "ir nec rx P32\r\n");
 
     while (1) {
         level = ir_rx_level();
         now_ticks = stc8h_timer0_read();
-        width_ticks = (stc8h_u16)(now_ticks - last_ticks);
+        width_ticks = (stc8h_u16)(now_ticks - last_falling_ticks);
 
-        if (level != last_level) {
-            feed_pulse(last_level, stc8h_timer0_12t_ticks_to_us(width_ticks));
+        if ((last_level != 0u) && (level == 0u)) {
+            if (falling_seen != 0u) {
+                feed_falling_interval(stc8h_timer0_12t_ticks_to_us(width_ticks));
+                handle_event();
+            }
+            falling_seen = 1u;
+            last_falling_ticks = now_ticks;
             last_level = level;
-            last_ticks = now_ticks;
             idle_chunks = 0u;
-            handle_event();
+        } else if (level != last_level) {
+            last_level = level;
         } else if (width_ticks > IR_RX_IDLE_TIMEOUT_TICKS) {
-            feed_pulse(last_level, stc8h_timer0_12t_ticks_to_us(width_ticks));
-            last_ticks = now_ticks;
+            drv_ir_rx_finish_nec_falling_interval(&ir_rx);
+            handle_event();
+            falling_seen = 0u;
+            last_falling_ticks = now_ticks;
             ++idle_chunks;
             if (idle_chunks >= IR_RX_HEARTBEAT_CHUNKS) {
                 idle_chunks = 0u;
@@ -131,7 +136,6 @@ void main(void)
                 stc8h_uart_putc(STC8H_UART1, last_level ? '1' : '0');
                 stc8h_uart_write_code(STC8H_UART1, "\r\n");
             }
-            handle_event();
         }
     }
 }

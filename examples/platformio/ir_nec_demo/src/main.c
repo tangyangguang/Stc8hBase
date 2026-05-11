@@ -24,17 +24,54 @@ static stc8h_u8 feed_tx_to_rx(drv_ir_rx_t *rx, stc8h_u8 address, stc8h_u8 comman
     return count;
 }
 
+static stc8h_u8 feed_tx_repeat_to_rx(drv_ir_rx_t *rx)
+{
+    drv_ir_tx_nec_t tx;
+    drv_ir_tx_level_t level;
+    stc8h_u16 duration;
+    stc8h_u8 count;
+
+    drv_ir_tx_nec_repeat_begin(&tx);
+    count = 0u;
+    while (1) {
+        level = drv_ir_tx_nec_next(&tx, &duration);
+        if (level == DRV_IR_TX_DONE) {
+            break;
+        }
+        drv_ir_rx_feed_pulse(rx, (level == DRV_IR_TX_MARK) ? 0u : 1u, duration);
+        ++count;
+    }
+
+    return count;
+}
+
+static void feed_falling_frame(drv_ir_rx_t *rx, stc8h_u16 lead_us, stc8h_u32 raw)
+{
+    stc8h_u8 i;
+
+    drv_ir_rx_feed_nec_falling_interval(rx, lead_us);
+    for (i = 0u; i < 32u; ++i) {
+        drv_ir_rx_feed_nec_falling_interval(rx, ((raw & ((stc8h_u32)1u << i)) == 0u) ? 1125u : 2250u);
+    }
+}
+
 static stc8h_u8 test_nec(void)
 {
     drv_ir_rx_t rx;
     drv_ir_rx_frame_t frame;
     drv_ir_rx_event_t event;
+    stc8h_u32 raw;
     stc8h_u8 count;
+    stc8h_u8 repeat_count;
 
     drv_ir_rx_init(&rx);
     count = feed_tx_to_rx(&rx, 0x10u, 0xEFu);
+    repeat_count = feed_tx_repeat_to_rx(&rx);
     event = drv_ir_rx_get_event(&rx, &frame);
     if (count != 67u) {
+        return 0u;
+    }
+    if (repeat_count != 3u) {
         return 0u;
     }
     if (event != DRV_IR_RX_EVENT_FRAME) {
@@ -43,9 +80,15 @@ static stc8h_u8 test_nec(void)
     if ((frame.address != 0x10u) || (frame.command != 0xEFu)) {
         return 0u;
     }
+    event = drv_ir_rx_get_event(&rx, 0);
+    if (event != DRV_IR_RX_EVENT_NONE) {
+        return 0u;
+    }
 
-    drv_ir_rx_feed_pulse(&rx, 0u, 9000u);
-    drv_ir_rx_feed_pulse(&rx, 1u, 2250u);
+    repeat_count = feed_tx_repeat_to_rx(&rx);
+    if (repeat_count != 3u) {
+        return 0u;
+    }
     event = drv_ir_rx_get_event(&rx, 0);
     if (event != DRV_IR_RX_EVENT_REPEAT) {
         return 0u;
@@ -56,6 +99,57 @@ static stc8h_u8 test_nec(void)
     drv_ir_rx_feed_pulse(&rx, 0u, 2000u);
     event = drv_ir_rx_get_event(&rx, 0);
     if (event != DRV_IR_RX_EVENT_ERROR) {
+        return 0u;
+    }
+
+    drv_ir_rx_reset(&rx);
+    raw = 0x10EFEF10UL;
+    feed_falling_frame(&rx, 12314u, raw);
+    event = drv_ir_rx_get_event(&rx, &frame);
+    if (event != DRV_IR_RX_EVENT_FRAME) {
+        return 0u;
+    }
+    if ((frame.address != 0x10u) || (frame.command != 0xEFu)) {
+        return 0u;
+    }
+
+    drv_ir_rx_reset(&rx);
+    feed_falling_frame(&rx, 11154u, raw);
+    event = drv_ir_rx_get_event(&rx, &frame);
+    if (event != DRV_IR_RX_EVENT_FRAME) {
+        return 0u;
+    }
+    if ((frame.address != 0x10u) || (frame.command != 0xEFu)) {
+        return 0u;
+    }
+
+    drv_ir_rx_reset(&rx);
+    feed_falling_frame(&rx, 13454u, raw);
+    drv_ir_rx_feed_nec_falling_interval(&rx, 11250u);
+    event = drv_ir_rx_get_event(&rx, &frame);
+    if (event != DRV_IR_RX_EVENT_FRAME) {
+        return 0u;
+    }
+    if ((frame.address != 0x10u) || (frame.command != 0xEFu)) {
+        return 0u;
+    }
+    event = drv_ir_rx_get_event(&rx, 0);
+    if (event != DRV_IR_RX_EVENT_NONE) {
+        return 0u;
+    }
+
+    drv_ir_rx_feed_nec_falling_interval(&rx, 11250u);
+    drv_ir_rx_finish_nec_falling_interval(&rx);
+    event = drv_ir_rx_get_event(&rx, 0);
+    if (event != DRV_IR_RX_EVENT_REPEAT) {
+        return 0u;
+    }
+
+    drv_ir_rx_reset(&rx);
+    drv_ir_rx_feed_nec_falling_interval(&rx, 11152u);
+    drv_ir_rx_finish_nec_falling_interval(&rx);
+    event = drv_ir_rx_get_event(&rx, 0);
+    if (event != DRV_IR_RX_EVENT_REPEAT) {
         return 0u;
     }
 

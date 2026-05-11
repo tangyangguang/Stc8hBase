@@ -15,6 +15,7 @@ typedef struct {
 } drv_ir_tx_nec_t;
 
 void drv_ir_tx_nec_begin(drv_ir_tx_nec_t *tx, stc8h_u8 address, stc8h_u8 command);
+void drv_ir_tx_nec_repeat_begin(drv_ir_tx_nec_t *tx);
 drv_ir_tx_level_t drv_ir_tx_nec_next(drv_ir_tx_nec_t *tx, stc8h_u16 *duration_us);
 
 #endif

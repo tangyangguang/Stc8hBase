@@ -82,13 +82,15 @@
 - 已归档 Infineon 官方红外遥控应用笔记，用于核对 NEC 协议帧结构、重复码和脉宽事实。
 - 已新增 `drv_ir_tx` NEC `mark/space` 编码器和 `drv_ir_rx` NEC 解码状态机。
 - 已新增 PlatformIO `ir_nec_demo` 协议自检示例，不接外部元件，验证普通 NEC 帧、重复码和异常脉宽事件。
+- `drv_ir_rx` 事件输出采用单槽锁存策略；`ir_nec_demo` 已覆盖 frame 后紧跟 repeat 时首次 `get_event()` 仍返回 frame。
+- `drv_ir_rx` 下降沿间隔解码已改为 frame 优先：10ms..12.5ms 首间隔先作为候选 repeat，后续若跟随 32bit 数据则输出 frame；单独 repeat 由空闲超时 `drv_ir_rx_finish_nec_falling_interval()` 确认。
 - 已烧录实测 `ir_nec_demo`，串口 115200 可读到连续 `ir nec ok`。
 - 已将 `ir_nec_demo` 输出频率降为约 1 秒一次并复烧确认，串口 115200 在约 4 秒内读到 2 行 `ir nec ok`。
 - 已新增 PlatformIO `ir_nec_tx` 发射硬件示例，使用 P1.0 / PWMA channel 1 输出约 38kHz 载波。
 - 已烧录实测 `ir_nec_tx`，串口读到 `ir tx ok`，示波器在 P1.0 观察到约 38.5kHz 发射载波。
 - 已新增 PlatformIO `ir_nec_rx` 接收硬件示例，当前接线为 VS1838B/1838B 输出接 P3.2。
 - 已烧录实测 `ir_nec_rx`，确认 P3.2 空闲电平为高，普通 NEC 帧可解出 `addr/cmd`，长按可输出 `repeat`。
-- 已新增并烧录实测 `ir_nec_rx_int_sleep` 中断接收与休眠唤醒示例，P3.2/INT0 可唤醒，串口可打印 `wake`、NEC `addr/cmd` 和 `repeat`，空闲约 3 秒后再次休眠。
+- 已新增并烧录实测 `ir_nec_rx_int_sleep` 中断接收与休眠唤醒示例，P3.2/INT0 可唤醒，串口可打印 `wake`、NEC `addr/cmd` 和 `repeat`，空闲约 3 秒后再次休眠。当前代码改为 INT0 下降沿间隔解码，避免依赖双边沿捕获。
 - 已新增 Keil C51 模块编译验证入口 `examples/keil_c51/module_compile_check/`。
 - Keil C51 实际编译验证：本机无 Keil 工具，需在 Windows + Keil C51 环境运行 `build_c51.bat`。
 - 已按当前临时接线 DIO/SDA=P3.2、CLK=P1.7 烧录实测 `tm1637_number`，确认依次显示 `8888`、`0123`、`4567`，随后 `0000` 起递增。

@@ -716,6 +716,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 目标：
 
 - 验证 `drv_ir_tx` NEC 编码器输出的 `mark/space` 时序数量。
+- 验证 `drv_ir_tx` 标准 NEC repeat 序列可被 `drv_ir_rx` 识别为重复码事件。
 - 验证 `drv_ir_rx` NEC 解码状态机可识别普通帧、重复码和异常脉宽。
 - 验证协议层不占用 GPIO、Timer、PWM 或中断。
 
@@ -753,6 +754,7 @@ ir nec ok
 - 本示例是协议自检，不验证 38kHz 载波和红外接收头硬件。
 - 后续真实硬件接收需要接 VS1838B/HS0038，并由板级捕获层测量边沿间隔。
 - 后续真实硬件发射需要红外 LED 外接三极管或 MOS 管驱动，并由板级发送层控制 38kHz 载波。
+- repeat 自检覆盖 `drv_ir_tx_nec_repeat_begin()` 输出的 9ms mark、2.25ms space、562us mark。
 
 ## 4.23 红外 NEC 发射 `ir_nec_tx`
 
@@ -799,7 +801,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 目标：
 
 - 验证 VS1838B/1838B 红外接收头输出可由 P3.2 读取。
-- 验证 Timer0 自由运行计数 + 轮询边沿测量可驱动 `drv_ir_rx` NEC 解码状态机。
+- 验证 Timer0 自由运行计数 + 轮询下降沿间隔测量可驱动 `drv_ir_rx` NEC 解码状态机。
 - 验证普通 NEC 帧和长按 repeat。
 
 当前测试接线：
@@ -830,19 +832,20 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 已确认 P3.2 空闲状态输出 `level=1`。
 - 已确认普通帧可解码，曾读到 `frame addr=0x01 cmd=0x11`、`cmd=0x22`、`cmd=0x33`。
 - 已确认另一次遥控器长按读到 `frame addr=0x00 cmd=0x19`，随后连续输出 `repeat`。
+- 当前下降沿间隔版本已完成 SDCC 编译；需重新烧录复测普通帧和 repeat。
 
 说明：
 
-- 当前示例采用 Timer0 12T 自由运行计数和轮询边沿测量，不启用 INT0 中断。
-- 轮询实现适合作为硬件验证示例；业务项目如需降低 CPU 占用，可在板级捕获层改为外部中断 + Timer 测宽。
+- 当前示例采用 Timer0 12T 自由运行计数和轮询下降沿间隔测量，不启用 INT0 中断。
+- 轮询实现适合作为硬件验证示例；业务项目如需降低 CPU 占用，可在板级捕获层改为 INT0 下降沿中断 + Timer 测宽。
 - VS1838B/HS0038 类接收头通常为空闲高电平、mark 低电平，`drv_ir_rx` 按此低有效语义解码。
 
 ## 4.25 红外 NEC 中断接收与休眠唤醒 `ir_nec_rx_int_sleep`
 
 目标：
 
-- 验证 P3.2 / INT0 可用上升/下降沿中断捕获红外接收头输出。
-- 验证 INT0 中断 + Timer0 自由运行测宽可驱动 `drv_ir_rx` NEC 解码状态机。
+- 验证 P3.2 / INT0 可用下降沿中断捕获红外接收头输出。
+- 验证 INT0 下降沿中断 + Timer0 自由运行测量 NEC 下降沿间隔可驱动 `drv_ir_rx` NEC 解码状态机。
 - 验证接收到红外信号后运行约 3 秒，之后进入休眠，并可由下一次红外信号唤醒。
 
 当前测试接线：
@@ -873,12 +876,13 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 已烧录成功。
 - 串口已读到唤醒和命令输出，例如 `wake`、`frame addr=0x00 cmd=0x44`、`cmd=0x45`、`cmd=0x46`、`repeat`。
 - 已确认约 3 秒空闲后输出 `sleep`，再次按遥控器可唤醒并继续打印命令。
+- 当前下降沿间隔版本已完成 SDCC 编译；需重新烧录复测普通帧、repeat 和休眠唤醒。
 
 说明：
 
-- STC 官方资料中 P3.2 可作为 INT0；`IT0=0` 为 INT0 上升/下降沿模式；`PCON |= 0x02` 进入休眠，可由 INT0 唤醒。
-- 本示例使用 INT0 捕获边沿，Timer0 仅做 16-bit 12T 自由运行脉宽计时，不启用 Timer0 中断。
-- ISR 中只做边沿时间戳和 NEC 解码状态机喂入，不做 UART 打印；UART 打印在主循环中完成。
+- STC 官方资料中 P3.2 可作为 INT0；`IT0=1` 为 INT0 下降沿模式；`PCON |= 0x02` 进入休眠，可由 INT0 唤醒。
+- STC 官方资料也列出 `IT0=0` 上升/下降沿模式，但本示例不依赖该模式；红外接收使用下降沿到下降沿间隔解码，避免一帧被拆成多个片段。
+- ISR 中只做下降沿时间戳和 NEC 解码状态机喂入，不做 UART 打印；UART 打印在主循环中完成。
 
 ## 4.26 WDT 受控复位测试 `wdt_reset_test`
 

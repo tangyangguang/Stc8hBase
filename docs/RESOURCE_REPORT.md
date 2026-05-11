@@ -1506,7 +1506,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 设计取舍：
 
 - `drv_ir_tx` 只生成 `mark/space + duration_us` 序列，不直接控制 GPIO、PWM 或 Timer。
-- `drv_ir_rx` 只消费 `level + width_us`，不直接读取 GPIO、Timer 或中断标志。
+- `drv_ir_rx` 可消费 `level + width_us` 或 NEC 下降沿间隔，不直接读取 GPIO、Timer 或中断标志。
 - 真实硬件接收层后续由板级代码绑定外部中断/Timer 或固定周期采样。
 - 真实硬件发射层后续由板级代码绑定 PWM/Timer 载波和红外 LED 驱动管。
 
@@ -1514,9 +1514,9 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 2997 bytes |
-| Stack start | 0x4d |
-| Internal RAM 边界 | 栈从 0x4d 开始，当前静态/参数/overlay 占用到 0x4c |
+| ROM/EPROM/FLASH | 4433 bytes |
+| Stack start | 0x71 |
+| Internal RAM 边界 | 栈从 0x71 开始，当前静态/参数/overlay 占用到 0x70 |
 | XDATA/PDATA | 未使用 |
 | Timer | Timer1 由 UART1 初始化使用；IR 协议层未使用 Timer |
 | 中断 | 未使用 |
@@ -1546,6 +1546,8 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 _drv_ir_rx_init
 _drv_ir_rx_reset
 _drv_ir_rx_feed_pulse
+_drv_ir_rx_feed_nec_falling_interval
+_drv_ir_rx_finish_nec_falling_interval
 _drv_ir_rx_get_event
 _drv_ir_tx_nec_begin
 _drv_ir_tx_nec_next
@@ -1666,12 +1668,12 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 功能：
 
 - 使用 P3.2 读取 VS1838B/1838B 红外接收头输出。
-- 使用 Timer0 12T 自由运行计数和轮询边沿测量脉宽。
-- 将 `level + width_us` 喂给 `drv_ir_rx`，输出普通 NEC 帧和 repeat。
+- 使用 Timer0 12T 自由运行计数和轮询下降沿间隔测量脉宽。
+- 将 NEC 下降沿间隔喂给 `drv_ir_rx`，输出普通 NEC 帧和 repeat。
 
 资料依据：
 
-- STC8H 官方资料：P3.2 可作为 INT0；当前示例为降低实现复杂度，先采用轮询边沿验证硬件链路。
+- STC8H 官方资料：P3.2 可作为 INT0；当前示例为降低实现复杂度，先采用轮询下降沿验证硬件链路。
 - STC8H 官方 Timer0 资料：Timer0 可配置为 16-bit 12T 计数器。
 - Infineon 官方红外遥控应用笔记：NEC 普通帧、repeat 和脉宽事实。
 - VS1838B/HS0038 类接收头通常输出低有效 mark，因此空闲应读到高电平。
@@ -1686,9 +1688,9 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 3501 bytes |
-| Stack start | 0x53 |
-| Internal RAM 边界 | 栈从 0x53 开始，当前静态/参数/overlay 占用到 0x52 |
+| ROM/EPROM/FLASH | 4371 bytes |
+| Stack start | 0x69 |
+| Internal RAM 边界 | 栈从 0x69 开始，当前静态/参数/overlay 占用到 0x68 |
 | XDATA/PDATA | 未使用 |
 | Timer | Timer0 12T 自由运行脉宽计时；Timer1 由 UART1 初始化使用 |
 | 中断 | 未使用 |
@@ -1707,6 +1709,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 .pio/build/STC8H1K08/src/drv_ir_rx_wrap.rel
 .pio/build/STC8H1K08/src/main.rel
 .pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_timer_wrap.rel
 .pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
 ```
 
@@ -1715,7 +1718,8 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 ```text
 _drv_ir_rx_init
 _drv_ir_rx_reset
-_drv_ir_rx_feed_pulse
+_drv_ir_rx_feed_nec_falling_interval
+_drv_ir_rx_finish_nec_falling_interval
 _drv_ir_rx_get_event
 _stc8h_gpio_set_mode
 _stc8h_uart_init
@@ -1751,32 +1755,32 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 功能：
 
 - 使用 P3.2 / INT0 接收 VS1838B/1838B 红外接收头输出。
-- 使用 INT0 上升/下降沿中断捕获边沿，Timer0 12T 自由运行测量脉宽。
+- 使用 INT0 下降沿中断捕获 NEC 下降沿间隔，Timer0 12T 自由运行测量脉宽。
 - 接收到红外信号后保持运行约 3 秒；空闲超时后进入休眠，等待下一次 INT0 红外边沿唤醒。
 - 主循环打印 `wake`、普通 NEC 帧和 repeat。
 
 资料依据：
 
-- STC8H 官方资料：P3.2 可作为 INT0；INT0 支持上升/下降沿模式；`PCON |= 0x02` 进入休眠并可由 INT0 唤醒。
+- STC8H 官方资料：P3.2 可作为 INT0；INT0 支持下降沿模式；`PCON |= 0x02` 进入休眠并可由 INT0 唤醒。
 - STC8H 官方 Timer0 资料：Timer0 可配置为 16-bit 12T 计数器。
 - Infineon 官方红外遥控应用笔记：NEC 普通帧、repeat 和脉宽事实。
 
 设计取舍：
 
 - 本示例用于验证中断方式和低功耗唤醒，不替代 `ir_nec_rx` 轮询硬件验证基线。
-- INT0 ISR 不打印串口，只记录边沿并喂入 `drv_ir_rx`，避免串口阻塞影响红外边沿捕获。
+- INT0 ISR 不打印串口，只记录下降沿间隔并喂入 `drv_ir_rx`，避免串口阻塞影响红外捕获。
 - Timer0 只用于脉宽测量，不使用 1ms tick。
 
 资源占用：
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 3691 bytes |
-| Stack start | 0x57 |
-| Internal RAM 边界 | 栈从 0x57 开始，当前静态/参数/overlay 占用到 0x56 |
+| ROM/EPROM/FLASH | 4625 bytes |
+| Stack start | 0x6e |
+| Internal RAM 边界 | 栈从 0x6e 开始，当前静态/参数/overlay 占用到 0x6d |
 | XDATA/PDATA | 未使用 |
 | Timer | Timer0 12T 自由运行脉宽计时；Timer1 由 UART1 初始化使用 |
-| 中断 | INT0，P3.2 上升/下降沿；Timer0 不启用中断 |
+| 中断 | INT0，P3.2 下降沿；Timer0 不启用中断 |
 | UART | UART1 |
 | GPIO | P3.2 输入，启用数字输入和内部上拉 |
 | PWM | 未使用 |
@@ -1794,6 +1798,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 .pio/build/STC8H1K08/src/stc8h_exti_wrap.rel
 .pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
 .pio/build/STC8H1K08/src/stc8h_power_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_timer_wrap.rel
 .pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
 ```
 
@@ -1803,7 +1808,8 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 _int0_isr
 _drv_ir_rx_init
 _drv_ir_rx_reset
-_drv_ir_rx_feed_pulse
+_drv_ir_rx_feed_nec_falling_interval
+_drv_ir_rx_finish_nec_falling_interval
 _drv_ir_rx_get_event
 _stc8h_exti_configure
 _stc8h_exti_clear_flag
@@ -1824,6 +1830,7 @@ _stc8h_uart_write_code
 - 已完成 SDCC 编译和资源检查。
 - 已烧录实测，串口 115200 可读到 `wake`、`frame addr=0x00 cmd=0x44`、`cmd=0x45`、`cmd=0x46` 和 `repeat`。
 - 已确认空闲约 3 秒后输出 `sleep`，随后可由红外按键唤醒并继续打印命令。
+- 当前下降沿间隔版本已完成 SDCC 编译和资源检查；仍需重新烧录做硬件回归确认。
 
 ## 26. PlatformIO `wdt_feed` 示例
 

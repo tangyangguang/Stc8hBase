@@ -5,7 +5,10 @@
 
 typedef enum {
     STC8H_EXTI_INT0 = 0,
-    STC8H_EXTI_INT1 = 1
+    STC8H_EXTI_INT1 = 1,
+    STC8H_EXTI_INT2 = 2,
+    STC8H_EXTI_INT3 = 3,
+    STC8H_EXTI_INT4 = 4
 } stc8h_exti_line_t;
 
 typedef enum {

@@ -8,6 +8,9 @@
 #define STC8H_VECTOR_INT1 2
 #define STC8H_VECTOR_TIMER1 3
 #define STC8H_VECTOR_UART1 4
+#define STC8H_VECTOR_INT2 10
+#define STC8H_VECTOR_INT3 11
+#define STC8H_VECTOR_INT4 16
 
 void stc8h_interrupt_enable_global(void);
 void stc8h_interrupt_disable_global(void);

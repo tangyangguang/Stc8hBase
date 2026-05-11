@@ -199,7 +199,7 @@ docs/RESOURCE_REPORT.md
 ### 6.7 红外验收
 
 - `ir_nec_demo` 不接外部元件，使用 NEC TX 编码器生成 `mark/space` 时序，再送入 RX 解码器自检。
-- `ir_nec_demo` 应验证普通 NEC 帧、重复码事件和异常脉宽错误事件。
+- `ir_nec_demo` 应验证普通 NEC 帧、TX repeat 序列、重复码事件和异常脉宽错误事件。
 - `ir_nec_demo` 协议层不应占用 GPIO、Timer、PWM 或中断。
 - 红外接收连续识别常见 NEC 遥控器按键 20 次，不出现地址/命令误码。
 - 能识别 NEC 重复码事件。
@@ -352,6 +352,7 @@ NEC
 - 38kHz 载波。
 - NEC 引导码。
 - 数据位时序。
+- 标准 NEC repeat：9ms mark、2.25ms space、562us mark。
 - 协议编码层和载波输出层资源记录分开：`drv_ir_tx` 只负责时序序列，PWM/Timer/GPIO 由板级发送层声明。
 - 重复码。
 

@@ -12,13 +12,12 @@
 #define IR_RX_ACTIVE_TIMEOUT_CHUNKS 100u
 
 static drv_ir_rx_t ir_rx;
-static volatile stc8h_u8 last_edge_level;
-static volatile stc8h_u16 last_edge_ticks;
+static volatile stc8h_u8 falling_seen;
+static volatile stc8h_u16 last_falling_ticks;
 static volatile stc8h_u8 active_chunks;
 static volatile stc8h_u8 active_mode;
 static volatile stc8h_u8 sleeping_mode;
 static volatile stc8h_u8 woke_from_ir;
-static volatile stc8h_u8 last_feed_level;
 static volatile stc8h_u16 last_feed_width_us;
 
 static stc8h_u8 ir_rx_level(void)
@@ -26,9 +25,9 @@ static stc8h_u8 ir_rx_level(void)
     return ((P3 & IR_RX_MASK) != 0u) ? 1u : 0u;
 }
 
-static void int0_init_both_edges(void)
+static void int0_init_falling_edge(void)
 {
-    (void)stc8h_exti_configure(STC8H_EXTI_INT0, STC8H_EXTI_MODE_BOTH_EDGES);
+    (void)stc8h_exti_configure(STC8H_EXTI_INT0, STC8H_EXTI_MODE_FALLING_EDGE);
     stc8h_exti_enable(STC8H_EXTI_INT0);
 }
 
@@ -40,9 +39,9 @@ static void ir_rx_board_init(void)
     stc8h_gpio_set_mode(3u, 2u, STC8H_GPIO_MODE_INPUT_ONLY);
     (void)stc8h_timer0_init_free_run_12t();
     stc8h_timer_start(STC8H_TIMER0);
-    last_edge_level = ir_rx_level();
-    last_edge_ticks = stc8h_timer0_read();
-    int0_init_both_edges();
+    falling_seen = 0u;
+    last_falling_ticks = stc8h_timer0_read();
+    int0_init_falling_edge();
 }
 
 static void uart_write_hex8(stc8h_u8 value)
@@ -98,9 +97,7 @@ static void handle_event(void)
     } else if (event == DRV_IR_RX_EVENT_REPEAT) {
         stc8h_uart_write_code(STC8H_UART1, "repeat\r\n");
     } else if (event == DRV_IR_RX_EVENT_ERROR) {
-        stc8h_uart_write_code(STC8H_UART1, "error level=");
-        stc8h_uart_putc(STC8H_UART1, last_feed_level ? '1' : '0');
-        stc8h_uart_write_code(STC8H_UART1, " width=");
+        stc8h_uart_write_code(STC8H_UART1, "error interval=");
         uart_write_u16(last_feed_width_us);
         stc8h_uart_write_code(STC8H_UART1, "us\r\n");
     }
@@ -111,6 +108,7 @@ static void enter_power_down_until_ir(void)
     drv_ir_rx_reset(&ir_rx);
     active_mode = 0u;
     active_chunks = 0u;
+    falling_seen = 0u;
     sleeping_mode = 1u;
     woke_from_ir = 0u;
 
@@ -132,9 +130,11 @@ static void poll_active_timeout(void)
     }
 
     now_ticks = stc8h_timer0_read();
-    width_ticks = (stc8h_u16)(now_ticks - last_edge_ticks);
+    width_ticks = (stc8h_u16)(now_ticks - last_falling_ticks);
     if (width_ticks > IR_RX_ACTIVE_TIMEOUT_TICKS) {
-        last_edge_ticks = now_ticks;
+        drv_ir_rx_finish_nec_falling_interval(&ir_rx);
+        falling_seen = 0u;
+        last_falling_ticks = now_ticks;
         ++active_chunks;
         if (active_chunks >= IR_RX_ACTIVE_TIMEOUT_CHUNKS) {
             enter_power_down_until_ir();
@@ -144,12 +144,10 @@ static void poll_active_timeout(void)
 
 STC8H_INTERRUPT(int0_isr, STC8H_VECTOR_INT0)
 {
-    stc8h_u8 level;
     stc8h_u16 now_ticks;
     stc8h_u16 width_ticks;
     stc8h_u16 width_us;
 
-    level = ir_rx_level();
     now_ticks = stc8h_timer0_read();
 
     if (sleeping_mode != 0u) {
@@ -159,19 +157,19 @@ STC8H_INTERRUPT(int0_isr, STC8H_VECTOR_INT0)
         active_chunks = 0u;
         drv_ir_rx_reset(&ir_rx);
         stc8h_timer0_reset();
-        stc8h_timer_start(STC8H_TIMER0);
-        last_edge_ticks = stc8h_timer0_read();
-        last_edge_level = level;
+        falling_seen = 1u;
+        last_falling_ticks = stc8h_timer0_read();
         return;
     }
 
-    width_ticks = (stc8h_u16)(now_ticks - last_edge_ticks);
-    width_us = stc8h_timer0_12t_ticks_to_us(width_ticks);
-    last_feed_level = last_edge_level;
-    last_feed_width_us = width_us;
-    drv_ir_rx_feed_pulse(&ir_rx, last_edge_level, width_us);
-    last_edge_level = level;
-    last_edge_ticks = now_ticks;
+    if (falling_seen != 0u) {
+        width_ticks = (stc8h_u16)(now_ticks - last_falling_ticks);
+        width_us = stc8h_timer0_12t_ticks_to_us(width_ticks);
+        last_feed_width_us = width_us;
+        drv_ir_rx_feed_nec_falling_interval(&ir_rx, width_us);
+    }
+    falling_seen = 1u;
+    last_falling_ticks = now_ticks;
     active_mode = 1u;
     active_chunks = 0u;
 }

@@ -5,6 +5,8 @@
 #define DRV_IR_RX_STATE_BIT_MARK   2u
 #define DRV_IR_RX_STATE_BIT_SPACE  3u
 #define DRV_IR_RX_STATE_STOP_MARK  4u
+#define DRV_IR_RX_STATE_FALLING_BITS 5u
+#define DRV_IR_RX_STATE_FALLING_REPEAT 6u
 
 #define DRV_IR_LEVEL_MARK  0u
 #define DRV_IR_LEVEL_SPACE 1u
@@ -44,12 +46,59 @@ static stc8h_u8 drv_ir_rx_space_1687(stc8h_u16 width_us)
     return drv_ir_rx_between(width_us, 1350u, 2050u);
 }
 
+static stc8h_u8 drv_ir_rx_falling_lead(stc8h_u16 width_us)
+{
+    return drv_ir_rx_between(width_us, 12500u, 16000u);
+}
+
+static stc8h_u8 drv_ir_rx_falling_repeat(stc8h_u16 width_us)
+{
+    return drv_ir_rx_between(width_us, 10000u, 12500u);
+}
+
+static stc8h_u8 drv_ir_rx_falling_bit_0(stc8h_u16 width_us)
+{
+    return drv_ir_rx_between(width_us, 900u, 1350u);
+}
+
+static stc8h_u8 drv_ir_rx_falling_bit_1(stc8h_u16 width_us)
+{
+    return drv_ir_rx_between(width_us, 1800u, 2700u);
+}
+
+static void drv_ir_rx_set_event(drv_ir_rx_t *rx, drv_ir_rx_event_t event);
+static void drv_ir_rx_finish_frame(drv_ir_rx_t *rx);
+
+static stc8h_u8 drv_ir_rx_falling_bit(drv_ir_rx_t *rx, stc8h_u16 width_us)
+{
+    if (drv_ir_rx_falling_bit_0(width_us) != 0u) {
+        ++rx->bit_index;
+    } else if (drv_ir_rx_falling_bit_1(width_us) != 0u) {
+        rx->raw |= ((stc8h_u32)1u << rx->bit_index);
+        ++rx->bit_index;
+    } else {
+        return STC8H_FALSE;
+    }
+
+    if (rx->bit_index >= 32u) {
+        drv_ir_rx_finish_frame(rx);
+    }
+    return STC8H_TRUE;
+}
+
+static void drv_ir_rx_set_event(drv_ir_rx_t *rx, drv_ir_rx_event_t event)
+{
+    if (rx->event == DRV_IR_RX_EVENT_NONE) {
+        rx->event = event;
+    }
+}
+
 static void drv_ir_rx_error(drv_ir_rx_t *rx)
 {
     rx->state = DRV_IR_RX_STATE_IDLE;
     rx->bit_index = 0u;
     rx->raw = 0u;
-    rx->event = DRV_IR_RX_EVENT_ERROR;
+    drv_ir_rx_set_event(rx, DRV_IR_RX_EVENT_ERROR);
 }
 
 static void drv_ir_rx_finish_frame(drv_ir_rx_t *rx)
@@ -69,14 +118,16 @@ static void drv_ir_rx_finish_frame(drv_ir_rx_t *rx)
 
     if (((stc8h_u8)(address ^ address_inv) != 0xFFu) ||
         ((stc8h_u8)(command ^ command_inv) != 0xFFu)) {
-        rx->event = DRV_IR_RX_EVENT_ERROR;
+        drv_ir_rx_set_event(rx, DRV_IR_RX_EVENT_ERROR);
         return;
     }
 
-    rx->frame.address = address;
-    rx->frame.command = command;
-    rx->frame.raw = rx->raw;
-    rx->event = DRV_IR_RX_EVENT_FRAME;
+    if (rx->event == DRV_IR_RX_EVENT_NONE) {
+        rx->frame.address = address;
+        rx->frame.command = command;
+        rx->frame.raw = rx->raw;
+        rx->event = DRV_IR_RX_EVENT_FRAME;
+    }
 }
 
 void drv_ir_rx_init(drv_ir_rx_t *rx)
@@ -125,7 +176,7 @@ void drv_ir_rx_feed_pulse(drv_ir_rx_t *rx, stc8h_u8 level, stc8h_u16 width_us)
             rx->state = DRV_IR_RX_STATE_BIT_MARK;
         } else if (drv_ir_rx_space_2250(width_us) != 0u) {
             rx->state = DRV_IR_RX_STATE_IDLE;
-            rx->event = DRV_IR_RX_EVENT_REPEAT;
+            drv_ir_rx_set_event(rx, DRV_IR_RX_EVENT_REPEAT);
         } else {
             drv_ir_rx_error(rx);
         }
@@ -162,6 +213,63 @@ void drv_ir_rx_feed_pulse(drv_ir_rx_t *rx, stc8h_u8 level, stc8h_u16 width_us)
         drv_ir_rx_finish_frame(rx);
     } else {
         drv_ir_rx_error(rx);
+    }
+}
+
+void drv_ir_rx_feed_nec_falling_interval(drv_ir_rx_t *rx, stc8h_u16 width_us)
+{
+    if (rx == 0) {
+        return;
+    }
+
+    if (rx->state == DRV_IR_RX_STATE_IDLE) {
+        if (drv_ir_rx_falling_lead(width_us) != 0u) {
+            rx->raw = 0u;
+            rx->bit_index = 0u;
+            rx->state = DRV_IR_RX_STATE_FALLING_BITS;
+        } else if (drv_ir_rx_falling_repeat(width_us) != 0u) {
+            rx->raw = 0u;
+            rx->bit_index = 0u;
+            rx->state = DRV_IR_RX_STATE_FALLING_REPEAT;
+        }
+        return;
+    }
+
+    if (rx->state == DRV_IR_RX_STATE_FALLING_REPEAT) {
+        if (drv_ir_rx_falling_bit(rx, width_us) != 0u) {
+            if (rx->state != DRV_IR_RX_STATE_IDLE) {
+                rx->state = DRV_IR_RX_STATE_FALLING_BITS;
+            }
+        } else {
+            rx->state = DRV_IR_RX_STATE_IDLE;
+            drv_ir_rx_set_event(rx, DRV_IR_RX_EVENT_REPEAT);
+        }
+        return;
+    }
+
+    if (rx->state != DRV_IR_RX_STATE_FALLING_BITS) {
+        drv_ir_rx_error(rx);
+        return;
+    }
+
+    if (drv_ir_rx_falling_bit(rx, width_us) == 0u) {
+        drv_ir_rx_error(rx);
+    }
+}
+
+void drv_ir_rx_finish_nec_falling_interval(drv_ir_rx_t *rx)
+{
+    if (rx == 0) {
+        return;
+    }
+
+    if (rx->state == DRV_IR_RX_STATE_FALLING_REPEAT) {
+        rx->state = DRV_IR_RX_STATE_IDLE;
+        drv_ir_rx_set_event(rx, DRV_IR_RX_EVENT_REPEAT);
+    } else if (rx->state == DRV_IR_RX_STATE_FALLING_BITS) {
+        rx->state = DRV_IR_RX_STATE_IDLE;
+        rx->bit_index = 0u;
+        rx->raw = 0u;
     }
 }
 

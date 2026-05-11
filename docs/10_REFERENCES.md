@@ -77,9 +77,9 @@ docs/vendor/titan/TM1637_TitanMicro.pdf
 - EEPROM/IAP 当前实现按官方 STC8H 资料和官方库校准：STC8H1K08 为 4KB EEPROM/IAP，地址 `0x0000..0x0FFF`，512 字节扇区擦除，IAP 触发序列为 `0x5A`、`0xA5`，触发窗口临时关闭全局中断。
 - PWM 当前实现按官方 STC8H PWM 资料和 `STC8H_PWM.c/.h` 校准：第一版仅使用 `PWMA` 1..4、PWM mode 1、P 输出、默认 P1 引脚组，不启用互补输出、死区、刹车、中断或 PWMB。
 - WDT 当前实现按官方 `WDT_CONTR` 位定义和官方库函数校准：`WDT_FLAG` 位于 bit7，`EN_WDT` 位于 bit5，`CLR_WDT` 位于 bit4，`IDLE_WDT` 位于 bit3，分频系数使用 bit2..0，喂狗通过置位 `CLR_WDT` 完成。
-- 外部中断当前实现按官方 `INT0_Mode/INT1_Mode` 示例校准：INT0/INT1 支持上升/下降沿模式和下降沿模式，`EX0/EX1` 控制使能，`IE0/IE1` 为中断标志。
+- 外部中断当前实现按 STC8H 官方手册和 STC8H1K08 资料校准：INT0(P3.2)/INT1(P3.3) 支持上升/下降沿模式和下降沿模式，`EX0/EX1` 控制使能，`IE0/IE1` 为中断标志；INT2(P3.6)/INT3(P3.7)/INT4(P3.0) 只支持下降沿，使能位为 `INTCLKO` bit4/5/6，请求标志为 `AUXINTIF` bit4/5/6，向量分别为 10/11/16。
 - 低功耗当前实现按官方 `PCON` 定义和官方休眠示例校准：`PCON.IDL` 进入 idle，`PCON.PD` 进入 power-down；P3.2/INT0、P3.3/INT1 可作为 power-down 唤醒源。
-- NEC 红外协议当前实现按 Infineon 官方应用笔记校准：普通 NEC 帧为 9ms 引导低有效脉冲、4.5ms 空闲、32bit LSB first 数据和结尾脉冲；重复码使用 9ms 引导低有效脉冲和约 2.25ms 空闲。协议层只输出或消费脉宽，不直接占用 PWM、Timer 或 GPIO。
+- NEC 红外协议当前实现按 Infineon 官方应用笔记校准：普通 NEC 帧为 9ms 引导低有效脉冲、4.5ms 空闲、32bit LSB first 数据和结尾脉冲；重复码使用 9ms 引导低有效脉冲、约 2.25ms 空闲和 562us 结尾脉冲。协议层只输出或消费脉宽，不直接占用 PWM、Timer 或 GPIO。对 INT0 红外接收，基础库示例优先使用下降沿间隔解码：普通帧引导约 13.5ms，bit0 约 1.125ms，bit1 约 2.25ms，repeat 约 11.25ms；10ms..12.5ms 首间隔先作为候选 repeat，后续若跟随 bit 间隔则按完整 frame 优先解码。
 - STC8G/STC8H 官方库函数包用于核对库函数层面的外设初始化顺序。已解压到临时目录分析，不把展开源码纳入仓库；仓库仅保留官方压缩包和吸收记录。
 - PCF8574 资料用于核对 LCD1602 I2C 背包的 I/O 扩展器行为。
 - HD44780 资料用于核对 LCD1602 初始化、命令和显示地址行为。

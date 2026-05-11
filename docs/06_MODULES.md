@@ -46,7 +46,7 @@ HAL 模块封装常见硬件操作，同时保留 STC8H 的硬件概念。
 | `stc8h_adc` | ADC 采样辅助 |
 | `stc8h_eeprom` | 持久化参数存储支持 |
 | `stc8h_wdt` | 看门狗启用、喂狗和复位标志辅助 |
-| `stc8h_exti` | INT0/INT1 外部中断基础配置 |
+| `stc8h_exti` | INT0-INT4 外部中断基础配置 |
 | `stc8h_power` | idle 和 power-down 低功耗入口 |
 
 HAL API 避免大型结构体，除非它能明显减少重复代码。
@@ -79,7 +79,7 @@ Drivers 支持外部器件和常见板级外设。
 
 LCD1602 第一版面向 I2C 转接板，采用 `VCC`、`GND`、`SDA`、`SCL` 四线连接。
 
-红外遥控第一版只支持常见 NEC 协议。`drv_ir_tx` 只输出 `mark/space` 时序，`drv_ir_rx` 只消费板级捕获层测得的脉宽；真实硬件发射的 38kHz 载波、红外 LED 驱动、真实硬件接收的 GPIO/中断/Timer 由板级示例单独绑定并记录资源占用。
+红外遥控第一版只支持常见 NEC 协议。`drv_ir_tx` 只输出普通帧和 repeat 帧的 `mark/space` 时序，`drv_ir_rx` 只消费板级捕获层测得的脉宽；真实硬件发射的 38kHz 载波、红外 LED 驱动、真实硬件接收的 GPIO/中断/Timer 由板级示例单独绑定并记录资源占用。
 
 LED、蜂鸣器、继电器驱动第一版不直接操作 GPIO，只提供有效电平和状态辅助。实际 GPIO 输出由板级宏或示例代码完成。
 
