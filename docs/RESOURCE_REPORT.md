@@ -1892,3 +1892,74 @@ _stc8h_uart_write_code
 
 - 已完成 SDCC 编译和资源检查。
 - 尚未烧录实测；真实 WDT 复位路径未测试。
+
+## 27. PlatformIO `wdt_reset_test` 示例
+
+路径：
+
+```text
+examples/platformio/wdt_reset_test
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 初始化 UART1。
+- 启动时读取 WDT 复位标志并打印启动原因。
+- 启用 WDT，先喂狗 3 次，然后停止喂狗等待 WDT 自动复位。
+
+资料依据：
+
+- STC8H 官方资料和官方库：`WDT_CONTR.WDT_FLAG`、`EN_WDT`、`CLR_WDT` 和分频位定义。
+
+设计取舍：
+
+- 这是受控硬件测试示例，会故意让芯片反复 WDT 复位。
+- 不作为普通业务项目示例使用；业务项目使用 `wdt_feed` 的正常喂狗模式。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 680 bytes |
+| Stack start | 0x0e |
+| Internal RAM 边界 | 栈从 0x0e 开始，当前静态/参数/overlay 占用到 0x0d |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| WDT | 使用 `WDT_CONTR`，停止喂狗后由 WDT 复位 |
+| GPIO/I2C/LCD1602 | 未使用 |
+| Button/EC11/ADC/SPI/EEPROM/TM1637/IR/PWM | 未使用 |
+| Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_delay_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_wdt_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_stc8h_wdt_enable
+_stc8h_wdt_feed
+_stc8h_wdt_reset_flag
+_stc8h_wdt_clear_reset_flag
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 已烧录实测。
+- 串口已读到 `stop feeding, wait reset` 后自动重启，并在重启后连续输出 `boot reason: wdt`。

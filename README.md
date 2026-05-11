@@ -70,7 +70,7 @@ Stc8hBase/
 - PWMA 1..4 基础 PWM 输出已完成编译、资源检查和 P1.2 LED 呼吸实测。
 - SPI 硬件主机轮询基础收发已完成编译、资源检查和回环实测。
 - EEPROM/IAP 基础读写擦除已完成编译、资源检查和受控写擦实测；默认 PlatformIO 环境不执行写擦。
-- WDT 看门狗最小封装、INT0/INT1 外部中断辅助、idle/power-down 低功耗入口已完成 SDCC 编译和资源检查。
+- WDT 看门狗最小封装、INT0/INT1 外部中断辅助、idle/power-down 低功耗入口已完成 SDCC 编译、资源检查和 WDT 复位实测。
 - 16-bit soft timer 工具已完成编译和回绕测试。
 - Ring buffer 工具已完成编译和回绕测试。
 - CRC/checksum 工具已完成编译和标准向量测试。

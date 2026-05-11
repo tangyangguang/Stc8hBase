@@ -879,3 +879,42 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - STC 官方资料中 P3.2 可作为 INT0；`IT0=0` 为 INT0 上升/下降沿模式；`PCON |= 0x02` 进入休眠，可由 INT0 唤醒。
 - 本示例使用 INT0 捕获边沿，Timer0 仅做 16-bit 12T 自由运行脉宽计时，不启用 Timer0 中断。
 - ISR 中只做边沿时间戳和 NEC 解码状态机喂入，不做 UART 打印；UART 打印在主循环中完成。
+
+## 4.26 WDT 受控复位测试 `wdt_reset_test`
+
+目标：
+
+- 验证 WDT 启用和喂狗。
+- 验证停止喂狗后芯片会自动复位。
+- 验证复位后可以读取到 WDT 复位标志。
+
+当前测试接线：
+
+```text
+无需外接元件，仅使用 USB 下载器串口
+```
+
+烧录：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/wdt_reset_test
+pio run -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+```
+
+预期：
+
+- 首次启动输出 `wdt reset test`。
+- 停止喂狗后输出 `stop feeding, wait reset`。
+- WDT 复位后再次启动，并输出 `boot reason: wdt`。
+
+实测：
+
+- 已烧录成功。
+- 串口读到 `stop feeding, wait reset` 后芯片自动复位。
+- 复位后连续输出 `wdt reset test`、`boot reason: wdt`、`feeding 3 times`、`stop feeding, wait reset`。
+
+说明：
+
+- 本示例会故意反复触发 WDT 复位，仅用于受控硬件测试。
+- 普通项目应使用 `wdt_feed` 的正常喂狗方式。
