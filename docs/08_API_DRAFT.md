@@ -381,6 +381,90 @@ stc8h_status_t stc8h_eeprom_erase_sector(stc8h_u16 addr);
 - 遵守 `docs/14_EEPROM_IAP_POLICY.md`。
 - 示例必须显式定义测试地址范围，默认构建不执行写擦。
 
+### 3.9 `stc8h_wdt`
+
+职责：
+
+- 看门狗最小控制。
+
+接口方向：
+
+```c
+typedef enum {
+    STC8H_WDT_SCALE_2 = 0,
+    STC8H_WDT_SCALE_4,
+    STC8H_WDT_SCALE_8,
+    STC8H_WDT_SCALE_16,
+    STC8H_WDT_SCALE_32,
+    STC8H_WDT_SCALE_64,
+    STC8H_WDT_SCALE_128,
+    STC8H_WDT_SCALE_256
+} stc8h_wdt_scale_t;
+
+void stc8h_wdt_enable(stc8h_wdt_scale_t scale, stc8h_u8 run_in_idle);
+void stc8h_wdt_feed(void);
+stc8h_u8 stc8h_wdt_reset_flag(void);
+void stc8h_wdt_clear_reset_flag(void);
+```
+
+取舍：
+
+- 只提供启用、喂狗和复位标志辅助。
+- 不提供任务健康监控框架，不保存任务状态，不占用 RAM。
+- STC8H WDT 启用后不能按普通运行期 API 关闭，应用应在启动阶段明确是否启用。
+- 超时时间由官方公式和 `SYSclk`、分频系数共同决定，示例只验证正常喂狗路径。
+
+### 3.10 `stc8h_exti`
+
+职责：
+
+- INT0/INT1 外部中断基础配置。
+
+接口方向：
+
+```c
+typedef enum {
+    STC8H_EXTI_INT0 = 0,
+    STC8H_EXTI_INT1 = 1
+} stc8h_exti_line_t;
+
+typedef enum {
+    STC8H_EXTI_MODE_BOTH_EDGES = 0,
+    STC8H_EXTI_MODE_FALLING_EDGE = 1
+} stc8h_exti_mode_t;
+
+stc8h_status_t stc8h_exti_configure(stc8h_exti_line_t line, stc8h_exti_mode_t mode);
+void stc8h_exti_enable(stc8h_exti_line_t line);
+void stc8h_exti_disable(stc8h_exti_line_t line);
+void stc8h_exti_clear_flag(stc8h_exti_line_t line);
+```
+
+取舍：
+
+- 第一版只封装已核实并已在示例中使用的 INT0/INT1。
+- 不做 ISR 注册表；ISR 函数仍由板级或应用代码用 `STC8H_INTERRUPT` 显式定义。
+- `BOTH_EDGES` 对应官方资料中的上升/下降沿模式，`FALLING_EDGE` 对应下降沿模式。
+- INT2/INT3/INT4 等扩展中断需要重新核对目标封装和寄存器后再按需加入。
+
+### 3.11 `stc8h_power`
+
+职责：
+
+- MCU idle 和 power-down 低功耗入口。
+
+接口方向：
+
+```c
+void stc8h_power_idle(void);
+void stc8h_power_down(void);
+```
+
+取舍：
+
+- 只封装 `PCON` 入口和必要的 `NOP`，不做电源管理框架。
+- 唤醒源配置由板级或应用代码完成，例如 INT0 红外唤醒示例。
+- 进入低功耗前的串口发送完成、外设状态保存和业务状态处理由应用负责。
+
 ## 4. Drivers
 
 ### 4.1 `drv_button`

@@ -45,8 +45,13 @@ HAL 模块封装常见硬件操作，同时保留 STC8H 的硬件概念。
 | `stc8h_pwm` | PWM 输出配置 |
 | `stc8h_adc` | ADC 采样辅助 |
 | `stc8h_eeprom` | 持久化参数存储支持 |
+| `stc8h_wdt` | 看门狗启用、喂狗和复位标志辅助 |
+| `stc8h_exti` | INT0/INT1 外部中断基础配置 |
+| `stc8h_power` | idle 和 power-down 低功耗入口 |
 
 HAL API 避免大型结构体，除非它能明显减少重复代码。
+
+WDT、外部中断和低功耗模块只封装已核实的 MCU 基础能力，不做任务健康监控、电源管理框架或中断注册表。ISR 仍由板级或应用代码显式绑定。
 
 第一版 I2C 明确采用软件 I2C 单总线，SDA/SCL 通过板级宏绑定。
 

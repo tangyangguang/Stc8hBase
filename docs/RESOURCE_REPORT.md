@@ -11,7 +11,7 @@ tools/check_examples.sh
 最近一次检查：
 
 ```text
-2026-05-10：tools/check_examples.sh 通过。
+2026-05-11：tools/check_examples.sh 通过。
 ```
 
 ## 1. `gpio_blink` 示例
@@ -1771,7 +1771,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 3582 bytes |
+| ROM/EPROM/FLASH | 3691 bytes |
 | Stack start | 0x57 |
 | Internal RAM 边界 | 栈从 0x57 开始，当前静态/参数/overlay 占用到 0x56 |
 | XDATA/PDATA | 未使用 |
@@ -1791,7 +1791,9 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 ```text
 .pio/build/STC8H1K08/src/drv_ir_rx_wrap.rel
 .pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_exti_wrap.rel
 .pio/build/STC8H1K08/src/stc8h_gpio_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_power_wrap.rel
 .pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
 ```
 
@@ -1803,7 +1805,11 @@ _drv_ir_rx_init
 _drv_ir_rx_reset
 _drv_ir_rx_feed_pulse
 _drv_ir_rx_get_event
+_stc8h_exti_configure
+_stc8h_exti_clear_flag
+_stc8h_exti_enable
 _stc8h_gpio_set_mode
+_stc8h_power_down
 _stc8h_uart_init
 _stc8h_uart_putc
 _stc8h_uart_write_code
@@ -1818,3 +1824,71 @@ _stc8h_uart_write_code
 - 已完成 SDCC 编译和资源检查。
 - 已烧录实测，串口 115200 可读到 `wake`、`frame addr=0x00 cmd=0x44`、`cmd=0x45`、`cmd=0x46` 和 `repeat`。
 - 已确认空闲约 3 秒后输出 `sleep`，随后可由红外按键唤醒并继续打印命令。
+
+## 26. PlatformIO `wdt_feed` 示例
+
+路径：
+
+```text
+examples/platformio/wdt_feed
+```
+
+工具链：
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+功能：
+
+- 初始化 UART1。
+- 启用 WDT，使用最大分频。
+- 主循环每约 500ms 喂狗并输出 `wdt ok`。
+
+资料依据：
+
+- STC8H 官方资料和官方库：`WDT_CONTR` 位定义、WDT 分频、喂狗位和复位标志。
+
+设计取舍：
+
+- 本示例只验证正常喂狗路径。
+- 不演示“故意不喂狗触发复位”，避免误判烧录器断开或开发板异常；需要验证复位路径时，应单独建立受控示例并提前确认。
+
+资源占用：
+
+| 项目 | 结果 |
+| --- | --- |
+| ROM/EPROM/FLASH | 526 bytes |
+| Stack start | 0x0e |
+| Internal RAM 边界 | 栈从 0x0e 开始，当前静态/参数/overlay 占用到 0x0d |
+| XDATA/PDATA | 未使用 |
+| Timer | Timer1 由 UART1 初始化使用 |
+| 中断 | 未使用 |
+| UART | UART1 |
+| WDT | 使用 `WDT_CONTR`，主循环喂狗 |
+| GPIO/I2C/LCD1602 | 未使用 |
+| Button/EC11/ADC/SPI/EEPROM/TM1637/IR/PWM | 未使用 |
+| Utils | 未使用 |
+
+链接文件检查：
+
+```text
+.pio/build/STC8H1K08/src/main.rel
+.pio/build/STC8H1K08/src/stc8h_delay_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_uart_wrap.rel
+.pio/build/STC8H1K08/src/stc8h_wdt_wrap.rel
+```
+
+关键符号检查：
+
+```text
+_stc8h_wdt_enable
+_stc8h_wdt_feed
+_stc8h_uart_init
+_stc8h_uart_write_code
+```
+
+验证状态：
+
+- 已完成 SDCC 编译和资源检查。
+- 尚未烧录实测；真实 WDT 复位路径未测试。

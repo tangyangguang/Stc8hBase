@@ -93,7 +93,13 @@
 - Keil C51 实际编译验证：本机无 Keil 工具，需在 Windows + Keil C51 环境运行 `build_c51.bat`。
 - 已按当前临时接线 DIO/SDA=P3.2、CLK=P1.7 烧录实测 `tm1637_number`，确认依次显示 `8888`、`0123`、`4567`，随后 `0000` 起递增。
 - 已新增 `tools/check_examples.sh`，用于全量构建 PlatformIO/Make 示例，并检查关键示例的禁止符号前缀。
+- 已按 STC 官方 WDT、外部中断和低功耗资料，新增 `stc8h_wdt`、`stc8h_exti`、`stc8h_power` 最小 HAL。
+- 已新增 PlatformIO `wdt_feed` 示例，完成 SDCC 编译和资源记录。
+- 已将 `ir_nec_rx_int_sleep` 中的 INT0 配置和 power-down 入口改为复用 `stc8h_exti` / `stc8h_power`。
+- 已新增 `docs/19_MODULE_ACCEPTANCE.md`，明确新增基础模块准入标准，避免按想象扩展外设。
 
 ## 2. 待优化项
 
 - LCD1602 写入暂不返回 I2C ACK 错误；硬件调试优先使用 `i2c_scan` 确认地址。
+- Keil C51 仍需在 Windows + Keil C51 环境完成真实编译验证。
+- `stc8h_wdt` 已完成正常喂狗路径编译验证；真实 WDT 复位路径需要用户确认后再单独烧录测试，避免误判设备掉线。

@@ -24,6 +24,9 @@ examples/keil_c51/module_compile_check/
 - `hal/stc8h_spi`
 - `hal/stc8h_eeprom`
 - `hal/stc8h_pwm`
+- `hal/stc8h_wdt`
+- `hal/stc8h_exti`
+- `hal/stc8h_power`
 - `drivers/drv_button`
 - `drivers/drv_ec11`
 - `drivers/drv_lcd1602`

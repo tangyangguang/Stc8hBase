@@ -1,6 +1,8 @@
 #include "drv_ir_rx.h"
+#include "stc8h_exti.h"
 #include "stc8h_gpio.h"
 #include "stc8h_interrupt.h"
+#include "stc8h_power.h"
 #include "stc8h_sfr.h"
 #include "stc8h_uart.h"
 
@@ -58,10 +60,8 @@ static void timer0_init_free_run(void)
 
 static void int0_init_both_edges(void)
 {
-    EX0 = 0;
-    IT0 = 0;
-    IE0 = 0;
-    EX0 = 1;
+    (void)stc8h_exti_configure(STC8H_EXTI_INT0, STC8H_EXTI_MODE_BOTH_EDGES);
+    stc8h_exti_enable(STC8H_EXTI_INT0);
 }
 
 static void ir_rx_board_init(void)
@@ -148,13 +148,9 @@ static void enter_power_down_until_ir(void)
     stc8h_uart_write_code(STC8H_UART1, "sleep\r\n");
     while (ir_rx_level() == 0u) {
     }
-    IE0 = 0;
+    stc8h_exti_clear_flag(STC8H_EXTI_INT0);
     EA = 1;
-    PCON |= 0x02u;
-    STC8H_NOP();
-    STC8H_NOP();
-    STC8H_NOP();
-    STC8H_NOP();
+    stc8h_power_down();
 }
 
 static void poll_active_timeout(void)

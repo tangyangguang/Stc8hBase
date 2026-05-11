@@ -25,7 +25,7 @@ Stc8hBase 用来沉淀 STC8H 项目中反复出现的基础能力和外设驱动
 基础库应该包含：
 
 - 芯片基础支持：通用类型、编译器兼容、时钟相关辅助、延时辅助、中断辅助。
-- HAL 模块：GPIO、定时器、UART、软件 I2C、SPI 基础收发、PWM、ADC、EEPROM/IAP。
+- HAL 模块：GPIO、定时器、UART、软件 I2C、SPI 基础收发、PWM、ADC、EEPROM/IAP、看门狗、外部中断和低功耗入口。
 - 外设驱动：按钮、EC11 编码器、I2C LCD1602、LED、蜂鸣器、继电器、TM1637、红外遥控发射/接收。
 - 工具模块：环形缓冲、软件定时器、CRC/校验、简单滤波。
 - 每个稳定模块对应一个最小示例。
@@ -70,6 +70,7 @@ Stc8hBase/
 - PWMA 1..4 基础 PWM 输出已完成编译、资源检查和 P1.2 LED 呼吸实测。
 - SPI 硬件主机轮询基础收发已完成编译、资源检查和回环实测。
 - EEPROM/IAP 基础读写擦除已完成编译、资源检查和受控写擦实测；默认 PlatformIO 环境不执行写擦。
+- WDT 看门狗最小封装、INT0/INT1 外部中断辅助、idle/power-down 低功耗入口已完成 SDCC 编译和资源检查。
 - 16-bit soft timer 工具已完成编译和回绕测试。
 - Ring buffer 工具已完成编译和回绕测试。
 - CRC/checksum 工具已完成编译和标准向量测试。
@@ -99,4 +100,5 @@ tools/check_examples.sh
 - [14 EEPROM/IAP 策略](docs/14_EEPROM_IAP_POLICY.md)
 - [15 剩余工作](docs/15_REMAINING_WORK.md)
 - [16 硬件测试清单](docs/16_HARDWARE_TEST.md)
+- [19 新增模块准入标准](docs/19_MODULE_ACCEPTANCE.md)
 - [资源报告](docs/RESOURCE_REPORT.md)

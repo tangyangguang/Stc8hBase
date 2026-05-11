@@ -74,6 +74,9 @@ docs/vendor/titan/TM1637_TitanMicro.pdf
 - SPI 当前实现按官方 STC8H SPI 资料校准：`SPSTAT/SPCTL/SPDAT` 为普通 SFR，`P_SW1[3:2]` 选择引脚组，`SPIF/WCOL` 写 1 清除；第一版采用硬件 SPI 主机轮询，不启用中断和 DMA。
 - EEPROM/IAP 当前实现按官方 STC8H 资料和官方库校准：STC8H1K08 为 4KB EEPROM/IAP，地址 `0x0000..0x0FFF`，512 字节扇区擦除，IAP 触发序列为 `0x5A`、`0xA5`，触发窗口临时关闭全局中断。
 - PWM 当前实现按官方 STC8H PWM 资料和 `STC8H_PWM.c/.h` 校准：第一版仅使用 `PWMA` 1..4、PWM mode 1、P 输出、默认 P1 引脚组，不启用互补输出、死区、刹车、中断或 PWMB。
+- WDT 当前实现按官方 `WDT_CONTR` 位定义和官方库函数校准：`WDT_FLAG` 位于 bit7，`EN_WDT` 位于 bit5，`CLR_WDT` 位于 bit4，`IDLE_WDT` 位于 bit3，分频系数使用 bit2..0，喂狗通过置位 `CLR_WDT` 完成。
+- 外部中断当前实现按官方 `INT0_Mode/INT1_Mode` 示例校准：INT0/INT1 支持上升/下降沿模式和下降沿模式，`EX0/EX1` 控制使能，`IE0/IE1` 为中断标志。
+- 低功耗当前实现按官方 `PCON` 定义和官方休眠示例校准：`PCON.IDL` 进入 idle，`PCON.PD` 进入 power-down；P3.2/INT0、P3.3/INT1 可作为 power-down 唤醒源。
 - NEC 红外协议当前实现按 Infineon 官方应用笔记校准：普通 NEC 帧为 9ms 引导低有效脉冲、4.5ms 空闲、32bit LSB first 数据和结尾脉冲；重复码使用 9ms 引导低有效脉冲和约 2.25ms 空闲。协议层只输出或消费脉宽，不直接占用 PWM、Timer 或 GPIO。
 - STC8G/STC8H 官方库函数包用于核对库函数层面的外设初始化顺序。已解压到临时目录分析，不把展开源码纳入仓库；仓库仅保留官方压缩包和吸收记录。
 - PCF8574 资料用于核对 LCD1602 I2C 背包的 I/O 扩展器行为。
