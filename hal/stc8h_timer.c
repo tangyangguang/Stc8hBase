@@ -19,6 +19,27 @@
 #define STC8H_INTCLKO_T0CLKO 0x01u
 #endif
 
+#ifndef STC8H_TIMER_ENABLE_1MS
+#define STC8H_TIMER_ENABLE_1MS 1
+#endif
+
+#ifndef STC8H_TIMER_ENABLE_TIMER0_FREE_RUN
+#define STC8H_TIMER_ENABLE_TIMER0_FREE_RUN 1
+#endif
+
+#ifndef STC8H_TIMER_ENABLE_TIMER0_RESET
+#define STC8H_TIMER_ENABLE_TIMER0_RESET 1
+#endif
+
+#ifndef STC8H_TIMER_ENABLE_RUN_CONTROL
+#define STC8H_TIMER_ENABLE_RUN_CONTROL 1
+#endif
+
+#ifndef STC8H_TIMER_ENABLE_INTERRUPT_CONTROL
+#define STC8H_TIMER_ENABLE_INTERRUPT_CONTROL 1
+#endif
+
+#if STC8H_TIMER_ENABLE_1MS
 stc8h_status_t stc8h_timer_init_1ms(stc8h_timer_id_t timer)
 {
     if (timer != STC8H_TIMER0) {
@@ -39,7 +60,9 @@ stc8h_status_t stc8h_timer_init_1ms(stc8h_timer_id_t timer)
     return STC8H_OK;
 #endif
 }
+#endif
 
+#if STC8H_TIMER_ENABLE_TIMER0_FREE_RUN
 stc8h_status_t stc8h_timer0_init_free_run_12t(void)
 {
     TR0 = 0;
@@ -52,7 +75,9 @@ stc8h_status_t stc8h_timer0_init_free_run_12t(void)
     TF0 = 0;
     return STC8H_OK;
 }
+#endif
 
+#if STC8H_TIMER_ENABLE_TIMER0_RESET
 void stc8h_timer0_reset(void)
 {
     stc8h_u8 running;
@@ -66,7 +91,9 @@ void stc8h_timer0_reset(void)
         TR0 = 1;
     }
 }
+#endif
 
+#if STC8H_TIMER_ENABLE_TIMER0_FREE_RUN
 stc8h_u16 stc8h_timer0_read(void)
 {
     stc8h_u8 high1;
@@ -94,7 +121,9 @@ stc8h_u16 stc8h_timer0_12t_ticks_to_us(stc8h_u16 ticks)
     return (stc8h_u16)((((stc8h_u32)ticks * 12000000UL) + (STC8H_SYSCLK_HZ / 2UL)) / STC8H_SYSCLK_HZ);
 #endif
 }
+#endif
 
+#if STC8H_TIMER_ENABLE_RUN_CONTROL
 void stc8h_timer_start(stc8h_timer_id_t timer)
 {
     if (timer == STC8H_TIMER0) {
@@ -108,7 +137,9 @@ void stc8h_timer_stop(stc8h_timer_id_t timer)
         TR0 = 0;
     }
 }
+#endif
 
+#if STC8H_TIMER_ENABLE_INTERRUPT_CONTROL
 void stc8h_timer_enable_interrupt(stc8h_timer_id_t timer)
 {
     if (timer == STC8H_TIMER0) {
@@ -129,3 +160,4 @@ void stc8h_timer_clear_flag(stc8h_timer_id_t timer)
         TF0 = 0;
     }
 }
+#endif

@@ -27,6 +27,27 @@
 
 模块不得在未被应用项目编译和初始化时占用任何资源。
 
+SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减小 ROM 的方式。通用 HAL 默认完整可用；小容量项目可通过显式宏限制端口、通道和 API 子集，但这些宏只裁剪芯片级能力，不承载应用业务逻辑。
+
+当前可裁剪项：
+
+| 模块 | 宏 | 默认 | 作用 |
+| --- | --- | --- | --- |
+| GPIO | `STC8H_GPIO_PORT_MASK` | `0x3F` | 限制 P0..P5 的 switch 分支 |
+| PWM | `STC8H_PWM_CHANNEL_MASK` | `0x0F` | 限制 `PWMA` channel 1..4 分支 |
+| Timer | `STC8H_TIMER_ENABLE_1MS` | `1` | 是否编译 Timer0 1ms 初始化 |
+| Timer | `STC8H_TIMER_ENABLE_TIMER0_FREE_RUN` | `1` | 是否编译 Timer0 12T free-run/read/us 换算 |
+| Timer | `STC8H_TIMER_ENABLE_TIMER0_RESET` | `1` | 是否编译 Timer0 reset |
+| Timer | `STC8H_TIMER_ENABLE_RUN_CONTROL` | `1` | 是否编译 Timer start/stop |
+| Timer | `STC8H_TIMER_ENABLE_INTERRUPT_CONTROL` | `1` | 是否编译 Timer 中断开关和清标志 |
+| UART | `STC8H_UART_ASSUME_UART1` | `0` | 只使用 UART1 时省去 id 检查 |
+| UART | `STC8H_UART_ENABLE_WRITE_RAM` | `1` | 是否编译 RAM 字符串输出 |
+| UART | `STC8H_UART_ENABLE_RX` | `1` | 是否编译轮询接收 |
+| IR RX | `DRV_IR_RX_ENABLE_PULSE` | `1` | 是否编译 NEC mark/space pulse 解码 |
+| IR RX | `DRV_IR_RX_ENABLE_FALLING` | `1` | 是否编译 falling interval 解码 |
+
+裁剪宏应放在板级配置或构建系统里，并随固件资源报告记录；基础库源码不应为某个应用硬编码固定端口或固定命令表。
+
 ## 3. 资源声明
 
 每个驱动头文件或模块文档应写明资源需求。

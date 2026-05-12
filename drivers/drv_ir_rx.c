@@ -1,5 +1,13 @@
 #include "drv_ir_rx.h"
 
+#ifndef DRV_IR_RX_ENABLE_PULSE
+#define DRV_IR_RX_ENABLE_PULSE 1
+#endif
+
+#ifndef DRV_IR_RX_ENABLE_FALLING
+#define DRV_IR_RX_ENABLE_FALLING 1
+#endif
+
 #define DRV_IR_RX_STATE_IDLE       0u
 #define DRV_IR_RX_STATE_LEAD_SPACE 1u
 #define DRV_IR_RX_STATE_BIT_MARK   2u
@@ -16,6 +24,7 @@ static stc8h_u8 drv_ir_rx_between(stc8h_u16 value, stc8h_u16 low, stc8h_u16 high
     return ((value >= low) && (value <= high)) ? STC8H_TRUE : STC8H_FALSE;
 }
 
+#if DRV_IR_RX_ENABLE_PULSE
 static stc8h_u8 drv_ir_rx_mark_9000(stc8h_u16 width_us)
 {
     return drv_ir_rx_between(width_us, 7200u, 10800u);
@@ -45,7 +54,9 @@ static stc8h_u8 drv_ir_rx_space_1687(stc8h_u16 width_us)
 {
     return drv_ir_rx_between(width_us, 1350u, 2050u);
 }
+#endif
 
+#if DRV_IR_RX_ENABLE_FALLING
 static stc8h_u8 drv_ir_rx_falling_lead(stc8h_u16 width_us)
 {
     return drv_ir_rx_between(width_us, 12500u, 16000u);
@@ -65,10 +76,12 @@ static stc8h_u8 drv_ir_rx_falling_bit_1(stc8h_u16 width_us)
 {
     return drv_ir_rx_between(width_us, 1800u, 2700u);
 }
+#endif
 
 static void drv_ir_rx_set_event(drv_ir_rx_t *rx, drv_ir_rx_event_t event);
 static void drv_ir_rx_finish_frame(drv_ir_rx_t *rx);
 
+#if DRV_IR_RX_ENABLE_FALLING
 static stc8h_u8 drv_ir_rx_falling_bit(drv_ir_rx_t *rx, stc8h_u16 width_us)
 {
     if (drv_ir_rx_falling_bit_0(width_us) != 0u) {
@@ -85,6 +98,7 @@ static stc8h_u8 drv_ir_rx_falling_bit(drv_ir_rx_t *rx, stc8h_u16 width_us)
     }
     return STC8H_TRUE;
 }
+#endif
 
 static void drv_ir_rx_set_event(drv_ir_rx_t *rx, drv_ir_rx_event_t event)
 {
@@ -154,6 +168,7 @@ void drv_ir_rx_reset(drv_ir_rx_t *rx)
     rx->frame.raw = 0u;
 }
 
+#if DRV_IR_RX_ENABLE_PULSE
 void drv_ir_rx_feed_pulse(drv_ir_rx_t *rx, stc8h_u8 level, stc8h_u16 width_us)
 {
     if (rx == 0) {
@@ -215,7 +230,9 @@ void drv_ir_rx_feed_pulse(drv_ir_rx_t *rx, stc8h_u8 level, stc8h_u16 width_us)
         drv_ir_rx_error(rx);
     }
 }
+#endif
 
+#if DRV_IR_RX_ENABLE_FALLING
 void drv_ir_rx_feed_nec_falling_interval(drv_ir_rx_t *rx, stc8h_u16 width_us)
 {
     if (rx == 0) {
@@ -256,7 +273,9 @@ void drv_ir_rx_feed_nec_falling_interval(drv_ir_rx_t *rx, stc8h_u16 width_us)
         drv_ir_rx_error(rx);
     }
 }
+#endif
 
+#if DRV_IR_RX_ENABLE_FALLING
 void drv_ir_rx_finish_nec_falling_interval(drv_ir_rx_t *rx)
 {
     if (rx == 0) {
@@ -272,6 +291,7 @@ void drv_ir_rx_finish_nec_falling_interval(drv_ir_rx_t *rx)
         rx->raw = 0u;
     }
 }
+#endif
 
 drv_ir_rx_event_t drv_ir_rx_get_event(drv_ir_rx_t *rx, drv_ir_rx_frame_t *frame)
 {

@@ -217,3 +217,33 @@ void send_mark(void)
 ```
 
 该接口会占用 Timer0，并把 Timer0 配置为 1T 16-bit non-auto-reload，不启用中断。已经使用 Timer0 free-run 接收红外、1ms tick 或其他计时功能的项目，不能同时使用这个阻塞延时；需要在板级资源表中明确二选一。
+
+## 10. 小容量固件裁剪
+
+SDCC/mcs51 对跨函数、跨模块的 dead-code elimination 不稳定；8051 小容量芯片不应依赖“没调用的函数一定被删掉”。基础库默认保留通用 HAL 全能力，8KB flash 这类项目可以在 `board_config.h` 或构建参数中显式关闭未用路径。
+
+常用裁剪开关：
+
+```c
+#define STC8H_GPIO_PORT_MASK ((1u << 1) | (1u << 3))
+#define STC8H_PWM_CHANNEL_MASK 0x01u
+#define STC8H_TIMER_ENABLE_1MS 0
+#define STC8H_TIMER_ENABLE_INTERRUPT_CONTROL 0
+#define STC8H_UART_ASSUME_UART1 1
+#define STC8H_UART_ENABLE_WRITE_RAM 0
+#define STC8H_UART_ENABLE_RX 0
+#define DRV_IR_RX_ENABLE_FALLING 0
+```
+
+含义：
+
+- `STC8H_GPIO_PORT_MASK` 只保留实际会访问的 Pn 分支；例如 `P1/P3` 是 `0x0A`。
+- `STC8H_PWM_CHANNEL_MASK` 只保留实际使用的 `PWMA` 通道分支；例如只用 channel 1 是 `0x01`。
+- `STC8H_TIMER_ENABLE_1MS=0` 裁掉 1ms tick 初始化；不影响 Timer0 free-run。
+- `STC8H_TIMER_ENABLE_INTERRUPT_CONTROL=0` 裁掉 Timer 中断开关 API；不影响 `start/stop/read/reset`。
+- `STC8H_UART_ASSUME_UART1=1` 适合只编译 UART1 的项目，省去运行期 UART id 检查。
+- `STC8H_UART_ENABLE_WRITE_RAM=0` 只保留 `write_code()`，适合日志字符串放在 code 区的固件。
+- `STC8H_UART_ENABLE_RX=0` 裁掉轮询接收 API；不影响 TX。
+- `DRV_IR_RX_ENABLE_FALLING=0` 只保留 NEC pulse 解码路径；不影响普通帧和 repeat 识别。
+
+不要关闭项目仍会调用的函数。例如红外夜灯接收端会调用 `stc8h_timer0_reset()`，因此必须保留默认的 `STC8H_TIMER_ENABLE_TIMER0_RESET=1`。关闭 UART 日志的生产构建应同时不编译 `hal/stc8h_uart.c`，而不是只依赖链接器清理。

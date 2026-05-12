@@ -43,11 +43,27 @@
 #endif
 #endif
 
+#ifndef STC8H_UART_ASSUME_UART1
+#define STC8H_UART_ASSUME_UART1 0
+#endif
+
+#ifndef STC8H_UART_ENABLE_WRITE_RAM
+#define STC8H_UART_ENABLE_WRITE_RAM 1
+#endif
+
+#ifndef STC8H_UART_ENABLE_RX
+#define STC8H_UART_ENABLE_RX 1
+#endif
+
 stc8h_status_t stc8h_uart_init(stc8h_uart_id_t uart)
 {
+#if !STC8H_UART_ASSUME_UART1
     if (uart != STC8H_UART1) {
         return STC8H_ERROR;
     }
+#else
+    (void)uart;
+#endif
 
 #if STC8H_UART1_RELOAD == 0
     return STC8H_ERROR;
@@ -74,9 +90,13 @@ stc8h_status_t stc8h_uart_init(stc8h_uart_id_t uart)
 
 void stc8h_uart_putc(stc8h_uart_id_t uart, char ch)
 {
+#if !STC8H_UART_ASSUME_UART1
     if (uart != STC8H_UART1) {
         return;
     }
+#else
+    (void)uart;
+#endif
 
     SBUF = (stc8h_u8)ch;
     while (TI == 0) {
@@ -84,6 +104,7 @@ void stc8h_uart_putc(stc8h_uart_id_t uart, char ch)
     TI = 0;
 }
 
+#if STC8H_UART_ENABLE_WRITE_RAM
 void stc8h_uart_write(stc8h_uart_id_t uart, const char *data)
 {
     if (data == 0) {
@@ -95,6 +116,7 @@ void stc8h_uart_write(stc8h_uart_id_t uart, const char *data)
         ++data;
     }
 }
+#endif
 
 void stc8h_uart_write_code(stc8h_uart_id_t uart, const STC8H_CODE char *data)
 {
@@ -108,11 +130,16 @@ void stc8h_uart_write_code(stc8h_uart_id_t uart, const STC8H_CODE char *data)
     }
 }
 
+#if STC8H_UART_ENABLE_RX
 stc8h_u8 stc8h_uart_readable(stc8h_uart_id_t uart)
 {
+#if !STC8H_UART_ASSUME_UART1
     if (uart != STC8H_UART1) {
         return 0u;
     }
+#else
+    (void)uart;
+#endif
     return (RI != 0) ? 1u : 0u;
 }
 
@@ -120,9 +147,13 @@ char stc8h_uart_getc(stc8h_uart_id_t uart)
 {
     char ch;
 
+#if !STC8H_UART_ASSUME_UART1
     if (uart != STC8H_UART1) {
         return '\0';
     }
+#else
+    (void)uart;
+#endif
 
     while (RI == 0) {
     }
@@ -130,3 +161,4 @@ char stc8h_uart_getc(stc8h_uart_id_t uart)
     ch = (char)SBUF;
     return ch;
 }
+#endif

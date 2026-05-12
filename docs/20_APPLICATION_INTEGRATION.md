@@ -33,3 +33,34 @@ wrapper 方式避免复制基础库源码，也能让 PlatformIO 自动编译项
 红外夜灯项目使用 Makefile 直接编译基础库源文件，接收端用 Timer0 12T free-run + INT0 边沿捕获解码 NEC。红外遥控器项目使用 PlatformIO wrapper include，发送端用 PWM 产生 38kHz 载波，用 Timer0 1T 阻塞延时输出 NEC 帧。
 
 这两个项目验证了当前基础库边界是合适的：不需要把遥控器或夜灯业务沉淀进基础库；需要沉淀的是 GPIO XFR mask、EXTI 批量清标志、PWM 共享周期语义和 Timer0 资源说明这类小而明确的基础能力。
+
+## 5. 8KB 项目的裁剪构建示例
+
+STC8H1K08 红外夜灯这类 8KB flash 项目可以继续编译通用 HAL 源文件，但通过构建参数声明实际使用的芯片资源：
+
+```sh
+TRIM_FLAGS='-DSTC8H_GPIO_PORT_MASK=0x0A \
+-DSTC8H_PWM_CHANNEL_MASK=0x01 \
+-DSTC8H_TIMER_ENABLE_1MS=0 \
+-DSTC8H_TIMER_ENABLE_INTERRUPT_CONTROL=0 \
+-DSTC8H_UART_ASSUME_UART1=1 \
+-DSTC8H_UART_ENABLE_WRITE_RAM=0 \
+-DSTC8H_UART_ENABLE_RX=0 \
+-DDRV_IR_RX_ENABLE_FALLING=0'
+```
+
+该配置表示：只访问 `P1/P3`，只使用 `PWMA channel 1`，Timer0 用 12T free-run/read/reset/start/stop，不使用 Timer 中断 API，UART 只保留 UART1 TX code-string 输出，IR RX 只保留 NEC pulse 解码。生产版若关闭 UART 日志，应让 Makefile 不编译 `hal/stc8h_uart.c`。
+
+验证方式：
+
+```sh
+BASE_FLAGS="-mmcs51 --std-sdcc11 -Iboard -Isrc -I${BASE}/core -I${BASE}/hal -I${BASE}/drivers -DSTC8H_CONFIG_INCLUDE=\\\"board_config.h\\\" -DSTC8H_PINS_INCLUDE=\\\"board_pins.h\\\" -DAPP_POWER_DOWN_ENABLE=1"
+make clean
+make IR_UART_DEBUG=1 IR_VERBOSE_DEBUG=0 POWER_DOWN_ENABLE=1
+make clean
+make CFLAGS="$BASE_FLAGS -DAPP_IR_UART_DEBUG=1 -DAPP_IR_VERBOSE_DEBUG=0 $TRIM_FLAGS" IR_UART_DEBUG=1 IR_VERBOSE_DEBUG=0 POWER_DOWN_ENABLE=1
+make clean
+make CFLAGS="$BASE_FLAGS -DAPP_IR_UART_DEBUG=0 -DAPP_IR_VERBOSE_DEBUG=0 $TRIM_FLAGS" IR_UART_DEBUG=0 IR_VERBOSE_DEBUG=0 POWER_DOWN_ENABLE=1
+```
+
+比较 `build/*.mem` 里的 `ROM/EPROM/FLASH` 和 `Stack starts`，并检查 `build/*.map` 中是否还有已关闭路径的符号前缀。

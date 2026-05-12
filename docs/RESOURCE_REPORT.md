@@ -12,7 +12,54 @@ tools/check_examples.sh
 
 ```text
 2026-05-11：tools/check_examples.sh 通过。
+2026-05-12：tools/check_examples.sh 通过。
 ```
+
+2026-05-12 小容量应用裁剪验证：
+
+路径：
+
+```text
+/Users/tyg/dir/codex_dir/Stc8h_红外遥控夜灯
+```
+
+工具链：
+
+```text
+SDCC mcs51，STC8H1K08，6MHz
+```
+
+功能边界：
+
+- NEC pulse 解码保留，普通帧和 repeat 保留。
+- Timer0 12T free-run/read/reset/start/stop 保留。
+- INT0 唤醒和 power-down 保留。
+- PWM 保留 `PWMA channel 1`。
+- 调试版 UART 保留 UART1 TX `write_code()`；生产版不编译 UART。
+
+裁剪参数：
+
+```text
+-DSTC8H_GPIO_PORT_MASK=0x0A
+-DSTC8H_PWM_CHANNEL_MASK=0x01
+-DSTC8H_TIMER_ENABLE_1MS=0
+-DSTC8H_TIMER_ENABLE_INTERRUPT_CONTROL=0
+-DSTC8H_UART_ASSUME_UART1=1
+-DSTC8H_UART_ENABLE_WRITE_RAM=0
+-DSTC8H_UART_ENABLE_RX=0
+-DDRV_IR_RX_ENABLE_FALLING=0
+```
+
+结果：
+
+| 构建 | ROM/EPROM/FLASH | Stack start | 说明 |
+| --- | ---: | ---: | --- |
+| 默认调试版 | 7577 bytes | 0x7a | `IR_UART_DEBUG=1`，通用 HAL 全量默认 |
+| 裁剪调试版 | 6128 bytes | 0x66 | 同功能，UART1 TX code-string，裁掉未用 HAL 路径 |
+| 默认生产版 | 6802 bytes | 0x6f | `IR_UART_DEBUG=0`，通用 HAL 全量默认 |
+| 裁剪生产版 | 5461 bytes | 0x5e | 不编译 UART，裁掉未用 HAL 路径 |
+
+本次定位到的主要体积来源是 SDCC/mcs51 对同一 `.c` 内未用全局函数和 switch 分支不会可靠裁掉；基础库保留通用 API，提供显式裁剪宏给 8KB 级别项目使用。
 
 ## 1. `gpio_blink` 示例
 
