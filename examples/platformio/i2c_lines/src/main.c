@@ -56,6 +56,10 @@ static void print_quasi_sda(void)
 void main(void)
 {
     board_i2c_init();
+    (void)stc8h_gpio_set_input_enable_mask(BOARD_I2C_SCL_PORT, BOARD_I2C_SCL_MASK, 1u);
+    (void)stc8h_gpio_set_input_enable_mask(BOARD_I2C_SDA_PORT, BOARD_I2C_SDA_MASK, 1u);
+    (void)stc8h_gpio_set_pullup_mask(BOARD_I2C_SCL_PORT, BOARD_I2C_SCL_MASK, 1u);
+    (void)stc8h_gpio_set_pullup_mask(BOARD_I2C_SDA_PORT, BOARD_I2C_SDA_MASK, 1u);
     (void)stc8h_uart_init(STC8H_UART1);
 
     stc8h_uart_write_code(STC8H_UART1, "I2C lines test\r\n");

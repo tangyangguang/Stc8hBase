@@ -194,12 +194,16 @@ void stc8h_gpio_set_mode(stc8h_u8 port, stc8h_u8 pin, stc8h_gpio_mode_t mode);
 void stc8h_gpio_write(stc8h_u8 port, stc8h_u8 pin, stc8h_u8 value);
 stc8h_u8 stc8h_gpio_read(stc8h_u8 port, stc8h_u8 pin);
 void stc8h_gpio_toggle(stc8h_u8 port, stc8h_u8 pin);
+stc8h_status_t stc8h_gpio_set_pullup_mask(stc8h_u8 port, stc8h_u8 mask, stc8h_u8 enable);
+stc8h_status_t stc8h_gpio_set_input_enable_mask(stc8h_u8 port, stc8h_u8 mask, stc8h_u8 enable);
 ```
 
 取舍：
 
 - 端口和引脚使用小整数，方便板级配置。
 - `port + pin` 接口主要用于低频初始化、调试和非关键路径。
+- `stc8h_gpio_set_pullup_mask()` 和 `stc8h_gpio_set_input_enable_mask()` 只支持 `P1/P3/P5` 对应的 XFR 寄存器，访问前会打开 `P_SW2.EAXFR`。
+- XFR mask 辅助实现在独立 `stc8h_gpio_xfr.c` 中；项目不用这些 API 时不要编译该源文件。
 - 高频或时序敏感路径优先使用板级宏或内联函数绑定具体引脚。
 - 软件 I2C、TM1637、红外、EC11 扫描等路径不应依赖运行期端口分派。
 
@@ -333,6 +337,8 @@ void stc8h_spi_write(const STC8H_DATA stc8h_u8 *data, stc8h_u8 len);
 接口方向：
 
 ```c
+stc8h_status_t stc8h_pwm_init_period(stc8h_u16 period);
+stc8h_status_t stc8h_pwm_channel_init(stc8h_u8 channel);
 stc8h_status_t stc8h_pwm_init(stc8h_u8 channel, stc8h_u16 period);
 stc8h_status_t stc8h_pwm_set_duty(stc8h_u8 channel, stc8h_u16 duty);
 stc8h_status_t stc8h_pwm_enable(stc8h_u8 channel);
@@ -343,7 +349,9 @@ stc8h_status_t stc8h_pwm_disable(stc8h_u8 channel);
 
 - 第一版实现 `PWMA` 1..4 的基础 PWM mode 1 输出。
 - 默认引脚选择为官方默认 P1 组：PWM1P/P1.0、PWM2P/P1.2、PWM3P/P1.4、PWM4P/P1.6。
-- `PWMA` 1..4 共用同一个周期；重新初始化任一通道会更新 `PWMA` 周期。
+- `PWMA` 1..4 共用同一个周期；`stc8h_pwm_init_period()` 或 `stc8h_pwm_init()` 会更新全局 ARR 周期。
+- `stc8h_pwm_channel_init()` 只初始化单个通道模式和默认占空比，不改全局周期。
+- `stc8h_pwm_init(channel, period)` 是便捷入口，等价于先设置全局周期再初始化一个通道。
 - 第一版不实现互补输出、死区、刹车、中断、PWMB 和运行期引脚自动适配。
 - 用于红外发射载波和无源蜂鸣器时，必须在资源策略中声明占用。
 
@@ -451,6 +459,7 @@ stc8h_status_t stc8h_exti_configure(stc8h_exti_line_t line, stc8h_exti_mode_t mo
 void stc8h_exti_enable(stc8h_exti_line_t line);
 void stc8h_exti_disable(stc8h_exti_line_t line);
 void stc8h_exti_clear_flag(stc8h_exti_line_t line);
+void stc8h_exti_clear_flags(stc8h_u8 mask);
 ```
 
 取舍：
@@ -462,6 +471,7 @@ void stc8h_exti_clear_flag(stc8h_exti_line_t line);
 - NEC 红外接收不依赖 `BOTH_EDGES`；P3.2/INT0 示例使用 `FALLING_EDGE` 加下降沿间隔解码。
 - STC8H1K08 的 INT2(P3.6)、INT3(P3.7)、INT4(P3.0) 只支持下降沿；对这三路配置 `BOTH_EDGES` 返回 `STC8H_ERROR`。
 - INT2/INT3/INT4 使能位在 `INTCLKO` bit4/5/6，请求标志在 `AUXINTIF` bit4/5/6；中断向量分别为 10、11、16。
+- `stc8h_exti_clear_flags()` 使用 bit0..bit4 表示 INT0..INT4，适合多个唤醒源进入 power-down 前统一清标志。
 
 ### 3.11 `stc8h_power`
 

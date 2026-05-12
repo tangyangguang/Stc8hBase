@@ -100,6 +100,7 @@
 - 已新增并烧录实测 PlatformIO `wdt_reset_test` 受控测试示例，确认停止喂狗后芯片复位，并在重启后读到 `boot reason: wdt`。
 - 已将 `ir_nec_rx_int_sleep` 中的 INT0 配置和 power-down 入口改为复用 `stc8h_exti` / `stc8h_power`。
 - 已新增 `docs/19_MODULE_ACCEPTANCE.md`，明确新增基础模块准入标准，避免按想象扩展外设。
+- 已根据红外夜灯和红外遥控器两个真实应用复盘，补充 GPIO XFR mask 辅助、EXTI 批量清标志、PWM 共享周期 API 和应用项目引用模式文档。
 
 ## 2. 待优化项
 

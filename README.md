@@ -101,4 +101,5 @@ tools/check_examples.sh
 - [15 剩余工作](docs/15_REMAINING_WORK.md)
 - [16 硬件测试清单](docs/16_HARDWARE_TEST.md)
 - [19 新增模块准入标准](docs/19_MODULE_ACCEPTANCE.md)
+- [20 应用项目引用模式](docs/20_APPLICATION_INTEGRATION.md)
 - [资源报告](docs/RESOURCE_REPORT.md)

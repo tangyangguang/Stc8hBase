@@ -14,5 +14,7 @@ void stc8h_gpio_set_mode(stc8h_u8 port, stc8h_u8 pin, stc8h_gpio_mode_t mode);
 void stc8h_gpio_write(stc8h_u8 port, stc8h_u8 pin, stc8h_u8 value);
 stc8h_u8 stc8h_gpio_read(stc8h_u8 port, stc8h_u8 pin);
 void stc8h_gpio_toggle(stc8h_u8 port, stc8h_u8 pin);
+stc8h_status_t stc8h_gpio_set_pullup_mask(stc8h_u8 port, stc8h_u8 mask, stc8h_u8 enable);
+stc8h_status_t stc8h_gpio_set_input_enable_mask(stc8h_u8 port, stc8h_u8 mask, stc8h_u8 enable);
 
 #endif

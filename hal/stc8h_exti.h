@@ -20,5 +20,6 @@ stc8h_status_t stc8h_exti_configure(stc8h_exti_line_t line, stc8h_exti_mode_t mo
 void stc8h_exti_enable(stc8h_exti_line_t line);
 void stc8h_exti_disable(stc8h_exti_line_t line);
 void stc8h_exti_clear_flag(stc8h_exti_line_t line);
+void stc8h_exti_clear_flags(stc8h_u8 mask);
 
 #endif

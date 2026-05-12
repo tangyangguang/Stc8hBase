@@ -37,7 +37,7 @@ HAL 模块封装常见硬件操作，同时保留 STC8H 的硬件概念。
 
 | 模块 | 作用 |
 | --- | --- |
-| `stc8h_gpio` | 引脚模式、读、写、翻转 |
+| `stc8h_gpio` | 引脚模式、读、写、翻转；可选 XFR 上拉/数字输入 mask 辅助 |
 | `stc8h_timer` | 定时器配置和 tick 来源 |
 | `stc8h_uart` | UART 初始化、发送、接收辅助 |
 | `stc8h_i2c` | 软件 I2C 单总线 |
@@ -50,6 +50,8 @@ HAL 模块封装常见硬件操作，同时保留 STC8H 的硬件概念。
 | `stc8h_power` | idle 和 power-down 低功耗入口 |
 
 HAL API 避免大型结构体，除非它能明显减少重复代码。
+
+`stc8h_gpio_xfr.c` 是 GPIO 的可选扩展源文件，只封装 `P1/P3/P5` 上拉和数字输入使能这类 XFR mask 操作。普通 GPIO 项目只编译 `stc8h_gpio.c` 即可，不为 XFR 辅助函数付出 ROM 成本。
 
 WDT、外部中断和低功耗模块只封装已核实的 MCU 基础能力，不做任务健康监控、电源管理框架或中断注册表。ISR 仍由板级或应用代码显式绑定。
 

@@ -74,22 +74,15 @@ static stc8h_status_t stc8h_pwm_set_channel_mode(stc8h_u8 channel)
     return STC8H_ERROR;
 }
 
-stc8h_status_t stc8h_pwm_init(stc8h_u8 channel, stc8h_u16 period)
+stc8h_status_t stc8h_pwm_init_period(stc8h_u16 period)
 {
-    stc8h_u8 ps_shift;
-    stc8h_u8 ps_mask;
-
-    if ((stc8h_pwm_output_mask(channel) == 0u) || (period == 0u)) {
+    if (period == 0u) {
         return STC8H_ERROR;
     }
 
     P_SW2 |= 0x80u;
     PWMA_CR1 &= (stc8h_u8)~STC8H_PWM_CR1_CEN;
     stc8h_pwm_period = period;
-
-    ps_shift = (stc8h_u8)((channel - 1u) << 1);
-    ps_mask = (stc8h_u8)(0x03u << ps_shift);
-    PWMA_PS &= (stc8h_u8)~ps_mask;
 
     PWMA_PSCRH = 0u;
     PWMA_PSCRL = 0u;
@@ -99,11 +92,36 @@ stc8h_status_t stc8h_pwm_init(stc8h_u8 channel, stc8h_u16 period)
     PWMA_BKR |= STC8H_PWM_BKR_MOE;
     PWMA_CR1 = (stc8h_u8)(PWMA_CR1 | STC8H_PWM_CR1_ARPE);
 
+    return STC8H_OK;
+}
+
+stc8h_status_t stc8h_pwm_channel_init(stc8h_u8 channel)
+{
+    stc8h_u8 ps_shift;
+    stc8h_u8 ps_mask;
+
+    if (stc8h_pwm_output_mask(channel) == 0u) {
+        return STC8H_ERROR;
+    }
+
+    P_SW2 |= 0x80u;
+    ps_shift = (stc8h_u8)((channel - 1u) << 1);
+    ps_mask = (stc8h_u8)(0x03u << ps_shift);
+    PWMA_PS &= (stc8h_u8)~ps_mask;
+
     if (stc8h_pwm_set_channel_mode(channel) != STC8H_OK) {
         return STC8H_ERROR;
     }
 
     return stc8h_pwm_set_duty(channel, 0u);
+}
+
+stc8h_status_t stc8h_pwm_init(stc8h_u8 channel, stc8h_u16 period)
+{
+    if (stc8h_pwm_init_period(period) != STC8H_OK) {
+        return STC8H_ERROR;
+    }
+    return stc8h_pwm_channel_init(channel);
 }
 
 stc8h_status_t stc8h_pwm_set_duty(stc8h_u8 channel, stc8h_u16 duty)
