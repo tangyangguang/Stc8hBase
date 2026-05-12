@@ -112,7 +112,7 @@ UART hello 115200
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/uart_hello
+cd examples/platformio/uart_hello
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -144,7 +144,7 @@ both_low SDA=0 SCL=0
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/i2c_lines
+cd examples/platformio/i2c_lines
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -171,7 +171,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/uart_echo_buffered
+cd examples/platformio/uart_echo_buffered
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -206,7 +206,7 @@ I2C scan
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/i2c_scan
+cd examples/platformio/i2c_scan
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -241,7 +241,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/lcd1602_text
+cd examples/platformio/lcd1602_text
 pio run -t upload --upload-port /dev/cu.usbserial-110
 ```
 
@@ -264,7 +264,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ec11_counter
+cd examples/platformio/ec11_counter
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -285,7 +285,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/adc_pot
+cd examples/platformio/adc_pot
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -307,7 +307,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/timer_tick
+cd examples/platformio/timer_tick
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -335,7 +335,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/soft_timer_tick
+cd examples/platformio/soft_timer_tick
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -360,7 +360,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ring_buffer_demo
+cd examples/platformio/ring_buffer_demo
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -384,7 +384,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/crc_demo
+cd examples/platformio/crc_demo
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -408,7 +408,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/filter_demo
+cd examples/platformio/filter_demo
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -440,7 +440,7 @@ P1.3 / MOSI  <->  P1.4 / MISO
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/spi_loopback
+cd examples/platformio/spi_loopback
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -476,7 +476,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 默认安全测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/eeprom_rw
+cd examples/platformio/eeprom_rw
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -484,7 +484,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 写擦测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/eeprom_rw
+cd examples/platformio/eeprom_rw
 pio run -e STC8H1K08_write_test -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -517,7 +517,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/output_levels
+cd examples/platformio/output_levels
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -550,7 +550,7 @@ TM1637 GND -> GND
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/tm1637_number
+cd examples/platformio/tm1637_number
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -589,7 +589,7 @@ P1.2 -> 板载/外接 LED，高电平点亮
 PlatformIO 测试命令：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/pwm_output
+cd examples/platformio/pwm_output
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -730,7 +730,7 @@ pio run -t upload --upload-port /dev/cu.usbserial-110
 烧录：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ir_nec_demo
+cd examples/platformio/ir_nec_demo
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -773,7 +773,7 @@ GND            -> GND
 烧录：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/delay_us_probe
+cd examples/platformio/delay_us_probe
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -810,7 +810,7 @@ GND        -> GND
 烧录：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ir_nec_tx
+cd examples/platformio/ir_nec_tx
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -853,7 +853,7 @@ VS1838B/1838B GND -> GND
 烧录：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ir_nec_rx
+cd examples/platformio/ir_nec_rx
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -897,7 +897,7 @@ VS1838B/1838B GND -> GND
 烧录：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/ir_nec_rx_int_sleep
+cd examples/platformio/ir_nec_rx_int_sleep
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```
@@ -939,7 +939,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 烧录：
 
 ```sh
-cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/wdt_reset_test
+cd examples/platformio/wdt_reset_test
 pio run -t upload --upload-port /dev/cu.usbserial-110
 pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 ```

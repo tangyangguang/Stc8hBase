@@ -20,7 +20,7 @@ tools/check_examples.sh
 路径：
 
 ```text
-/Users/tyg/dir/codex_dir/Stc8h_红外遥控夜灯
+Stc8h_红外遥控夜灯
 ```
 
 工具链：
