@@ -3,7 +3,7 @@ setlocal
 
 set ROOT=%~dp0..\..\..
 set BUILD=%~dp0build
-set INCS=INCDIR(%ROOT%\core;%ROOT%\hal;%ROOT%\drivers;%ROOT%\utils;%ROOT%\board\stc8h1k08_tssop20_demo)
+set INCS=INCDIR(%ROOT%\core;%ROOT%\hal;%ROOT%\drivers;%ROOT%\utils;%ROOT%\protocols;%ROOT%\board\stc8h1k08_tssop20_demo)
 set C51FLAGS=DEBUG
 set ERR=0
 

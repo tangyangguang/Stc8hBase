@@ -281,3 +281,28 @@ SDCC 的 8051 语法可能导致 VS Code C/C++ 插件误报。
 - 总入口式大 HAL。
 - 为了泛化增加函数指针表或运行期适配。
 - 与本项目常用外设无关的大量模块。
+
+## 6. nRF24L01 / RF24 资料
+
+参考来源：
+
+```text
+https://devzone.nordicsemi.com/cfs-file/__key/communityserver-discussions-components-files/4/nRF24L01P_5F00_PS_5F00_v1.0.pdf
+https://nrf24.github.io/RF24/classRF24.html
+https://nrf24.github.io/RF24/md_COMMON__ISSUES.html
+https://docs.circuitpython.org/projects/nrf24l01/en/latest/
+```
+
+用途：
+
+- 核对 nRF24L01+ SPI 命令、寄存器、FIFO、IRQ 和 TX/RX 状态机。
+- 核对 ACK payload 与 dynamic payload 的依赖关系。
+- 核对 `TX_DS`、`RX_DR`、`MAX_RT`、`FIFO_STATUS` 和 `OBSERVE_TX` 的恢复策略。
+- 记录常见硬件问题：供电噪声、PA/LNA 电流、线长、SPI 速度和 2.4GHz 穿透限制。
+
+吸收结论：
+
+- `drv_nrf24l01` 只做芯片驱动，不继承旧项目 API 或业务协议。
+- ACK payload 只作为短状态回传优化，启用时必须同时启用 dynamic payload。
+- PRX 的 ACK payload 会占用 TX FIFO，堵塞时需要 `FLUSH_TX`。
+- ISR 只置位，不在 ISR 中执行 SPI 收发。

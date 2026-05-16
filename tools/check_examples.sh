@@ -71,6 +71,10 @@ check_map_absent \
     "_stc8h_wdt" "__div" "__mod" "__mullong" "_stc8h_exti_disable" \
     "_stc8h_exti_clear_flags" "_stc8h_power_idle"
 
+check_map_absent \
+    "examples/platformio/gpio_blink/.pio/build/STC8H1K08/firmware.map" \
+    "_drv_nrf24l01" "_proto_rf_link"
+
 if grep -Eq '\(stc8h_u32\)1u? *<< *rx->bit_index' "${ROOT_DIR}/drivers/drv_ir_rx.c"; then
     echo "forbidden variable u32 shift found in drivers/drv_ir_rx.c" >&2
     exit 1

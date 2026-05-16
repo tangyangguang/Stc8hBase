@@ -52,4 +52,15 @@
 #define BOARD_TM1637_DIO_LOW() do { P3 &= (stc8h_u8)~BOARD_TM1637_DIO_MASK; } while (0)
 #define BOARD_TM1637_DIO_READ() ((P3 & BOARD_TM1637_DIO_MASK) ? 1u : 0u)
 
+/* Current nRF24L01 hardware-test wiring. SPI uses P1.3/P1.4/P1.5. */
+#define BOARD_NRF24L01_CSN_MASK 0x04u
+#define BOARD_NRF24L01_CE_MASK 0x40u
+#define BOARD_NRF24L01_IRQ_MASK 0x04u
+
+#define DRV_NRF24L01_CSN_HIGH() do { P1 |= BOARD_NRF24L01_CSN_MASK; } while (0)
+#define DRV_NRF24L01_CSN_LOW() do { P1 &= (stc8h_u8)~BOARD_NRF24L01_CSN_MASK; } while (0)
+#define DRV_NRF24L01_CE_HIGH() do { P1 |= BOARD_NRF24L01_CE_MASK; } while (0)
+#define DRV_NRF24L01_CE_LOW() do { P1 &= (stc8h_u8)~BOARD_NRF24L01_CE_MASK; } while (0)
+#define DRV_NRF24L01_IRQ_READ() ((P3 & BOARD_NRF24L01_IRQ_MASK) ? 1u : 0u)
+
 #endif

@@ -32,6 +32,9 @@ examples/platformio/ring_buffer_demo/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ir_nec_demo/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ir_nec_tx/.pio/build/STC8H1K08/firmware.hex
 examples/platformio/ir_nec_rx/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/nrf24_fixed_ping/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/nrf24_ack_payload/.pio/build/STC8H1K08/firmware.hex
+examples/platformio/rf_link_status_demo/.pio/build/STC8H1K08/firmware.hex
 ```
 
 ## 2. 板级默认配置
@@ -65,6 +68,7 @@ board/stc8h1k08_tssop20_demo/
 | EC11 SW | P5.4 |
 | 10K 电位器 | P3.3 |
 | UART1 | 默认 UART1 引脚，优先按 STC 官方 P3.0/RXD、P3.1/TXD 接线 |
+| nRF24L01 SPI | P1.3/MOSI、P1.4/MISO、P1.5/SCK、P1.2/CSN、P1.6/CE、P3.2/IRQ |
 
 当前已按核心板现状设置：LED 接 P1.2，高电平点亮。烧录或实测前，仍应按实际 TSSOP20 原理图核对 UART、电源和复位接线。
 

@@ -13,6 +13,7 @@ tools/check_examples.sh
 ```text
 2026-05-11：tools/check_examples.sh 通过。
 2026-05-12：tools/check_examples.sh 通过。
+2026-05-16：新增 nRF24L01/RF link 模块后，`tools/check_examples.sh` 通过。新增示例 flash 占用：`nrf24_fixed_ping` 1783 bytes，`nrf24_ack_payload` 1754 bytes，`rf_link_status_demo` 2094 bytes。
 ```
 
 2026-05-12 小容量应用裁剪验证：
