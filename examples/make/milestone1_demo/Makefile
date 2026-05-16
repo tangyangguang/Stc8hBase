@@ -14,6 +14,7 @@ SRCS := \
 	main.c \
 	$(ROOT)/core/stc8h_delay.c \
 	$(ROOT)/hal/stc8h_gpio.c \
+	$(ROOT)/hal/stc8h_gpio_toggle.c \
 	$(ROOT)/hal/stc8h_uart.c \
 	$(ROOT)/hal/stc8h_i2c.c \
 	$(ROOT)/drivers/drv_lcd1602.c \

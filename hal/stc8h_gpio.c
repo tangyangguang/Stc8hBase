@@ -233,16 +233,3 @@ stc8h_u8 stc8h_gpio_read(stc8h_u8 port, stc8h_u8 pin)
     mask = stc8h_gpio_mask(pin);
     return ((p & mask) != 0u) ? 1u : 0u;
 }
-
-void stc8h_gpio_toggle(stc8h_u8 port, stc8h_u8 pin)
-{
-    stc8h_u8 p;
-
-    if ((port >= STC8H_GPIO_PORT_COUNT) || (pin > 7u)) {
-        return;
-    }
-
-    p = stc8h_gpio_read_port(port);
-    p ^= stc8h_gpio_mask(pin);
-    stc8h_gpio_write_port(port, p);
-}

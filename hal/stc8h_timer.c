@@ -39,6 +39,10 @@
 #define STC8H_TIMER_ENABLE_INTERRUPT_CONTROL 1
 #endif
 
+#if defined(STC8H_TIMER0_ROLE_1T_DELAY) && STC8H_TIMER_ENABLE_TIMER0_FREE_RUN
+#error "Timer0 cannot be both 1T delay and 12T free-run in one firmware"
+#endif
+
 #if STC8H_TIMER_ENABLE_1MS
 stc8h_status_t stc8h_timer_init_1ms(stc8h_timer_id_t timer)
 {

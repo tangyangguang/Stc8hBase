@@ -118,6 +118,9 @@ stc8h_status_t stc8h_pwm_init_period(stc8h_u16 period)
     if (period == 0u) {
         return STC8H_ERROR;
     }
+    if (((PWMA_ENO & 0x55u) != 0u) && (period != stc8h_pwm_period)) {
+        return STC8H_ERROR;
+    }
 
     P_SW2 |= 0x80u;
     PWMA_CR1 &= (stc8h_u8)~STC8H_PWM_CR1_CEN;

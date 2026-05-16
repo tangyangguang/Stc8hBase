@@ -1,6 +1,10 @@
 #include "stc8h_delay.h"
 #include "stc8h_sfr.h"
 
+#ifdef STC8H_TIMER0_ROLE_FREE_RUN
+#error "Timer0 cannot be both 12T free-run and 1T delay in one firmware"
+#endif
+
 #ifndef STC8H_AUXR_T0_1T
 #define STC8H_AUXR_T0_1T 0x80u
 #endif

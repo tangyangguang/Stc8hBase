@@ -81,14 +81,22 @@ static stc8h_u8 drv_ir_rx_falling_bit_1(stc8h_u16 width_us)
 static void drv_ir_rx_set_event(drv_ir_rx_t *rx, drv_ir_rx_event_t event);
 static void drv_ir_rx_finish_frame(drv_ir_rx_t *rx);
 
+static void drv_ir_rx_push_bit(drv_ir_rx_t *rx, stc8h_u8 bit)
+{
+    rx->raw >>= 1;
+    if (bit != 0u) {
+        rx->raw |= 0x80000000UL;
+    }
+    ++rx->bit_index;
+}
+
 #if DRV_IR_RX_ENABLE_FALLING
 static stc8h_u8 drv_ir_rx_falling_bit(drv_ir_rx_t *rx, stc8h_u16 width_us)
 {
     if (drv_ir_rx_falling_bit_0(width_us) != 0u) {
-        ++rx->bit_index;
+        drv_ir_rx_push_bit(rx, 0u);
     } else if (drv_ir_rx_falling_bit_1(width_us) != 0u) {
-        rx->raw |= ((stc8h_u32)1u << rx->bit_index);
-        ++rx->bit_index;
+        drv_ir_rx_push_bit(rx, 1u);
     } else {
         return STC8H_FALSE;
     }
@@ -211,10 +219,9 @@ void drv_ir_rx_feed_pulse(drv_ir_rx_t *rx, stc8h_u8 level, stc8h_u16 width_us)
         if (level != DRV_IR_LEVEL_SPACE) {
             drv_ir_rx_error(rx);
         } else if (drv_ir_rx_space_562(width_us) != 0u) {
-            ++rx->bit_index;
+            drv_ir_rx_push_bit(rx, 0u);
         } else if (drv_ir_rx_space_1687(width_us) != 0u) {
-            rx->raw |= ((stc8h_u32)1u << rx->bit_index);
-            ++rx->bit_index;
+            drv_ir_rx_push_bit(rx, 1u);
         } else {
             drv_ir_rx_error(rx);
             return;

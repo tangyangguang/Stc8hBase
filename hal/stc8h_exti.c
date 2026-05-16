@@ -72,22 +72,6 @@ void stc8h_exti_enable(stc8h_exti_line_t line)
     }
 }
 
-void stc8h_exti_disable(stc8h_exti_line_t line)
-{
-    stc8h_u8 mask;
-
-    if (line == STC8H_EXTI_INT0) {
-        EX0 = 0;
-    } else if (line == STC8H_EXTI_INT1) {
-        EX1 = 0;
-    } else {
-        mask = stc8h_exti_mask(line);
-        if (mask != 0u) {
-            INTCLKO &= (stc8h_u8)~mask;
-        }
-    }
-}
-
 void stc8h_exti_clear_flag(stc8h_exti_line_t line)
 {
     stc8h_u8 mask;
@@ -101,24 +85,5 @@ void stc8h_exti_clear_flag(stc8h_exti_line_t line)
         if (mask != 0u) {
             AUXINTIF &= (stc8h_u8)~mask;
         }
-    }
-}
-
-void stc8h_exti_clear_flags(stc8h_u8 mask)
-{
-    if ((mask & (1u << STC8H_EXTI_INT0)) != 0u) {
-        IE0 = 0;
-    }
-    if ((mask & (1u << STC8H_EXTI_INT1)) != 0u) {
-        IE1 = 0;
-    }
-    if ((mask & (1u << STC8H_EXTI_INT2)) != 0u) {
-        AUXINTIF &= (stc8h_u8)~STC8H_EXTI_INT2_MASK;
-    }
-    if ((mask & (1u << STC8H_EXTI_INT3)) != 0u) {
-        AUXINTIF &= (stc8h_u8)~STC8H_EXTI_INT3_MASK;
-    }
-    if ((mask & (1u << STC8H_EXTI_INT4)) != 0u) {
-        AUXINTIF &= (stc8h_u8)~STC8H_EXTI_INT4_MASK;
     }
 }
