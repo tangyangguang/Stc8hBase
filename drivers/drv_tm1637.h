@@ -15,6 +15,30 @@
 #define DRV_TM1637_ENABLE_DISPLAY_DIGITS 1
 #endif
 
+#ifndef DRV_TM1637_ENABLE_DISPLAY_RAW4
+#define DRV_TM1637_ENABLE_DISPLAY_RAW4 0
+#endif
+
+#ifndef DRV_TM1637_ENABLE_DISPLAY_RAW
+#define DRV_TM1637_ENABLE_DISPLAY_RAW 1
+#endif
+
+#ifndef DRV_TM1637_ENABLE_SET_DISPLAY
+#define DRV_TM1637_ENABLE_SET_DISPLAY 1
+#endif
+
+#ifndef DRV_TM1637_ENABLE_BRIGHTNESS_STATE
+#define DRV_TM1637_ENABLE_BRIGHTNESS_STATE 1
+#endif
+
+#ifndef DRV_TM1637_FIXED_BRIGHTNESS
+#define DRV_TM1637_FIXED_BRIGHTNESS 7u
+#endif
+
+#ifndef DRV_TM1637_ENABLE_RAW_LEN_CHECK
+#define DRV_TM1637_ENABLE_RAW_LEN_CHECK 1
+#endif
+
 #ifndef DRV_TM1637_ENABLE_DISPLAY_NUMBER
 #define DRV_TM1637_ENABLE_DISPLAY_NUMBER 1
 #endif
@@ -41,8 +65,15 @@
 
 void drv_tm1637_init(void);
 void drv_tm1637_set_brightness(stc8h_u8 brightness);
+#if DRV_TM1637_ENABLE_SET_DISPLAY
 void drv_tm1637_set_display(stc8h_u8 on);
+#endif
+#if DRV_TM1637_ENABLE_DISPLAY_RAW
 stc8h_status_t drv_tm1637_display_raw(const stc8h_u8 *segments, stc8h_u8 len);
+#endif
+#if DRV_TM1637_ENABLE_DISPLAY_RAW4
+stc8h_status_t drv_tm1637_display_raw4(const stc8h_u8 segments[4]);
+#endif
 #if DRV_TM1637_ENABLE_DISPLAY_DIGITS
 stc8h_status_t drv_tm1637_display_digits(const stc8h_u8 *digits, stc8h_u8 len);
 #endif

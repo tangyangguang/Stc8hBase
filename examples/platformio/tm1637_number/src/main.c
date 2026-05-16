@@ -58,7 +58,7 @@ static stc8h_status_t display_u16_4(stc8h_u16 value)
         digits[pos] = drv_tm1637_encode_digit(digits[pos]);
     }
 
-    return drv_tm1637_display_raw(digits, 4u);
+    return drv_tm1637_display_raw4(digits);
 }
 
 void main(void)
@@ -74,13 +74,13 @@ void main(void)
     drv_tm1637_init();
     drv_tm1637_set_brightness(7u);
 
-    ok = (drv_tm1637_display_raw(all_on, 4u) == STC8H_OK) ? 1u : 0u;
+    ok = (drv_tm1637_display_raw4(all_on) == STC8H_OK) ? 1u : 0u;
     print_result(ok);
     stc8h_delay_ms(1500u);
-    ok = (drv_tm1637_display_raw(order_a, 4u) == STC8H_OK) ? 1u : 0u;
+    ok = (drv_tm1637_display_raw4(order_a) == STC8H_OK) ? 1u : 0u;
     print_result(ok);
     stc8h_delay_ms(1500u);
-    ok = (drv_tm1637_display_raw(order_b, 4u) == STC8H_OK) ? 1u : 0u;
+    ok = (drv_tm1637_display_raw4(order_b) == STC8H_OK) ? 1u : 0u;
     print_result(ok);
     stc8h_delay_ms(1500u);
 

@@ -8,7 +8,7 @@
 #define SERVO_CENTER_US_TICKS 1382u
 #define MOTOR_PERIOD_TICKS 1105u
 
-static drv_ec11_t encoder;
+static drv_ec11_small_t encoder;
 
 static void pwm_pins_init(void)
 {
@@ -21,7 +21,7 @@ static void pwm_pins_init(void)
 void main(void)
 {
     pwm_pins_init();
-    drv_ec11_init(&encoder);
+    drv_ec11_small_init(&encoder);
 
     (void)stc8h_pwm_set_prescaler(STC8H_PWM_GROUP_A, SERVO_PRESCALER);
     (void)stc8h_pwm_set_period(STC8H_PWM_GROUP_A, SERVO_PERIOD_TICKS);
@@ -41,8 +41,7 @@ void main(void)
     (void)stc8h_pwm_enable(STC8H_PWM_GROUP_B, STC8H_PWM_CHANNEL_8);
 
     while (1) {
-        drv_ec11_scan(&encoder, 1u, 1u, 1u);
-        (void)drv_ec11_get_delta(&encoder);
+        (void)drv_ec11_scan_delta_small(&encoder, 1u, 1u);
         (void)stc8h_pwm_set_duty(STC8H_PWM_GROUP_A, STC8H_PWM_CHANNEL_1, SERVO_MIN_US_TICKS);
     }
 }

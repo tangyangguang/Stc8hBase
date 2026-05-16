@@ -1,5 +1,6 @@
 #include "drv_ec11.h"
 
+#if DRV_EC11_ENABLE_FULL_API || DRV_EC11_ENABLE_SMALL_API
 static stc8h_s8 drv_ec11_transition(stc8h_u8 previous, stc8h_u8 current)
 {
     static const STC8H_CODE stc8h_s8 table[16] = {
@@ -11,7 +12,9 @@ static stc8h_s8 drv_ec11_transition(stc8h_u8 previous, stc8h_u8 current)
 
     return table[(stc8h_u8)((previous << 2) | current) & 0x0Fu];
 }
+#endif
 
+#if DRV_EC11_ENABLE_FULL_API
 static void drv_ec11_add_ms(stc8h_u16 *value, stc8h_u16 elapsed_ms)
 {
     stc8h_u16 next;
@@ -140,3 +143,45 @@ stc8h_s16 drv_ec11_get_delta(drv_ec11_t *ec11)
     ec11->delta = 0;
     return delta;
 }
+#endif
+
+#if DRV_EC11_ENABLE_SMALL_API
+void drv_ec11_small_init(drv_ec11_small_t *ec11)
+{
+    if (ec11 == 0) {
+        return;
+    }
+
+    ec11->last_state = 0u;
+    ec11->step_accum = 0;
+}
+
+stc8h_s8 drv_ec11_scan_delta_small(drv_ec11_small_t *ec11, stc8h_u8 a_level, stc8h_u8 b_level)
+{
+    stc8h_u8 current;
+    stc8h_s8 step;
+
+    if (ec11 == 0) {
+        return 0;
+    }
+
+    current = (stc8h_u8)(((a_level ? 1u : 0u) << 1) | (b_level ? 1u : 0u));
+    step = drv_ec11_transition(ec11->last_state, current);
+    ec11->last_state = current;
+    if (step == 0) {
+        return 0;
+    }
+
+    ec11->step_accum = (stc8h_s8)(ec11->step_accum + step);
+    if (ec11->step_accum >= (stc8h_s8)DRV_EC11_SMALL_STEPS_PER_DETENT) {
+        ec11->step_accum = 0;
+        return DRV_EC11_SMALL_REVERSE ? -1 : 1;
+    }
+    if (ec11->step_accum <= (stc8h_s8)(0 - DRV_EC11_SMALL_STEPS_PER_DETENT)) {
+        ec11->step_accum = 0;
+        return DRV_EC11_SMALL_REVERSE ? 1 : -1;
+    }
+
+    return 0;
+}
+#endif

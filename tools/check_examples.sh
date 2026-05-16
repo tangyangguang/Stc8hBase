@@ -118,6 +118,7 @@ check_map_absent \
 
 check_map_absent \
     "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.map" \
+    "_drv_ec11_init " "_drv_ec11_scan " "_drv_ec11_get_delta " \
     "_drv_ec11_set_fast" "_drv_ec11_set_reverse" "_drv_ec11_set_steps_per_detent"
 
 check_map_absent \
@@ -125,13 +126,21 @@ check_map_absent \
     "_drv_nrf24l01_read_fifo_status" "_drv_nrf24l01_read_observe_tx" \
     "_drv_nrf24l01_read_reg" "_drv_nrf24l01_write_reg" "_drv_nrf24l01_read_buf" \
     "_drv_nrf24l01_write_buf" "_drv_nrf24l01_command" \
+    "_drv_nrf24l01_set_address_width" "_drv_nrf24l01_set_tx_address" \
+    "_drv_nrf24l01_set_rx_address" "_drv_nrf24l01_set_payload_size" \
     "_drv_nrf24l01_enable_dynamic_payload" "_drv_nrf24l01_disable_dynamic_payload" \
     "_drv_nrf24l01_enable_ack_payload" "_drv_nrf24l01_disable_ack_payload" \
     "_drv_nrf24l01_read_dynamic_payload_size" "_drv_nrf24l01_write_ack_payload"
 
 check_map_absent \
+    "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.map" \
+    "_proto_rf_link_connect " "_proto_rf_link_send_data " "_proto_rf_link_poll " \
+    "_proto_rf_link_reset " "_proto_rf_link_tick " "_proto_rf_link_get_state "
+
+check_map_absent \
     "examples/platformio/tm1637_number/.pio/build/STC8H1K08/firmware.map" \
-    "_drv_tm1637_display_digits" "_drv_tm1637_display_number"
+    "_drv_tm1637_set_display" "_drv_tm1637_display_raw " "_drv_tm1637_display_digits" \
+    "_drv_tm1637_display_number" "_drv_tm1637_clear"
 
 check_map_absent \
     "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.map" \

@@ -20,6 +20,34 @@
 #define DRV_NRF24L01_ENABLE_CHECK_PRESENT 1
 #endif
 
+#ifndef DRV_NRF24L01_ENABLE_ARG_CHECK
+#define DRV_NRF24L01_ENABLE_ARG_CHECK 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_ADDRESS_API
+#define DRV_NRF24L01_ENABLE_ADDRESS_API 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_PIPE0_FIXED_API
+#define DRV_NRF24L01_ENABLE_PIPE0_FIXED_API 0
+#endif
+
+#ifndef DRV_NRF24L01_FIXED_ADDRESS_WIDTH
+#define DRV_NRF24L01_FIXED_ADDRESS_WIDTH 5u
+#endif
+
+#ifndef DRV_NRF24L01_FIXED_PAYLOAD_SIZE
+#define DRV_NRF24L01_FIXED_PAYLOAD_SIZE 32u
+#endif
+
+#if (DRV_NRF24L01_FIXED_ADDRESS_WIDTH < 3u) || (DRV_NRF24L01_FIXED_ADDRESS_WIDTH > 5u)
+#error "DRV_NRF24L01_FIXED_ADDRESS_WIDTH must be 3..5."
+#endif
+
+#if DRV_NRF24L01_FIXED_PAYLOAD_SIZE > 32u
+#error "DRV_NRF24L01_FIXED_PAYLOAD_SIZE must be <= 32."
+#endif
+
 #ifndef DRV_NRF24L01_ENABLE_READ_FIFO_STATUS
 #define DRV_NRF24L01_ENABLE_READ_FIFO_STATUS 1
 #endif
@@ -104,10 +132,15 @@ void drv_nrf24l01_enter_rx(void);
 void drv_nrf24l01_enter_tx(void);
 
 stc8h_status_t drv_nrf24l01_set_channel(stc8h_u8 channel);
+#if DRV_NRF24L01_ENABLE_ADDRESS_API
 stc8h_status_t drv_nrf24l01_set_address_width(stc8h_u8 width);
 stc8h_status_t drv_nrf24l01_set_tx_address(const stc8h_u8 *addr, stc8h_u8 len);
 stc8h_status_t drv_nrf24l01_set_rx_address(stc8h_u8 pipe, const stc8h_u8 *addr, stc8h_u8 len);
 stc8h_status_t drv_nrf24l01_set_payload_size(stc8h_u8 pipe, stc8h_u8 len);
+#endif
+#if DRV_NRF24L01_ENABLE_PIPE0_FIXED_API
+stc8h_status_t drv_nrf24l01_config_pipe0_fixed(const stc8h_u8 *addr);
+#endif
 stc8h_status_t drv_nrf24l01_set_rate_power(drv_nrf24l01_rate_t rate, drv_nrf24l01_power_t power);
 stc8h_status_t drv_nrf24l01_set_auto_retransmit(stc8h_u8 delay_code, stc8h_u8 count);
 void drv_nrf24l01_set_auto_ack(stc8h_u8 pipe_mask);

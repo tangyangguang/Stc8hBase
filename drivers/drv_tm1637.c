@@ -27,8 +27,12 @@
 #define DRV_TM1637_MAX_DIGITS    6u
 #define DRV_TM1637_MINUS         0x40u
 
+#if DRV_TM1637_ENABLE_BRIGHTNESS_STATE
 static stc8h_u8 drv_tm1637_brightness = 7u;
+#endif
+#if DRV_TM1637_ENABLE_SET_DISPLAY
 static stc8h_u8 drv_tm1637_display_on = 1u;
+#endif
 
 static void drv_tm1637_delay(void)
 {
@@ -100,11 +104,19 @@ static stc8h_status_t drv_tm1637_write_control(void)
 {
     stc8h_u8 cmd;
 
+#if DRV_TM1637_ENABLE_SET_DISPLAY
     if (drv_tm1637_display_on != 0u) {
+#endif
+#if DRV_TM1637_ENABLE_BRIGHTNESS_STATE
         cmd = (stc8h_u8)(DRV_TM1637_CMD_DISPLAY | (drv_tm1637_brightness & 0x07u));
+#else
+        cmd = (stc8h_u8)(DRV_TM1637_CMD_DISPLAY | (DRV_TM1637_FIXED_BRIGHTNESS & 0x07u));
+#endif
+#if DRV_TM1637_ENABLE_SET_DISPLAY
     } else {
         cmd = 0x80u;
     }
+#endif
 
     return drv_tm1637_write_cmd(cmd);
 }
@@ -129,30 +141,50 @@ static stc8h_u8 drv_tm1637_divmod10(stc8h_u16 *value)
 
 void drv_tm1637_init(void)
 {
+#if DRV_TM1637_ENABLE_BRIGHTNESS_STATE
     drv_tm1637_brightness = 7u;
+#endif
+#if DRV_TM1637_ENABLE_SET_DISPLAY
     drv_tm1637_display_on = 1u;
+#endif
     BOARD_TM1637_CLK_HIGH();
     BOARD_TM1637_DIO_HIGH();
 }
 
 void drv_tm1637_set_brightness(stc8h_u8 brightness)
 {
+#if DRV_TM1637_ENABLE_BRIGHTNESS_STATE
     drv_tm1637_brightness = brightness & 0x07u;
+#else
+    (void)brightness;
+#endif
 }
 
+#if DRV_TM1637_ENABLE_SET_DISPLAY
 void drv_tm1637_set_display(stc8h_u8 on)
 {
     drv_tm1637_display_on = on ? 1u : 0u;
 }
+#endif
 
-stc8h_status_t drv_tm1637_display_raw(const stc8h_u8 *segments, stc8h_u8 len)
+#if DRV_TM1637_ENABLE_DISPLAY_RAW4 || !DRV_TM1637_ENABLE_DISPLAY_RAW
+#define DRV_TM1637_RAW_FN static stc8h_status_t drv_tm1637_display_raw_len
+#define DRV_TM1637_DISPLAY_RAW_INTERNAL drv_tm1637_display_raw_len
+#else
+#define DRV_TM1637_RAW_FN stc8h_status_t drv_tm1637_display_raw
+#define DRV_TM1637_DISPLAY_RAW_INTERNAL drv_tm1637_display_raw
+#endif
+
+DRV_TM1637_RAW_FN(const stc8h_u8 *segments, stc8h_u8 len)
 {
     stc8h_u8 i;
     stc8h_status_t status;
 
+#if DRV_TM1637_ENABLE_RAW_LEN_CHECK
     if ((segments == 0) || (len == 0u) || (len > DRV_TM1637_MAX_DIGITS)) {
         return STC8H_ERROR;
     }
+#endif
 
     status = drv_tm1637_write_cmd(DRV_TM1637_CMD_DATA_AUTO);
     if (status != STC8H_OK) {
@@ -172,6 +204,20 @@ stc8h_status_t drv_tm1637_display_raw(const stc8h_u8 *segments, stc8h_u8 len)
     return drv_tm1637_write_control();
 }
 
+#if DRV_TM1637_ENABLE_DISPLAY_RAW && DRV_TM1637_ENABLE_DISPLAY_RAW4
+stc8h_status_t drv_tm1637_display_raw(const stc8h_u8 *segments, stc8h_u8 len)
+{
+    return drv_tm1637_display_raw_len(segments, len);
+}
+#endif
+
+#if DRV_TM1637_ENABLE_DISPLAY_RAW4
+stc8h_status_t drv_tm1637_display_raw4(const stc8h_u8 segments[4])
+{
+    return DRV_TM1637_DISPLAY_RAW_INTERNAL(segments, 4u);
+}
+#endif
+
 #if DRV_TM1637_ENABLE_DISPLAY_DIGITS
 stc8h_status_t drv_tm1637_display_digits(const stc8h_u8 *digits, stc8h_u8 len)
 {
@@ -186,7 +232,7 @@ stc8h_status_t drv_tm1637_display_digits(const stc8h_u8 *digits, stc8h_u8 len)
         segments[i] = drv_tm1637_encode_digit(digits[i]);
     }
 
-    return drv_tm1637_display_raw(segments, len);
+    return DRV_TM1637_DISPLAY_RAW_INTERNAL(segments, len);
 }
 #endif
 
@@ -222,7 +268,7 @@ stc8h_status_t drv_tm1637_display_number(stc8h_s16 value)
         }
     }
 
-    return drv_tm1637_display_raw(segments, DRV_TM1637_DIGITS);
+    return DRV_TM1637_DISPLAY_RAW_INTERNAL(segments, DRV_TM1637_DIGITS);
 }
 #endif
 
@@ -252,6 +298,6 @@ stc8h_status_t drv_tm1637_clear(void)
         segments[i] = 0u;
     }
 
-    return drv_tm1637_display_raw(segments, DRV_TM1637_DIGITS);
+    return DRV_TM1637_DISPLAY_RAW_INTERNAL(segments, DRV_TM1637_DIGITS);
 }
 #endif
