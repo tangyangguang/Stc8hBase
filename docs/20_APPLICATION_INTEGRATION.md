@@ -64,3 +64,11 @@ make CFLAGS="$BASE_FLAGS -DAPP_IR_UART_DEBUG=0 -DAPP_IR_VERBOSE_DEBUG=0 $TRIM_FL
 ```
 
 比较 `build/*.mem` 里的 `ROM/EPROM/FLASH` 和 `Stack starts`，并检查 `build/*.map` 中是否还有已关闭路径的符号前缀。
+
+## 6. PlatformIO RF 链路裁剪
+
+STC8H1K08 项目通过 PlatformIO wrapper 接入 `proto_rf_link` 时，不要在小内存固件里默认拉入完整链路 API。SDCC/mcs51 会给未调用的外部函数参数分配内部 RAM，整单元 wrapper 容易和 `drv_nrf24l01`、业务协议 wrapper 一起耗尽 DSEG/OSEG 连续空间。
+
+推荐做法是在 `platformio.ini` 里声明当前阶段实际需要的链路 API。阶段 2 只编译 radio 驱动和应用 radio 骨架时，可关闭全部 `PROTO_RF_LINK_ENABLE_*`；真实接入发送、接收、心跳或状态回传时，再逐项打开 `CONNECT`、`SEND_DATA`、`POLL`、`SEND_STATUS`、`SEND_HEARTBEAT`、`TICK`、`GET_STATE`。
+
+基础库示例 `examples/platformio/rf_link_nrf24_small` 记录了 `drv_nrf24l01 + stc8h_spi + proto_rf_link` 在 STC8H1K08 上的裁剪接入方式。

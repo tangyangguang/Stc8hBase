@@ -73,3 +73,25 @@ LOST
 调用方持有 `proto_rf_link_t` 状态，RAM 占用显式。公共 API 使用完整前缀 `proto_rf_link_`。
 
 协议层只生成和解析 32 字节包，不直接调用驱动发送。应用负责把包交给 `drv_nrf24l01` 或其他射频驱动。
+
+## 8. SDCC/8051 裁剪构建
+
+SDCC/mcs51 会为编译单元中的外部函数参数分配内部 RAM。PlatformIO wrapper 直接 `#include` 整个 `proto_rf_link.c` 时，未调用的公共 API 也会进入 `.rel`，在 STC8H1K08 这类 1.25KB RAM 目标上可能导致 DSEG/OSEG 连续空间不足。
+
+`proto_rf_link` 因此提供功能裁剪宏。默认全部启用，保持完整 API；8KB 小内存固件应在 `platformio.ini` 的 `build_flags` 或全局配置头中只启用当前阶段需要的 API：
+
+```ini
+build_flags =
+    -DPROTO_RF_LINK_ENABLE_RESET=0
+    -DPROTO_RF_LINK_ENABLE_TICK=0
+    -DPROTO_RF_LINK_ENABLE_CONNECT=0
+    -DPROTO_RF_LINK_ENABLE_SEND_DATA=0
+    -DPROTO_RF_LINK_ENABLE_SEND_STATUS=0
+    -DPROTO_RF_LINK_ENABLE_SEND_HEARTBEAT=0
+    -DPROTO_RF_LINK_ENABLE_POLL=0
+    -DPROTO_RF_LINK_ENABLE_GET_STATE=0
+```
+
+阶段 2 只验证 `drv_nrf24l01`、`stc8h_spi` 和应用侧 `app_radio` 时，可以像上面一样关闭全部链路 API，只保留模块可编译接入。进入真实链路收发阶段后，再按实际调用打开对应宏，例如 controller 需要 `CONNECT/SEND_DATA/POLL` 时只启用这几项。
+
+每次调整宏后必须检查 `.pio/build/*/firmware.mem` 和 `.map`：确认 DSEG/OSEG 不再要求不可满足的连续内部 RAM，并确认关闭的函数符号没有出现在 map 中。

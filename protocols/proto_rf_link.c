@@ -4,6 +4,7 @@
 #define PROTO_RF_LINK_LOST_TIMEOUT_MS 1000u
 #endif
 
+#if PROTO_RF_LINK_ENABLE_CONNECT || PROTO_RF_LINK_ENABLE_SEND_DATA || PROTO_RF_LINK_ENABLE_SEND_STATUS || PROTO_RF_LINK_ENABLE_SEND_HEARTBEAT
 static void proto_rf_link_clear_packet(stc8h_u8 *packet)
 {
     stc8h_u8 i;
@@ -39,6 +40,7 @@ static stc8h_status_t proto_rf_link_make_packet(proto_rf_link_t *link, stc8h_u8 
     ++link->seq_tx;
     return STC8H_OK;
 }
+#endif
 
 void proto_rf_link_init(proto_rf_link_t *link)
 {
@@ -66,6 +68,7 @@ void proto_rf_link_set_ids(proto_rf_link_t *link, stc8h_u8 local_id, stc8h_u8 pe
     link->peer_id = peer_id;
 }
 
+#if PROTO_RF_LINK_ENABLE_RESET
 void proto_rf_link_reset(proto_rf_link_t *link)
 {
     if (link == 0) {
@@ -79,7 +82,9 @@ void proto_rf_link_reset(proto_rf_link_t *link)
     link->timeout_ms = 0u;
     link->heartbeat_ms = 0u;
 }
+#endif
 
+#if PROTO_RF_LINK_ENABLE_TICK
 void proto_rf_link_tick(proto_rf_link_t *link, stc8h_u16 elapsed_ms)
 {
     if (link == 0) {
@@ -94,7 +99,9 @@ void proto_rf_link_tick(proto_rf_link_t *link, stc8h_u16 elapsed_ms)
         }
     }
 }
+#endif
 
+#if PROTO_RF_LINK_ENABLE_CONNECT
 stc8h_status_t proto_rf_link_connect(proto_rf_link_t *link, stc8h_u8 *packet)
 {
     stc8h_status_t status;
@@ -106,7 +113,9 @@ stc8h_status_t proto_rf_link_connect(proto_rf_link_t *link, stc8h_u8 *packet)
     }
     return status;
 }
+#endif
 
+#if PROTO_RF_LINK_ENABLE_SEND_DATA
 stc8h_status_t proto_rf_link_send_data(proto_rf_link_t *link, stc8h_u8 *packet, const stc8h_u8 *data, stc8h_u8 len)
 {
     stc8h_status_t status;
@@ -117,12 +126,16 @@ stc8h_status_t proto_rf_link_send_data(proto_rf_link_t *link, stc8h_u8 *packet, 
     }
     return status;
 }
+#endif
 
+#if PROTO_RF_LINK_ENABLE_SEND_STATUS
 stc8h_status_t proto_rf_link_send_status(proto_rf_link_t *link, stc8h_u8 *packet, const stc8h_u8 *data, stc8h_u8 len)
 {
     return proto_rf_link_make_packet(link, packet, PROTO_RF_LINK_PACKET_STATUS, 0u, data, len);
 }
+#endif
 
+#if PROTO_RF_LINK_ENABLE_SEND_HEARTBEAT
 stc8h_status_t proto_rf_link_send_heartbeat(proto_rf_link_t *link, stc8h_u8 *packet)
 {
     stc8h_status_t status;
@@ -133,7 +146,9 @@ stc8h_status_t proto_rf_link_send_heartbeat(proto_rf_link_t *link, stc8h_u8 *pac
     }
     return status;
 }
+#endif
 
+#if PROTO_RF_LINK_ENABLE_POLL
 proto_rf_link_event_t proto_rf_link_poll(proto_rf_link_t *link, const stc8h_u8 *packet, stc8h_u8 *type, stc8h_u8 *data, stc8h_u8 *len)
 {
     stc8h_u8 i;
@@ -188,7 +203,9 @@ proto_rf_link_event_t proto_rf_link_poll(proto_rf_link_t *link, const stc8h_u8 *
 
     return PROTO_RF_LINK_EVENT_NONE;
 }
+#endif
 
+#if PROTO_RF_LINK_ENABLE_GET_STATE
 proto_rf_link_state_t proto_rf_link_get_state(const proto_rf_link_t *link)
 {
     if (link == 0) {
@@ -196,3 +213,4 @@ proto_rf_link_state_t proto_rf_link_get_state(const proto_rf_link_t *link)
     }
     return (proto_rf_link_state_t)link->state;
 }
+#endif

@@ -14,6 +14,8 @@ tools/check_examples.sh
 2026-05-11：tools/check_examples.sh 通过。
 2026-05-12：tools/check_examples.sh 通过。
 2026-05-16：新增 nRF24L01/RF link 模块后，`tools/check_examples.sh` 通过。新增示例 flash 占用：`nrf24_fixed_ping` 1783 bytes，`nrf24_ack_payload` 1754 bytes，`rf_link_status_demo` 2094 bytes。
+
+2026-05-16：`proto_rf_link` 增加 SDCC/8051 功能裁剪宏，避免 PlatformIO wrapper 拉入未使用公共 API 时占用 DSEG/OSEG。新增 `rf_link_nrf24_small` 示例验证 STC8H1K08 上 `drv_nrf24l01 + stc8h_spi + proto_rf_link` 裁剪接入，flash 占用 2294 bytes。
 ```
 
 2026-05-12 小容量应用裁剪验证：
