@@ -5,7 +5,9 @@
 #include "stc8h_sfr.h"
 #include "stc8h_uart.h"
 
+#define IR_TX_PWM_GROUP STC8H_PWM_GROUP_A
 #define IR_TX_PWM_CHANNEL STC8H_PWM_CHANNEL_1
+#define IR_TX_PWM_PIN STC8H_PWM_PIN_PWM1_P10
 #define IR_TX_PWM_PERIOD  290u
 #define IR_TX_PWM_DUTY    97u
 #define IR_TX_ADDRESS     0x00u
@@ -13,13 +15,13 @@
 
 static void ir_tx_carrier_on(void)
 {
-    (void)stc8h_pwm_set_duty(IR_TX_PWM_CHANNEL, IR_TX_PWM_DUTY);
-    (void)stc8h_pwm_enable(IR_TX_PWM_CHANNEL);
+    (void)stc8h_pwm_set_duty(IR_TX_PWM_GROUP, IR_TX_PWM_CHANNEL, IR_TX_PWM_DUTY);
+    (void)stc8h_pwm_enable(IR_TX_PWM_GROUP, IR_TX_PWM_CHANNEL);
 }
 
 static void ir_tx_carrier_off(void)
 {
-    (void)stc8h_pwm_disable(IR_TX_PWM_CHANNEL);
+    (void)stc8h_pwm_disable(IR_TX_PWM_GROUP, IR_TX_PWM_CHANNEL);
     P1 &= (stc8h_u8)~0x01u;
 }
 
@@ -50,8 +52,9 @@ static void ir_tx_board_init(void)
     stc8h_gpio_set_mode(1u, 0u, STC8H_GPIO_MODE_PUSH_PULL);
     P1 &= (stc8h_u8)~0x01u;
     (void)stc8h_delay_timer0_1t_init();
-    (void)stc8h_pwm_init(IR_TX_PWM_CHANNEL, IR_TX_PWM_PERIOD);
-    (void)stc8h_pwm_set_duty(IR_TX_PWM_CHANNEL, 0u);
+    (void)stc8h_pwm_set_period(IR_TX_PWM_GROUP, IR_TX_PWM_PERIOD);
+    (void)stc8h_pwm_init_channel(IR_TX_PWM_GROUP, IR_TX_PWM_CHANNEL, IR_TX_PWM_PIN);
+    (void)stc8h_pwm_set_duty(IR_TX_PWM_GROUP, IR_TX_PWM_CHANNEL, 0u);
     ir_tx_carrier_off();
 }
 

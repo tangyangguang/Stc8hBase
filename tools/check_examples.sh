@@ -75,6 +75,14 @@ check_map_absent \
     "examples/platformio/gpio_blink/.pio/build/STC8H1K08/firmware.map" \
     "_drv_nrf24l01" "_proto_rf_link"
 
+check_map_absent \
+    "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.map" \
+    "_drv_ec11_set_fast" "_drv_ec11_set_reverse" "_drv_ec11_set_steps_per_detent"
+
+check_map_absent \
+    "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.mem" \
+    "Could not get" "DSEG.*overflow" "OSEG.*overflow"
+
 if grep -Eq '\(stc8h_u32\)1u? *<< *rx->bit_index' "${ROOT_DIR}/drivers/drv_ir_rx.c"; then
     echo "forbidden variable u32 shift found in drivers/drv_ir_rx.c" >&2
     exit 1

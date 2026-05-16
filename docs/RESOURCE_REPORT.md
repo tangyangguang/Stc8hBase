@@ -37,14 +37,16 @@ SDCC mcs51，STC8H1K08，6MHz
 - NEC pulse 解码保留，普通帧和 repeat 保留。
 - Timer0 12T free-run/read/reset/start/stop 保留。
 - INT0 唤醒和 power-down 保留。
-- PWM 保留 `PWMA channel 1`。
+- PWM 保留 `PWMA channel 1`，关闭 `PWMB` 分支。
 - 调试版 UART 保留 UART1 TX `write_code()`；生产版不编译 UART。
 
 裁剪参数：
 
 ```text
 -DSTC8H_GPIO_PORT_MASK=0x0A
--DSTC8H_PWM_CHANNEL_MASK=0x01
+-DSTC8H_PWM_GROUP_MASK=0x01
+-DSTC8H_PWM_A_CHANNEL_MASK=0x01
+-DSTC8H_PWM_B_CHANNEL_MASK=0x00
 -DSTC8H_TIMER_ENABLE_1MS=0
 -DSTC8H_TIMER_ENABLE_INTERRUPT_CONTROL=0
 -DSTC8H_UART_ASSUME_UART1=1
@@ -1470,7 +1472,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 设计取舍：
 
-- 第一版只实现 `PWMA` 1..4 基础 P 输出。
+- `stc8h_pwm` 支持 `PWMA` 1..4 与 `PWMB` 5..8 基础 P 输出。
 - 不实现互补输出、死区、刹车、中断、PWMB 和运行期引脚自动适配。
 - `PWMA` 1..4 共用一个周期。
 - 示例使用 P1.2 LED 做明暗变化验证。

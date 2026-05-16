@@ -49,6 +49,7 @@ void drv_ec11_init(drv_ec11_t *ec11)
     ec11->delta = 0;
 }
 
+#if DRV_EC11_ENABLE_SET_FAST
 void drv_ec11_set_fast(drv_ec11_t *ec11, stc8h_u16 threshold_ms, stc8h_s8 fast_step)
 {
     if (ec11 == 0) {
@@ -58,7 +59,9 @@ void drv_ec11_set_fast(drv_ec11_t *ec11, stc8h_u16 threshold_ms, stc8h_s8 fast_s
     ec11->fast_threshold_ms = threshold_ms;
     ec11->fast_step = (fast_step < 1) ? 1 : fast_step;
 }
+#endif
 
+#if DRV_EC11_ENABLE_SET_REVERSE
 void drv_ec11_set_reverse(drv_ec11_t *ec11, stc8h_u8 reverse)
 {
     if (ec11 == 0) {
@@ -67,7 +70,9 @@ void drv_ec11_set_reverse(drv_ec11_t *ec11, stc8h_u8 reverse)
 
     ec11->reverse = reverse ? 1u : 0u;
 }
+#endif
 
+#if DRV_EC11_ENABLE_SET_STEPS_PER_DETENT
 void drv_ec11_set_steps_per_detent(drv_ec11_t *ec11, stc8h_u8 steps_per_detent)
 {
     if (ec11 == 0) {
@@ -81,6 +86,7 @@ void drv_ec11_set_steps_per_detent(drv_ec11_t *ec11, stc8h_u8 steps_per_detent)
     }
     ec11->steps_per_detent = steps_per_detent;
 }
+#endif
 
 void drv_ec11_scan(drv_ec11_t *ec11, stc8h_u8 a_level, stc8h_u8 b_level, stc8h_u16 elapsed_ms)
 {

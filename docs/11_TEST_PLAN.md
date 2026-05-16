@@ -201,7 +201,7 @@ docs/RESOURCE_REPORT.md
 
 - `pwm_output` 示例使用 `PWMA` channel 2 正向输出，即 P1.2/PWM2P。
 - P1.2 LED 应呈现周期性明暗变化。
-- 第一版不启用 PWM 中断，不使用互补输出、死区、刹车或 PWMB。
+- PWM 基础验证不启用 PWM 中断，不使用互补输出、死区、刹车、捕获或同步；需要覆盖 `PWMA` 与 `PWMB` 独立周期同时输出。
 - 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、SPI、EEPROM、IR、utils 等未使用模块符号。
 
 ### 6.5 LCD1602 验收

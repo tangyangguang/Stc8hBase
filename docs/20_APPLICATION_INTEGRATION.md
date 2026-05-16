@@ -40,7 +40,9 @@ STC8H1K08 红外夜灯这类 8KB flash 项目可以继续编译通用 HAL 源文
 
 ```sh
 TRIM_FLAGS='-DSTC8H_GPIO_PORT_MASK=0x0A \
--DSTC8H_PWM_CHANNEL_MASK=0x01 \
+-DSTC8H_PWM_GROUP_MASK=0x01 \
+-DSTC8H_PWM_A_CHANNEL_MASK=0x01 \
+-DSTC8H_PWM_B_CHANNEL_MASK=0x00 \
 -DSTC8H_TIMER_ENABLE_1MS=0 \
 -DSTC8H_TIMER_ENABLE_INTERRUPT_CONTROL=0 \
 -DSTC8H_UART_ASSUME_UART1=1 \
@@ -49,7 +51,7 @@ TRIM_FLAGS='-DSTC8H_GPIO_PORT_MASK=0x0A \
 -DDRV_IR_RX_ENABLE_FALLING=0'
 ```
 
-该配置表示：只访问 `P1/P3`，只使用 `PWMA channel 1`，Timer0 用 12T free-run/read/reset/start/stop，不使用 Timer 中断 API，UART 只保留 UART1 TX code-string 输出，IR RX 只保留 NEC pulse 解码。生产版若关闭 UART 日志，应让 Makefile 不编译 `hal/stc8h_uart.c`。
+该配置表示：只访问 `P1/P3`，只使用 `PWMA channel 1` 并关闭 `PWMB` 分支，Timer0 用 12T free-run/read/reset/start/stop，不使用 Timer 中断 API，UART 只保留 UART1 TX code-string 输出，IR RX 只保留 NEC pulse 解码。生产版若关闭 UART 日志，应让 Makefile 不编译 `hal/stc8h_uart.c`。
 
 验证方式：
 

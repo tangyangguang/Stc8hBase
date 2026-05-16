@@ -3,7 +3,9 @@
 #include "stc8h_pwm.h"
 #include "stc8h_uart.h"
 
+#define PWM_TEST_GROUP STC8H_PWM_GROUP_A
 #define PWM_TEST_CHANNEL STC8H_PWM_CHANNEL_2
+#define PWM_TEST_PIN STC8H_PWM_PIN_PWM2_P12
 #define PWM_TEST_PERIOD 1023u
 #define PWM_TEST_STEP 31u
 
@@ -22,13 +24,16 @@ void main(void)
     pwm_pin_init();
 
     ok = 1u;
-    if (stc8h_pwm_init(PWM_TEST_CHANNEL, PWM_TEST_PERIOD) != STC8H_OK) {
+    if (stc8h_pwm_set_period(PWM_TEST_GROUP, PWM_TEST_PERIOD) != STC8H_OK) {
         ok = 0u;
     }
-    if (stc8h_pwm_set_duty(PWM_TEST_CHANNEL, 0u) != STC8H_OK) {
+    if (stc8h_pwm_init_channel(PWM_TEST_GROUP, PWM_TEST_CHANNEL, PWM_TEST_PIN) != STC8H_OK) {
         ok = 0u;
     }
-    if (stc8h_pwm_enable(PWM_TEST_CHANNEL) != STC8H_OK) {
+    if (stc8h_pwm_set_duty(PWM_TEST_GROUP, PWM_TEST_CHANNEL, 0u) != STC8H_OK) {
+        ok = 0u;
+    }
+    if (stc8h_pwm_enable(PWM_TEST_GROUP, PWM_TEST_CHANNEL) != STC8H_OK) {
         ok = 0u;
     }
 
@@ -37,7 +42,7 @@ void main(void)
     duty = 0u;
     rising = 1u;
     while (1) {
-        (void)stc8h_pwm_set_duty(PWM_TEST_CHANNEL, duty);
+        (void)stc8h_pwm_set_duty(PWM_TEST_GROUP, PWM_TEST_CHANNEL, duty);
         if (rising != 0u) {
             duty = (stc8h_u16)(duty + PWM_TEST_STEP);
             if (duty >= PWM_TEST_PERIOD) {
