@@ -128,24 +128,25 @@ DRV_NRF24L01_RAW_SCOPE stc8h_u8 drv_nrf24l01_write_buf(stc8h_u8 cmd, const stc8h
 #if DRV_NRF24L01_ENABLE_CHECK_PRESENT
 stc8h_status_t drv_nrf24l01_check_present(void)
 {
+    static const STC8H_CODE stc8h_u8 pattern[5] = { 0x11u, 0x22u, 0x33u, 0x44u, 0x55u };
+    stc8h_u8 i;
     stc8h_u8 ok;
 
     DRV_NRF24L01_CSN_LOW();
     (void)stc8h_spi_transfer((stc8h_u8)(NRF24_CMD_W_REGISTER | NRF24_REG_RX_ADDR_P0));
-    (void)stc8h_spi_transfer(0x11u);
-    (void)stc8h_spi_transfer(0x22u);
-    (void)stc8h_spi_transfer(0x33u);
-    (void)stc8h_spi_transfer(0x44u);
-    (void)stc8h_spi_transfer(0x55u);
+    for (i = 0u; i < 5u; ++i) {
+        (void)stc8h_spi_transfer(pattern[i]);
+    }
     DRV_NRF24L01_CSN_HIGH();
 
+    ok = 1u;
     DRV_NRF24L01_CSN_LOW();
     (void)stc8h_spi_transfer((stc8h_u8)(NRF24_CMD_R_REGISTER | NRF24_REG_RX_ADDR_P0));
-    ok = (stc8h_spi_transfer(NRF24_CMD_NOP) == 0x11u) ? 1u : 0u;
-    ok = (stc8h_spi_transfer(NRF24_CMD_NOP) == 0x22u) ? ok : 0u;
-    ok = (stc8h_spi_transfer(NRF24_CMD_NOP) == 0x33u) ? ok : 0u;
-    ok = (stc8h_spi_transfer(NRF24_CMD_NOP) == 0x44u) ? ok : 0u;
-    ok = (stc8h_spi_transfer(NRF24_CMD_NOP) == 0x55u) ? ok : 0u;
+    for (i = 0u; i < 5u; ++i) {
+        if (stc8h_spi_transfer(NRF24_CMD_NOP) != pattern[i]) {
+            ok = 0u;
+        }
+    }
     DRV_NRF24L01_CSN_HIGH();
 
     return (ok != 0u) ? STC8H_OK : STC8H_ERROR;

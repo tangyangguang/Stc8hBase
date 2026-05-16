@@ -140,9 +140,11 @@ stc8h_status_t proto_rf_link_send_data_fixed(proto_rf_link_t *link, stc8h_u8 *pa
     stc8h_status_t status;
 
     status = proto_rf_link_make_packet(link, packet, PROTO_RF_LINK_PACKET_DATA, PROTO_RF_LINK_FLAG_ACK_REQUIRED, data, PROTO_RF_LINK_FIXED_PAYLOAD_LEN);
+#if PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_TRACK_ACK
     if (status == STC8H_OK) {
         link->ack_pending = 1u;
     }
+#endif
     return status;
 }
 #endif
@@ -249,9 +251,11 @@ stc8h_status_t proto_rf_link_poll_data_fixed(proto_rf_link_t *link, const stc8h_
     }
 
     link->seq_rx = packet[3];
+#if PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED_TRACK_LINK
     link->ack_pending = 0u;
     link->timeout_ms = 0u;
     link->state = PROTO_RF_LINK_STATE_CONNECTED;
+#endif
     return STC8H_OK;
 }
 #endif

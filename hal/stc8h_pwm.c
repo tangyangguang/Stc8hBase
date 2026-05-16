@@ -372,16 +372,22 @@ stc8h_status_t stc8h_pwm_init_channel(stc8h_u8 group, stc8h_u8 channel, stc8h_u8
 
 stc8h_status_t stc8h_pwm_set_duty(stc8h_u8 group, stc8h_u8 channel, stc8h_u16 duty)
 {
+#if STC8H_PWM_ENABLE_SET_DUTY_CLAMP
     stc8h_u16 period;
+#endif
 
+#if STC8H_PWM_ENABLE_SET_DUTY_CHANNEL_CHECK
     if (stc8h_pwm_channel_output_mask(group, channel) == 0u) {
         return STC8H_ERROR;
     }
+#endif
 
+#if STC8H_PWM_ENABLE_SET_DUTY_CLAMP
     period = stc8h_pwm_get_period(group);
     if (duty > period) {
         duty = period;
     }
+#endif
 
     if (group == STC8H_PWM_GROUP_A) {
         if (channel == STC8H_PWM_CHANNEL_1) {

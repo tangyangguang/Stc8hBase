@@ -56,6 +56,17 @@
 #define STC8H_PWM_ENABLE_DISABLE 1
 #endif
 
+/* Hot-path trimming switches. Default keeps the existing safe behaviour;
+ * fixed-channel apps can set these to 0 once they have validated that
+ * the duty value is already bounded and the (group, channel) pair is
+ * guaranteed valid by board configuration. */
+#ifndef STC8H_PWM_ENABLE_SET_DUTY_CHANNEL_CHECK
+#define STC8H_PWM_ENABLE_SET_DUTY_CHANNEL_CHECK 1
+#endif
+#ifndef STC8H_PWM_ENABLE_SET_DUTY_CLAMP
+#define STC8H_PWM_ENABLE_SET_DUTY_CLAMP 1
+#endif
+
 stc8h_status_t stc8h_pwm_set_prescaler(stc8h_u8 group, stc8h_u16 prescaler);
 stc8h_status_t stc8h_pwm_set_period(stc8h_u8 group, stc8h_u16 period);
 stc8h_status_t stc8h_pwm_init_channel(stc8h_u8 group, stc8h_u8 channel, stc8h_u8 pin_select);
