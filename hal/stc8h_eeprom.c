@@ -17,6 +17,7 @@
 #define STC8H_IAP_ENABLE 0x80u
 #define STC8H_IAP_CMD_FAIL 0x10u
 
+#if STC8H_EEPROM_ENABLE_READ || STC8H_EEPROM_ENABLE_WRITE
 static stc8h_u8 stc8h_eeprom_range_ok(stc8h_u16 addr, stc8h_u16 len)
 {
     if (len == 0u) {
@@ -30,6 +31,7 @@ static stc8h_u8 stc8h_eeprom_range_ok(stc8h_u16 addr, stc8h_u16 len)
     }
     return STC8H_TRUE;
 }
+#endif
 
 static void stc8h_eeprom_enable(stc8h_u8 cmd)
 {
@@ -68,6 +70,7 @@ static void stc8h_eeprom_set_addr(stc8h_u16 addr)
     IAP_ADDRL = (stc8h_u8)addr;
 }
 
+#if STC8H_EEPROM_ENABLE_READ
 stc8h_status_t stc8h_eeprom_read(stc8h_u16 addr, STC8H_DATA stc8h_u8 *data, stc8h_u16 len)
 {
     stc8h_status_t status;
@@ -90,7 +93,9 @@ stc8h_status_t stc8h_eeprom_read(stc8h_u16 addr, STC8H_DATA stc8h_u8 *data, stc8
 
     return status;
 }
+#endif
 
+#if STC8H_EEPROM_ENABLE_WRITE
 stc8h_status_t stc8h_eeprom_write(stc8h_u16 addr, const STC8H_DATA stc8h_u8 *data, stc8h_u16 len)
 {
     stc8h_status_t status;
@@ -113,7 +118,9 @@ stc8h_status_t stc8h_eeprom_write(stc8h_u16 addr, const STC8H_DATA stc8h_u8 *dat
 
     return status;
 }
+#endif
 
+#if STC8H_EEPROM_ENABLE_ERASE
 stc8h_status_t stc8h_eeprom_erase_sector(stc8h_u16 addr)
 {
     stc8h_status_t status;
@@ -129,3 +136,75 @@ stc8h_status_t stc8h_eeprom_erase_sector(stc8h_u16 addr)
 
     return status;
 }
+#endif
+
+#if STC8H_EEPROM_ENABLE_FIXED_BLOCK
+stc8h_status_t stc8h_eeprom_read_fixed(STC8H_DATA stc8h_u8 *data)
+{
+    stc8h_u16 addr;
+#if STC8H_EEPROM_FIXED_SIZE <= 255u
+    stc8h_u8 len;
+#else
+    stc8h_u16 len;
+#endif
+    stc8h_status_t status;
+
+    if ((data == 0) || (STC8H_IAP_TPS == 0u)) {
+        return STC8H_ERROR;
+    }
+
+    addr = STC8H_EEPROM_FIXED_ADDR;
+    len = STC8H_EEPROM_FIXED_SIZE;
+    status = STC8H_OK;
+    stc8h_eeprom_enable(STC8H_IAP_CMD_READ);
+    while ((len != 0u) && (status == STC8H_OK)) {
+        stc8h_eeprom_set_addr(addr);
+        status = stc8h_eeprom_trigger();
+        *data = IAP_DATA;
+        ++data;
+        ++addr;
+        --len;
+    }
+    stc8h_eeprom_disable();
+
+    return status;
+}
+
+stc8h_status_t stc8h_eeprom_save_fixed(const STC8H_DATA stc8h_u8 *data)
+{
+    stc8h_u16 addr;
+#if STC8H_EEPROM_FIXED_SIZE <= 255u
+    stc8h_u8 len;
+#else
+    stc8h_u16 len;
+#endif
+    stc8h_status_t status;
+
+    if ((data == 0) || (STC8H_IAP_TPS == 0u)) {
+        return STC8H_ERROR;
+    }
+
+    stc8h_eeprom_enable(STC8H_IAP_CMD_ERASE);
+    stc8h_eeprom_set_addr(STC8H_EEPROM_FIXED_ADDR);
+    status = stc8h_eeprom_trigger();
+    stc8h_eeprom_disable();
+    if (status != STC8H_OK) {
+        return status;
+    }
+
+    addr = STC8H_EEPROM_FIXED_ADDR;
+    len = STC8H_EEPROM_FIXED_SIZE;
+    stc8h_eeprom_enable(STC8H_IAP_CMD_WRITE);
+    while ((len != 0u) && (status == STC8H_OK)) {
+        stc8h_eeprom_set_addr(addr);
+        IAP_DATA = *data;
+        status = stc8h_eeprom_trigger();
+        ++data;
+        ++addr;
+        --len;
+    }
+    stc8h_eeprom_disable();
+
+    return status;
+}
+#endif

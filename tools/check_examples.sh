@@ -46,7 +46,48 @@ EOF
     sdcc -mmcs51 --std-sdcc11 -I"${ROOT_DIR}/core" -c -o "${tmp_dir}/test_using.rel" "${tmp_dir}/test_using.c"
 }
 
+check_eeprom_api_trim() {
+    tmp_dir=$(mktemp -d)
+    trap 'rm -rf "${tmp_dir}"' EXIT
+
+    cat > "${tmp_dir}/eeprom_read_only.c" <<EOF
+#define STC8H_EEPROM_ENABLE_READ 1
+#define STC8H_EEPROM_ENABLE_WRITE 0
+#define STC8H_EEPROM_ENABLE_ERASE 0
+#include "${ROOT_DIR}/hal/stc8h_eeprom.c"
+EOF
+    sdcc -mmcs51 --std-sdcc11 -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -c -o "${tmp_dir}/eeprom_read_only.rel" "${tmp_dir}/eeprom_read_only.c"
+    if grep -Eq '_stc8h_eeprom_(write|erase_sector)' "${tmp_dir}/eeprom_read_only.sym"; then
+        echo "disabled EEPROM write/erase symbols found in read-only trim check" >&2
+        exit 1
+    fi
+
+    cat > "${tmp_dir}/eeprom_fixed.c" <<EOF
+#define STC8H_EEPROM_ENABLE_READ 0
+#define STC8H_EEPROM_ENABLE_WRITE 0
+#define STC8H_EEPROM_ENABLE_ERASE 0
+#define STC8H_EEPROM_ENABLE_FIXED_BLOCK 1
+#define STC8H_EEPROM_FIXED_ADDR 0x0E00u
+#define STC8H_EEPROM_FIXED_SIZE 8u
+#include "${ROOT_DIR}/hal/stc8h_eeprom.c"
+EOF
+    sdcc -mmcs51 --std-sdcc11 -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -c -o "${tmp_dir}/eeprom_fixed.rel" "${tmp_dir}/eeprom_fixed.c"
+    if grep -Eq '_stc8h_eeprom_(read|write|erase_sector)($|[[:space:]])' "${tmp_dir}/eeprom_fixed.sym"; then
+        echo "generic EEPROM symbols found in fixed-block trim check" >&2
+        exit 1
+    fi
+    if ! grep -q '_stc8h_eeprom_read_fixed' "${tmp_dir}/eeprom_fixed.sym"; then
+        echo "fixed EEPROM read symbol missing" >&2
+        exit 1
+    fi
+    if ! grep -q '_stc8h_eeprom_save_fixed' "${tmp_dir}/eeprom_fixed.sym"; then
+        echo "fixed EEPROM save symbol missing" >&2
+        exit 1
+    fi
+}
+
 check_sdcc_interrupt_using
+check_eeprom_api_trim
 
 for ini in "${ROOT_DIR}"/examples/platformio/*/platformio.ini; do
     run_platformio_example "examples/platformio/$(basename "$(dirname "${ini}")")"

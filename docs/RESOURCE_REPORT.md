@@ -1209,6 +1209,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 - HAL 只提供 `read`、`write`、`erase_sector`，不定义应用参数格式。
 - 写入函数不隐式擦除，调用方必须先明确擦除扇区。
+- `read`、`write`、`erase_sector` 均可通过编译宏关闭；固定小配置块可启用 `stc8h_eeprom_read_fixed()` 和 `stc8h_eeprom_save_fixed()`，避免小内存应用导出未使用的通用 API。
 - 示例默认不执行写擦，避免误伤 EEPROM 中已有数据。
 - 第一版只支持 `11.0592MHz` 和 `12MHz` 的 `IAP_TPS` 编译期配置。
 
@@ -1261,6 +1262,13 @@ _stc8h_eeprom_write
 _stc8h_eeprom_erase_sector
 _stc8h_uart_init
 _stc8h_uart_write_code
+```
+
+裁剪符号检查：
+
+```text
+read-only 编译：未出现 _stc8h_eeprom_write、_stc8h_eeprom_erase_sector
+fixed-block 8 字节编译：出现 _stc8h_eeprom_read_fixed、_stc8h_eeprom_save_fixed，未出现通用 _stc8h_eeprom_read、_stc8h_eeprom_write、_stc8h_eeprom_erase_sector
 ```
 
 未使用模块检查：

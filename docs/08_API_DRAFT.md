@@ -389,6 +389,29 @@ stc8h_status_t stc8h_eeprom_write(stc8h_u16 addr, const STC8H_DATA stc8h_u8 *dat
 stc8h_status_t stc8h_eeprom_erase_sector(stc8h_u16 addr);
 ```
 
+小内存裁剪：
+
+```c
+#define STC8H_EEPROM_ENABLE_READ
+#define STC8H_EEPROM_ENABLE_WRITE
+#define STC8H_EEPROM_ENABLE_ERASE
+```
+
+以上宏默认均为 `1`，保持完整通用 API。STC8H1K08 小内存应用可在编译配置中关闭未使用的 API，让对应声明、定义和 public 参数区符号不进入目标文件。
+
+固定小配置块接口：
+
+```c
+#define STC8H_EEPROM_ENABLE_FIXED_BLOCK 1
+#define STC8H_EEPROM_FIXED_ADDR
+#define STC8H_EEPROM_FIXED_SIZE
+
+stc8h_status_t stc8h_eeprom_read_fixed(STC8H_DATA stc8h_u8 *data);
+stc8h_status_t stc8h_eeprom_save_fixed(const STC8H_DATA stc8h_u8 *data);
+```
+
+`fixed` 模式默认关闭。启用后，固定地址必须 512 字节扇区对齐，固定大小必须为 `1..512` 且不能越过 EEPROM 边界。`stc8h_eeprom_save_fixed()` 会擦除固定扇区再写入固定长度数据，适合只保存少量参数的 8KB flash 目标；同一扇区存在其他数据时不能使用该接口。
+
 实现约束：
 
 - STC8H1K08 EEPROM/IAP 按官方资料确认为 4KB，地址范围 `0x0000..0x0FFF`。

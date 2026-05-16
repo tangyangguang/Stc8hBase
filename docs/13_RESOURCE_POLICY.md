@@ -202,6 +202,8 @@ EEPROM/IAP 示例必须指定测试地址范围。
 
 STC8H1K08 EEPROM/IAP 第一版按官方资料限定为 4KB，地址范围 `0x0000..0x0FFF`，512 字节扇区擦除。示例默认构建和上传不执行写擦；真实写擦测试必须显式选择写擦环境，并在资源报告中记录测试扇区。
 
+EEPROM/IAP HAL 的 `read`、`write`、`erase_sector` 必须支持按 API 关闭编译。固定小配置块应优先使用 `STC8H_EEPROM_ENABLE_FIXED_BLOCK`，避免应用项目复制 IAP 实现或承担未使用 public API 的 ROM/RAM 成本。
+
 EEPROM/IAP 触发窗口会临时关闭全局中断。写擦期间不得同时执行红外收发等严格时序任务。
 
 ### 4.8 红外接收
