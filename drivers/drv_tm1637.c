@@ -109,6 +109,7 @@ static stc8h_status_t drv_tm1637_write_control(void)
     return drv_tm1637_write_cmd(cmd);
 }
 
+#if DRV_TM1637_ENABLE_DISPLAY_NUMBER
 static stc8h_u8 drv_tm1637_divmod10(stc8h_u16 *value)
 {
     stc8h_u16 quotient;
@@ -124,6 +125,7 @@ static stc8h_u8 drv_tm1637_divmod10(stc8h_u16 *value)
 
     return (stc8h_u8)remainder;
 }
+#endif
 
 void drv_tm1637_init(void)
 {
@@ -170,6 +172,7 @@ stc8h_status_t drv_tm1637_display_raw(const stc8h_u8 *segments, stc8h_u8 len)
     return drv_tm1637_write_control();
 }
 
+#if DRV_TM1637_ENABLE_DISPLAY_DIGITS
 stc8h_status_t drv_tm1637_display_digits(const stc8h_u8 *digits, stc8h_u8 len)
 {
     stc8h_u8 i;
@@ -185,7 +188,9 @@ stc8h_status_t drv_tm1637_display_digits(const stc8h_u8 *digits, stc8h_u8 len)
 
     return drv_tm1637_display_raw(segments, len);
 }
+#endif
 
+#if DRV_TM1637_ENABLE_DISPLAY_NUMBER
 stc8h_status_t drv_tm1637_display_number(stc8h_s16 value)
 {
     stc8h_u8 segments[DRV_TM1637_DIGITS];
@@ -219,7 +224,9 @@ stc8h_status_t drv_tm1637_display_number(stc8h_s16 value)
 
     return drv_tm1637_display_raw(segments, DRV_TM1637_DIGITS);
 }
+#endif
 
+#if DRV_TM1637_ENABLE_ENCODE_DIGIT
 stc8h_u8 drv_tm1637_encode_digit(stc8h_u8 digit)
 {
     static const STC8H_CODE stc8h_u8 table[10] = {
@@ -233,7 +240,9 @@ stc8h_u8 drv_tm1637_encode_digit(stc8h_u8 digit)
 
     return table[digit];
 }
+#endif
 
+#if DRV_TM1637_ENABLE_CLEAR
 stc8h_status_t drv_tm1637_clear(void)
 {
     stc8h_u8 segments[DRV_TM1637_DIGITS];
@@ -245,3 +254,4 @@ stc8h_status_t drv_tm1637_clear(void)
 
     return drv_tm1637_display_raw(segments, DRV_TM1637_DIGITS);
 }
+#endif

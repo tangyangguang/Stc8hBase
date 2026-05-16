@@ -16,6 +16,50 @@
 
 #define DRV_NRF24L01_PIPE0 0x01u
 
+#ifndef DRV_NRF24L01_ENABLE_CHECK_PRESENT
+#define DRV_NRF24L01_ENABLE_CHECK_PRESENT 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_READ_FIFO_STATUS
+#define DRV_NRF24L01_ENABLE_READ_FIFO_STATUS 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_READ_OBSERVE_TX
+#define DRV_NRF24L01_ENABLE_READ_OBSERVE_TX 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_RAW_API
+#define DRV_NRF24L01_ENABLE_RAW_API 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_POWER_DOWN
+#define DRV_NRF24L01_ENABLE_POWER_DOWN 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_ENTER_STANDBY
+#define DRV_NRF24L01_ENABLE_ENTER_STANDBY 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD
+#define DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_ACK_PAYLOAD
+#define DRV_NRF24L01_ENABLE_ACK_PAYLOAD 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_WRITE_ACK_PAYLOAD
+#define DRV_NRF24L01_ENABLE_WRITE_ACK_PAYLOAD DRV_NRF24L01_ENABLE_ACK_PAYLOAD
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_DISABLE_ACK_PAYLOAD
+#define DRV_NRF24L01_ENABLE_DISABLE_ACK_PAYLOAD DRV_NRF24L01_ENABLE_ACK_PAYLOAD
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE
+#define DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE (DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD || DRV_NRF24L01_ENABLE_ACK_PAYLOAD)
+#endif
+
 typedef enum {
     DRV_NRF24L01_RATE_250KBPS = 0,
     DRV_NRF24L01_RATE_1MBPS,
@@ -30,20 +74,32 @@ typedef enum {
 } drv_nrf24l01_power_t;
 
 void drv_nrf24l01_init_pins(void);
+#if DRV_NRF24L01_ENABLE_CHECK_PRESENT
 stc8h_status_t drv_nrf24l01_check_present(void);
+#endif
 
 stc8h_u8 drv_nrf24l01_read_status(void);
+#if DRV_NRF24L01_ENABLE_READ_FIFO_STATUS
 stc8h_u8 drv_nrf24l01_read_fifo_status(void);
+#endif
+#if DRV_NRF24L01_ENABLE_READ_OBSERVE_TX
 stc8h_u8 drv_nrf24l01_read_observe_tx(void);
+#endif
 
+#if DRV_NRF24L01_ENABLE_RAW_API
 stc8h_u8 drv_nrf24l01_read_reg(stc8h_u8 reg);
 stc8h_u8 drv_nrf24l01_write_reg(stc8h_u8 reg, stc8h_u8 value);
 stc8h_u8 drv_nrf24l01_read_buf(stc8h_u8 cmd, stc8h_u8 *buf, stc8h_u8 len);
 stc8h_u8 drv_nrf24l01_write_buf(stc8h_u8 cmd, const stc8h_u8 *buf, stc8h_u8 len);
 stc8h_u8 drv_nrf24l01_command(stc8h_u8 cmd);
+#endif
 
+#if DRV_NRF24L01_ENABLE_POWER_DOWN
 void drv_nrf24l01_power_down(void);
+#endif
+#if DRV_NRF24L01_ENABLE_ENTER_STANDBY
 void drv_nrf24l01_enter_standby(void);
+#endif
 void drv_nrf24l01_enter_rx(void);
 void drv_nrf24l01_enter_tx(void);
 
@@ -64,11 +120,21 @@ void drv_nrf24l01_clear_irq(stc8h_u8 flags);
 void drv_nrf24l01_flush_tx(void);
 void drv_nrf24l01_flush_rx(void);
 
+#if DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD
 stc8h_status_t drv_nrf24l01_enable_dynamic_payload(stc8h_u8 pipe_mask);
 void drv_nrf24l01_disable_dynamic_payload(void);
+#endif
+#if DRV_NRF24L01_ENABLE_ACK_PAYLOAD
 stc8h_status_t drv_nrf24l01_enable_ack_payload(stc8h_u8 pipe_mask);
-void drv_nrf24l01_disable_ack_payload(void);
-stc8h_u8 drv_nrf24l01_read_dynamic_payload_size(void);
+#endif
+#if DRV_NRF24L01_ENABLE_WRITE_ACK_PAYLOAD
 stc8h_u8 drv_nrf24l01_write_ack_payload(stc8h_u8 pipe, const stc8h_u8 *data, stc8h_u8 len);
+#endif
+#if DRV_NRF24L01_ENABLE_DISABLE_ACK_PAYLOAD
+void drv_nrf24l01_disable_ack_payload(void);
+#endif
+#if DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE
+stc8h_u8 drv_nrf24l01_read_dynamic_payload_size(void);
+#endif
 
 #endif

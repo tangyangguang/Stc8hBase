@@ -52,11 +52,17 @@
 #define STC8H_PWM_PIN_PWM8_P03 2u
 #define STC8H_PWM_PIN_PWM8_P77 3u
 
+#ifndef STC8H_PWM_ENABLE_DISABLE
+#define STC8H_PWM_ENABLE_DISABLE 1
+#endif
+
 stc8h_status_t stc8h_pwm_set_prescaler(stc8h_u8 group, stc8h_u16 prescaler);
 stc8h_status_t stc8h_pwm_set_period(stc8h_u8 group, stc8h_u16 period);
 stc8h_status_t stc8h_pwm_init_channel(stc8h_u8 group, stc8h_u8 channel, stc8h_u8 pin_select);
 stc8h_status_t stc8h_pwm_set_duty(stc8h_u8 group, stc8h_u8 channel, stc8h_u16 duty);
 stc8h_status_t stc8h_pwm_enable(stc8h_u8 group, stc8h_u8 channel);
+#if STC8H_PWM_ENABLE_DISABLE
 stc8h_status_t stc8h_pwm_disable(stc8h_u8 group, stc8h_u8 channel);
+#endif
 
 #endif

@@ -80,6 +80,23 @@ check_map_absent \
     "_drv_ec11_set_fast" "_drv_ec11_set_reverse" "_drv_ec11_set_steps_per_detent"
 
 check_map_absent \
+    "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.map" \
+    "_drv_nrf24l01_read_fifo_status" "_drv_nrf24l01_read_observe_tx" \
+    "_drv_nrf24l01_read_reg" "_drv_nrf24l01_write_reg" "_drv_nrf24l01_read_buf" \
+    "_drv_nrf24l01_write_buf" "_drv_nrf24l01_command" \
+    "_drv_nrf24l01_enable_dynamic_payload" "_drv_nrf24l01_disable_dynamic_payload" \
+    "_drv_nrf24l01_enable_ack_payload" "_drv_nrf24l01_disable_ack_payload" \
+    "_drv_nrf24l01_read_dynamic_payload_size" "_drv_nrf24l01_write_ack_payload"
+
+check_map_absent \
+    "examples/platformio/tm1637_number/.pio/build/STC8H1K08/firmware.map" \
+    "_drv_tm1637_display_digits" "_drv_tm1637_display_number"
+
+check_map_absent \
+    "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.map" \
+    "_stc8h_pwm_disable"
+
+check_map_absent \
     "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.mem" \
     "Could not get" "DSEG.*overflow" "OSEG.*overflow"
 
