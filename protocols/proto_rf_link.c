@@ -29,7 +29,11 @@ static stc8h_status_t proto_rf_link_make_packet(proto_rf_link_t *link, stc8h_u8 
     packet[1] = PROTO_RF_LINK_VERSION;
     packet[2] = type;
     packet[3] = link->seq_tx;
+#if PROTO_RF_LINK_TRACK_SEQ_RX
     packet[4] = link->seq_rx;
+#else
+    packet[4] = 0u;
+#endif
     packet[5] = flags;
     packet[6] = link->local_id;
     packet[7] = link->peer_id;
@@ -52,12 +56,18 @@ void proto_rf_link_init(proto_rf_link_t *link)
     }
 #endif
 
+#if PROTO_RF_LINK_TRACK_STATE
     link->state = PROTO_RF_LINK_STATE_IDLE;
+#endif
     link->local_id = 0u;
     link->peer_id = 0u;
     link->seq_tx = 0u;
+#if PROTO_RF_LINK_TRACK_SEQ_RX
     link->seq_rx = 0u;
+#endif
+#if PROTO_RF_LINK_TRACK_ACK_PENDING
     link->ack_pending = 0u;
+#endif
 #if PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS
     link->timeout_ms = 0u;
     link->heartbeat_ms = 0u;
@@ -87,10 +97,16 @@ void proto_rf_link_reset(proto_rf_link_t *link)
     }
 #endif
 
+#if PROTO_RF_LINK_TRACK_STATE
     link->state = PROTO_RF_LINK_STATE_IDLE;
+#endif
     link->seq_tx = 0u;
+#if PROTO_RF_LINK_TRACK_SEQ_RX
     link->seq_rx = 0u;
+#endif
+#if PROTO_RF_LINK_TRACK_ACK_PENDING
     link->ack_pending = 0u;
+#endif
 #if PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
     link->timeout_ms = 0u;
     link->heartbeat_ms = 0u;
@@ -105,12 +121,17 @@ void proto_rf_link_tick(proto_rf_link_t *link, stc8h_u16 elapsed_ms)
         return;
     }
 
-    if (link->state == PROTO_RF_LINK_STATE_CONNECTED) {
-        link->timeout_ms = (stc8h_u16)(link->timeout_ms + elapsed_ms);
-        link->heartbeat_ms = (stc8h_u16)(link->heartbeat_ms + elapsed_ms);
-        if (link->timeout_ms >= PROTO_RF_LINK_LOST_TIMEOUT_MS) {
-            link->state = PROTO_RF_LINK_STATE_LOST;
-        }
+#if PROTO_RF_LINK_TRACK_STATE
+    if (link->state != PROTO_RF_LINK_STATE_CONNECTED) {
+        return;
+    }
+#endif
+    link->timeout_ms = (stc8h_u16)(link->timeout_ms + elapsed_ms);
+    link->heartbeat_ms = (stc8h_u16)(link->heartbeat_ms + elapsed_ms);
+    if (link->timeout_ms >= PROTO_RF_LINK_LOST_TIMEOUT_MS) {
+#if PROTO_RF_LINK_TRACK_STATE
+        link->state = PROTO_RF_LINK_STATE_LOST;
+#endif
     }
 }
 #endif
@@ -122,8 +143,12 @@ stc8h_status_t proto_rf_link_connect(proto_rf_link_t *link, stc8h_u8 *packet)
 
     status = proto_rf_link_make_packet(link, packet, PROTO_RF_LINK_PACKET_HELLO, PROTO_RF_LINK_FLAG_ACK_REQUIRED, 0, 0u);
     if (status == STC8H_OK) {
+#if PROTO_RF_LINK_TRACK_STATE
         link->state = PROTO_RF_LINK_STATE_CONNECTING;
+#endif
+#if PROTO_RF_LINK_TRACK_ACK_PENDING
         link->ack_pending = 1u;
+#endif
     }
     return status;
 }
@@ -136,7 +161,9 @@ stc8h_status_t proto_rf_link_send_data(proto_rf_link_t *link, stc8h_u8 *packet, 
 
     status = proto_rf_link_make_packet(link, packet, PROTO_RF_LINK_PACKET_DATA, PROTO_RF_LINK_FLAG_ACK_REQUIRED, data, len);
     if (status == STC8H_OK) {
+#if PROTO_RF_LINK_TRACK_ACK_PENDING
         link->ack_pending = 1u;
+#endif
     }
     return status;
 }
@@ -148,7 +175,7 @@ stc8h_status_t proto_rf_link_send_data_fixed(proto_rf_link_t *link, stc8h_u8 *pa
     stc8h_status_t status;
 
     status = proto_rf_link_make_packet(link, packet, PROTO_RF_LINK_PACKET_DATA, PROTO_RF_LINK_FLAG_ACK_REQUIRED, data, PROTO_RF_LINK_FIXED_PAYLOAD_LEN);
-#if PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_TRACK_ACK
+#if PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_TRACK_ACK && PROTO_RF_LINK_TRACK_ACK_PENDING
     if (status == STC8H_OK) {
         link->ack_pending = 1u;
     }
@@ -210,26 +237,38 @@ proto_rf_link_event_t proto_rf_link_poll(proto_rf_link_t *link, const stc8h_u8 *
     }
     *len = payload_len;
 
+#if PROTO_RF_LINK_TRACK_SEQ_RX
     link->seq_rx = packet[3];
+#endif
+#if PROTO_RF_LINK_TRACK_ACK_PENDING
     link->ack_pending = 0u;
+#endif
 #if PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
     link->timeout_ms = 0u;
 #endif
 
     if ((packet_type == PROTO_RF_LINK_PACKET_HELLO_ACK) || (packet_type == PROTO_RF_LINK_PACKET_HELLO)) {
+#if PROTO_RF_LINK_TRACK_STATE
         link->state = PROTO_RF_LINK_STATE_CONNECTED;
+#endif
         return PROTO_RF_LINK_EVENT_CONNECTED;
     }
     if (packet_type == PROTO_RF_LINK_PACKET_DATA) {
+#if PROTO_RF_LINK_TRACK_STATE
         link->state = PROTO_RF_LINK_STATE_CONNECTED;
+#endif
         return PROTO_RF_LINK_EVENT_DATA;
     }
     if (packet_type == PROTO_RF_LINK_PACKET_STATUS) {
+#if PROTO_RF_LINK_TRACK_STATE
         link->state = PROTO_RF_LINK_STATE_CONNECTED;
+#endif
         return PROTO_RF_LINK_EVENT_STATUS;
     }
     if (packet_type == PROTO_RF_LINK_PACKET_HEARTBEAT) {
+#if PROTO_RF_LINK_TRACK_STATE
         link->state = PROTO_RF_LINK_STATE_CONNECTED;
+#endif
     }
 
     return PROTO_RF_LINK_EVENT_NONE;
@@ -260,13 +299,19 @@ stc8h_status_t proto_rf_link_poll_data_fixed(proto_rf_link_t *link, const stc8h_
         data[i] = packet[PROTO_RF_LINK_HEADER_SIZE + i];
     }
 
+#if PROTO_RF_LINK_TRACK_SEQ_RX
     link->seq_rx = packet[3];
+#endif
 #if PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED_TRACK_LINK
+#if PROTO_RF_LINK_TRACK_ACK_PENDING
     link->ack_pending = 0u;
+#endif
 #if PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
     link->timeout_ms = 0u;
 #endif
+#if PROTO_RF_LINK_TRACK_STATE
     link->state = PROTO_RF_LINK_STATE_CONNECTED;
+#endif
 #endif
     return STC8H_OK;
 }

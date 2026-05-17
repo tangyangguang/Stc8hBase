@@ -28,6 +28,18 @@
 #define PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS 1
 #endif
 
+#ifndef PROTO_RF_LINK_TRACK_STATE
+#define PROTO_RF_LINK_TRACK_STATE 1
+#endif
+
+#ifndef PROTO_RF_LINK_TRACK_SEQ_RX
+#define PROTO_RF_LINK_TRACK_SEQ_RX 1
+#endif
+
+#ifndef PROTO_RF_LINK_TRACK_ACK_PENDING
+#define PROTO_RF_LINK_TRACK_ACK_PENDING 1
+#endif
+
 /* Include timeout_ms / heartbeat_ms in the proto_rf_link_t struct.
  * Default 1 keeps existing ABI. Apps that never tick the link and
  * never read those fields can set this to 0 to save 4 bytes of RAM
@@ -36,18 +48,6 @@
  * be gated by this same macro. */
 #ifndef PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
 #define PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS 1
-#endif
-
-#if !PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
-#if PROTO_RF_LINK_ENABLE_TICK
-#error "PROTO_RF_LINK_ENABLE_TICK requires PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS."
-#endif
-#if PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS
-#error "PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS requires PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS."
-#endif
-#if PROTO_RF_LINK_ENABLE_SEND_HEARTBEAT
-#error "PROTO_RF_LINK_ENABLE_SEND_HEARTBEAT requires PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS."
-#endif
 #endif
 
 #ifndef PROTO_RF_LINK_FIXED_PAYLOAD_LEN
@@ -102,6 +102,26 @@
 #define PROTO_RF_LINK_ENABLE_GET_STATE 1
 #endif
 
+#if !PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
+#if PROTO_RF_LINK_ENABLE_TICK
+#error "PROTO_RF_LINK_ENABLE_TICK requires PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS."
+#endif
+#if PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS
+#error "PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS requires PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS."
+#endif
+#if PROTO_RF_LINK_ENABLE_SEND_HEARTBEAT
+#error "PROTO_RF_LINK_ENABLE_SEND_HEARTBEAT requires PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS."
+#endif
+#endif
+
+#if !PROTO_RF_LINK_TRACK_STATE && PROTO_RF_LINK_ENABLE_TICK
+#error "PROTO_RF_LINK_ENABLE_TICK requires PROTO_RF_LINK_TRACK_STATE."
+#endif
+
+#if !PROTO_RF_LINK_TRACK_STATE && PROTO_RF_LINK_ENABLE_GET_STATE
+#error "PROTO_RF_LINK_ENABLE_GET_STATE requires PROTO_RF_LINK_TRACK_STATE."
+#endif
+
 typedef enum {
     PROTO_RF_LINK_PACKET_HELLO = 1,
     PROTO_RF_LINK_PACKET_HELLO_ACK = 2,
@@ -127,12 +147,18 @@ typedef enum {
 } proto_rf_link_event_t;
 
 typedef struct {
+#if PROTO_RF_LINK_TRACK_STATE
     stc8h_u8 state;
+#endif
     stc8h_u8 local_id;
     stc8h_u8 peer_id;
     stc8h_u8 seq_tx;
+#if PROTO_RF_LINK_TRACK_SEQ_RX
     stc8h_u8 seq_rx;
+#endif
+#if PROTO_RF_LINK_TRACK_ACK_PENDING
     stc8h_u8 ack_pending;
+#endif
 #if PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
     stc8h_u16 timeout_ms;
     stc8h_u16 heartbeat_ms;
