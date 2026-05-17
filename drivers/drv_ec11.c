@@ -145,9 +145,11 @@ stc8h_s16 drv_ec11_get_delta(drv_ec11_t *ec11)
 {
     stc8h_s16 delta;
 
+#if DRV_EC11_ENABLE_NULL_CHECK
     if (ec11 == 0) {
         return 0;
     }
+#endif
 
     delta = ec11->delta;
     ec11->delta = 0;

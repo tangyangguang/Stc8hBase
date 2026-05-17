@@ -70,10 +70,12 @@ DRV_NRF24L01_RAW_SCOPE stc8h_u8 drv_nrf24l01_command(stc8h_u8 cmd)
     return status;
 }
 
+#if DRV_NRF24L01_ENABLE_READ_STATUS
 stc8h_u8 drv_nrf24l01_read_status(void)
 {
     return drv_nrf24l01_command(NRF24_CMD_NOP);
 }
+#endif
 
 DRV_NRF24L01_RAW_SCOPE stc8h_u8 drv_nrf24l01_read_reg(stc8h_u8 reg)
 {
@@ -183,11 +185,13 @@ void drv_nrf24l01_enter_standby(void)
 }
 #endif
 
+#if DRV_NRF24L01_ENABLE_ENTER_RX
 void drv_nrf24l01_enter_rx(void)
 {
     (void)drv_nrf24l01_write_reg(NRF24_REG_CONFIG, (stc8h_u8)(DRV_NRF24L01_DEFAULT_CONFIG | NRF24_CONFIG_PWR_UP | NRF24_CONFIG_PRIM_RX));
     DRV_NRF24L01_CE_HIGH();
 }
+#endif
 
 void drv_nrf24l01_enter_tx(void)
 {
@@ -324,21 +328,31 @@ stc8h_u8 drv_nrf24l01_write_payload(const stc8h_u8 *data, stc8h_u8 len)
 {
 #if DRV_NRF24L01_ENABLE_ARG_CHECK
     if ((data == 0) || (len > 32u)) {
+#if DRV_NRF24L01_ENABLE_READ_STATUS
         return drv_nrf24l01_read_status();
+#else
+        return 0u;
+#endif
     }
 #endif
     return drv_nrf24l01_write_buf(NRF24_CMD_W_TX_PAYLOAD, data, len);
 }
 
+#if DRV_NRF24L01_ENABLE_READ_PAYLOAD
 stc8h_u8 drv_nrf24l01_read_payload(stc8h_u8 *data, stc8h_u8 len)
 {
 #if DRV_NRF24L01_ENABLE_ARG_CHECK
     if ((data == 0) || (len > 32u)) {
+#if DRV_NRF24L01_ENABLE_READ_STATUS
         return drv_nrf24l01_read_status();
+#else
+        return 0u;
+#endif
     }
 #endif
     return drv_nrf24l01_read_buf(NRF24_CMD_R_RX_PAYLOAD, data, len);
 }
+#endif
 
 void drv_nrf24l01_pulse_ce(void)
 {
@@ -436,7 +450,11 @@ stc8h_u8 drv_nrf24l01_write_ack_payload(stc8h_u8 pipe, const stc8h_u8 *data, stc
 {
 #if DRV_NRF24L01_ENABLE_ARG_CHECK
     if ((pipe > 5u) || (data == 0) || (len > 32u)) {
+#if DRV_NRF24L01_ENABLE_READ_STATUS
         return drv_nrf24l01_read_status();
+#else
+        return 0u;
+#endif
     }
 #endif
     return drv_nrf24l01_write_buf((stc8h_u8)(NRF24_CMD_W_ACK_PAYLOAD | pipe), data, len);

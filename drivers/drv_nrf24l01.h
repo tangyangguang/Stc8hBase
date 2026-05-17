@@ -56,6 +56,10 @@
 #define DRV_NRF24L01_ENABLE_READ_OBSERVE_TX 1
 #endif
 
+#ifndef DRV_NRF24L01_ENABLE_READ_STATUS
+#define DRV_NRF24L01_ENABLE_READ_STATUS 1
+#endif
+
 #ifndef DRV_NRF24L01_ENABLE_RAW_API
 #define DRV_NRF24L01_ENABLE_RAW_API 1
 #endif
@@ -66,6 +70,14 @@
 
 #ifndef DRV_NRF24L01_ENABLE_ENTER_STANDBY
 #define DRV_NRF24L01_ENABLE_ENTER_STANDBY 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_ENTER_RX
+#define DRV_NRF24L01_ENABLE_ENTER_RX 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_READ_PAYLOAD
+#define DRV_NRF24L01_ENABLE_READ_PAYLOAD 1
 #endif
 
 #ifndef DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD
@@ -117,7 +129,9 @@ void drv_nrf24l01_init_pins(void);
 stc8h_status_t drv_nrf24l01_check_present(void);
 #endif
 
+#if DRV_NRF24L01_ENABLE_READ_STATUS
 stc8h_u8 drv_nrf24l01_read_status(void);
+#endif
 #if DRV_NRF24L01_ENABLE_READ_FIFO_STATUS
 stc8h_u8 drv_nrf24l01_read_fifo_status(void);
 #endif
@@ -139,7 +153,9 @@ void drv_nrf24l01_power_down(void);
 #if DRV_NRF24L01_ENABLE_ENTER_STANDBY
 void drv_nrf24l01_enter_standby(void);
 #endif
+#if DRV_NRF24L01_ENABLE_ENTER_RX
 void drv_nrf24l01_enter_rx(void);
+#endif
 void drv_nrf24l01_enter_tx(void);
 
 stc8h_status_t drv_nrf24l01_set_channel(stc8h_u8 channel);
@@ -157,7 +173,9 @@ stc8h_status_t drv_nrf24l01_set_auto_retransmit(stc8h_u8 delay_code, stc8h_u8 co
 void drv_nrf24l01_set_auto_ack(stc8h_u8 pipe_mask);
 
 stc8h_u8 drv_nrf24l01_write_payload(const stc8h_u8 *data, stc8h_u8 len);
+#if DRV_NRF24L01_ENABLE_READ_PAYLOAD
 stc8h_u8 drv_nrf24l01_read_payload(stc8h_u8 *data, stc8h_u8 len);
+#endif
 void drv_nrf24l01_pulse_ce(void);
 
 void drv_nrf24l01_clear_irq(stc8h_u8 flags);
