@@ -17,6 +17,14 @@
 #define STC8H_DELAY_TIMER0_1T_CHUNK_US 5000u
 #endif
 
+#if (STC8H_SYSCLK_HZ == 6000000UL) && (STC8H_DELAY_TIMER0_1T_CHUNK_US > 10922u)
+#error "STC8H_DELAY_TIMER0_1T_CHUNK_US is too large for Timer0 1T at 6MHz"
+#elif (STC8H_SYSCLK_HZ == 12000000UL) && (STC8H_DELAY_TIMER0_1T_CHUNK_US > 5461u)
+#error "STC8H_DELAY_TIMER0_1T_CHUNK_US is too large for Timer0 1T at 12MHz"
+#elif (STC8H_SYSCLK_HZ == 11059200UL) && (STC8H_DELAY_TIMER0_1T_CHUNK_US > 5926u)
+#error "STC8H_DELAY_TIMER0_1T_CHUNK_US is too large for Timer0 1T at 11.0592MHz"
+#endif
+
 static stc8h_u16 stc8h_delay_timer0_1t_ticks(stc8h_u16 us)
 {
 #if STC8H_SYSCLK_HZ == 6000000UL
@@ -24,7 +32,7 @@ static stc8h_u16 stc8h_delay_timer0_1t_ticks(stc8h_u16 us)
 #elif STC8H_SYSCLK_HZ == 12000000UL
     return (stc8h_u16)(us * 12u);
 #elif STC8H_SYSCLK_HZ == 11059200UL
-    return (stc8h_u16)((((stc8h_u32)us * 110592UL) + 5000UL) / 10000UL);
+    return (stc8h_u16)((us * 11u) + (us >> 4) - (us >> 8));
 #else
     return (stc8h_u16)((((stc8h_u32)us * (STC8H_SYSCLK_HZ / 1000UL)) + 500UL) / 1000UL);
 #endif

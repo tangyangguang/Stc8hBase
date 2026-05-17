@@ -103,9 +103,10 @@
 - 已根据红外夜灯和红外遥控器两个真实应用复盘，补充 GPIO XFR mask 辅助、EXTI 批量清标志、PWM 共享周期 API 和应用项目引用模式文档。
 - 已完成一轮 wrapper-include 模式下的资源裁剪复查：确认单纯拆分 `.c` 不能改善现有 PlatformIO wrapper 示例，改为给 nRF24L01 TX-only/RX 相关 public API 增加默认开启的编译宏，并修正 EC11 small API null-check 裁剪漏包。
 - 已继续裁剪 wrapper-include 模式下的 SPI 批量写死代码：新增默认开启的 `STC8H_SPI_ENABLE_WRITE`，`rf_link_nrf24_small` 只使用单字节 transfer 时关闭该 API。
+- 已根据 `delay_us_probe` 示波器复测结果优化 11.0592MHz Timer0 1T 微秒换算，避免热路径拉入 `__divulong`/`__mullong` 长整数库函数。
 
 ## 2. 待优化项
 
 - LCD1602 写入暂不返回 I2C ACK 错误；硬件调试优先使用 `i2c_scan` 确认地址。
 - Keil C51 仍需在 Windows + Keil C51 环境完成真实编译验证。
-- `delay_us_probe` 和 `ir_nec_tx` 仍会因 11.0592MHz Timer0 1T 微秒换算拉入 `__divulong`/`__mullong`；本轮未改，因为这会改变硬件时序近似方式，需要示波器复测后再落地。
+- 11.0592MHz Timer0 1T 微秒换算已去除长整数库函数；仍需烧录新版 `delay_us_probe` 复测 562us、1687us、2250us、4500us、9000us 五档实际脉宽。
