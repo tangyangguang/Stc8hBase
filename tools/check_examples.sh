@@ -160,6 +160,7 @@ check_map_absent \
 
 check_map_absent \
     "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.map" \
+    "_stc8h_spi_write" \
     "_proto_rf_link_connect " "_proto_rf_link_send_data " "_proto_rf_link_poll " \
     "_proto_rf_link_reset " "_proto_rf_link_tick " "_proto_rf_link_get_state "
 
