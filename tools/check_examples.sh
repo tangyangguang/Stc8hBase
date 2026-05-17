@@ -38,6 +38,7 @@ check_map_absent() {
 check_mem_rom_at_most() {
     mem_file=$1
     max_bytes=$2
+    label=$3
     used=$(python3 - "${ROOT_DIR}/${mem_file}" <<'PY'
 import sys
 with open(sys.argv[1], "r", encoding="utf-8", errors="ignore") as fh:
@@ -53,6 +54,7 @@ PY
         echo "ROM ${used} exceeds guard ${max_bytes} in ${mem_file}" >&2
         exit 1
     fi
+    echo "ROM guard ${label}: ${used}/${max_bytes} bytes"
 }
 
 check_sdcc_interrupt_using() {
@@ -146,6 +148,8 @@ check_map_absent \
 check_map_absent \
     "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.map" \
     "_drv_nrf24l01_read_fifo_status" "_drv_nrf24l01_read_observe_tx" \
+    "_drv_nrf24l01_read_status" "_drv_nrf24l01_enter_rx" \
+    "_drv_nrf24l01_enter_standby" "_drv_nrf24l01_read_payload" \
     "_drv_nrf24l01_read_reg" "_drv_nrf24l01_write_reg" "_drv_nrf24l01_read_buf" \
     "_drv_nrf24l01_write_buf" "_drv_nrf24l01_command" \
     "_drv_nrf24l01_set_address_width" "_drv_nrf24l01_set_tx_address" \
@@ -181,10 +185,12 @@ check_map_absent \
 # Raise the ceiling deliberately if a real feature has been added.
 check_mem_rom_at_most \
     "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.mem" \
-    2350
+    2350 \
+    "pwm_pwma_pwmb_small"
 check_mem_rom_at_most \
     "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.mem" \
-    2080
+    2080 \
+    "rf_link_nrf24_small"
 
 if grep -Eq '\(stc8h_u32\)1u? *<< *rx->bit_index' "${ROOT_DIR}/drivers/drv_ir_rx.c"; then
     echo "forbidden variable u32 shift found in drivers/drv_ir_rx.c" >&2

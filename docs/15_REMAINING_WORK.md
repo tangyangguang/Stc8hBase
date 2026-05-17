@@ -101,8 +101,10 @@
 - 已将 `ir_nec_rx_int_sleep` 中的 INT0 配置和 power-down 入口改为复用 `stc8h_exti` / `stc8h_power`。
 - 已新增 `docs/19_MODULE_ACCEPTANCE.md`，明确新增基础模块准入标准，避免按想象扩展外设。
 - 已根据红外夜灯和红外遥控器两个真实应用复盘，补充 GPIO XFR mask 辅助、EXTI 批量清标志、PWM 共享周期 API 和应用项目引用模式文档。
+- 已完成一轮 wrapper-include 模式下的资源裁剪复查：确认单纯拆分 `.c` 不能改善现有 PlatformIO wrapper 示例，改为给 nRF24L01 TX-only/RX 相关 public API 增加默认开启的编译宏，并修正 EC11 small API null-check 裁剪漏包。
 
 ## 2. 待优化项
 
 - LCD1602 写入暂不返回 I2C ACK 错误；硬件调试优先使用 `i2c_scan` 确认地址。
 - Keil C51 仍需在 Windows + Keil C51 环境完成真实编译验证。
+- `delay_us_probe` 和 `ir_nec_tx` 仍会因 11.0592MHz Timer0 1T 微秒换算拉入 `__divulong`/`__mullong`；本轮未改，因为这会改变硬件时序近似方式，需要示波器复测后再落地。
