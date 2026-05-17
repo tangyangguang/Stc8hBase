@@ -75,7 +75,7 @@ docs/vendor/titan/TM1637_TitanMicro.pdf
 - ADC 当前实现按官方 STC8H ADC 资料校准：STC8H1K08 为 10-bit ADC，P3.3 对应 ADC11；ADC 引脚需配置为高阻输入；ADC 上电后等待约 1ms；`ADCTIM` 推荐 `0x3f`；10-bit ADC 速度不高于 500kHz。
 - SPI 当前实现按官方 STC8H SPI 资料校准：`SPSTAT/SPCTL/SPDAT` 为普通 SFR，`P_SW1[3:2]` 选择引脚组，`SPIF/WCOL` 写 1 清除；第一版采用硬件 SPI 主机轮询，不启用中断和 DMA。
 - EEPROM/IAP 当前实现按官方 STC8H 资料和官方库校准：STC8H1K08 为 4KB EEPROM/IAP，地址 `0x0000..0x0FFF`，512 字节扇区擦除，IAP 触发序列为 `0x5A`、`0xA5`，触发窗口临时关闭全局中断。
-- PWM 当前实现按官方 STC8H PWM 资料和 `STC8H_PWM.c/.h` 校准：第一版仅使用 `PWMA` 1..4、PWM mode 1、P 输出、默认 P1 引脚组，不启用互补输出、死区、刹车、中断或 PWMB。
+- PWM 当前实现按官方 STC8H PWM 资料和 `STC8H_PWM.c/.h` 校准：支持 `PWMA` 1..4 与 `PWMB` 5..8、PWM mode 1、P 输出和显式引脚组选择；不启用互补输出、死区、刹车、中断、捕获或同步。
 - WDT 当前实现按官方 `WDT_CONTR` 位定义和官方库函数校准：`WDT_FLAG` 位于 bit7，`EN_WDT` 位于 bit5，`CLR_WDT` 位于 bit4，`IDLE_WDT` 位于 bit3，分频系数使用 bit2..0，喂狗通过置位 `CLR_WDT` 完成。
 - 外部中断当前实现按 STC8H 官方手册和 STC8H1K08 资料校准：INT0(P3.2)/INT1(P3.3) 支持上升/下降沿模式和下降沿模式，`EX0/EX1` 控制使能，`IE0/IE1` 为中断标志；INT2(P3.6)/INT3(P3.7)/INT4(P3.0) 只支持下降沿，使能位为 `INTCLKO` bit4/5/6，请求标志为 `AUXINTIF` bit4/5/6，向量分别为 10/11/16。
 - 低功耗当前实现按官方 `PCON` 定义和官方休眠示例校准：`PCON.IDL` 进入 idle，`PCON.PD` 进入 power-down；P3.2/INT0、P3.3/INT1 可作为 power-down 唤醒源。

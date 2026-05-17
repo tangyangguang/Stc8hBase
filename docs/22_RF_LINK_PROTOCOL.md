@@ -86,12 +86,19 @@ build_flags =
     -DPROTO_RF_LINK_ENABLE_TICK=0
     -DPROTO_RF_LINK_ENABLE_CONNECT=0
     -DPROTO_RF_LINK_ENABLE_SEND_DATA=0
+    -DPROTO_RF_LINK_ENABLE_SEND_DATA_FIXED=1
+    -DPROTO_RF_LINK_FIXED_PAYLOAD_LEN=11
     -DPROTO_RF_LINK_ENABLE_SEND_STATUS=0
     -DPROTO_RF_LINK_ENABLE_SEND_HEARTBEAT=0
     -DPROTO_RF_LINK_ENABLE_POLL=0
+    -DPROTO_RF_LINK_ENABLE_POLL_DATA_FIXED=1
     -DPROTO_RF_LINK_ENABLE_GET_STATE=0
+    -DPROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK=0
+    -DPROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS=0
 ```
 
-阶段 2 只验证 `drv_nrf24l01`、`stc8h_spi` 和应用侧 `app_radio` 时，可以像上面一样关闭全部链路 API，只保留模块可编译接入。进入真实链路收发阶段后，再按实际调用打开对应宏，例如 controller 需要 `CONNECT/SEND_DATA/POLL` 时只启用这几项。
+阶段 2 只验证 `drv_nrf24l01`、`stc8h_spi` 和应用侧 `app_radio` 时，可以关闭全部链路 API，只保留模块可编译接入。进入真实链路收发阶段后，再按实际调用打开对应宏。固定 32-byte nRF24 packet、固定 DATA、固定 11-byte payload 的控制器可用 `proto_rf_link_send_data_fixed()` 替代通用 `send_data()`；只接收 DATA 的接收端可用 `proto_rf_link_poll_data_fixed()` 替代通用 `poll()`。
+
+关闭 `PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK` 后，协议层不再防御空指针或非法固定长度调用，只适合固定 packet buffer 和固定 payload buffer 的小容量构建。关闭 `PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS` 只跳过 `init()` 中 timeout/heartbeat 字段初始化，适合未启用 `tick/lost/heartbeat` 的 fixed path。
 
 每次调整宏后必须检查 `.pio/build/*/firmware.mem` 和 `.map`：确认 DSEG/OSEG 不再要求不可满足的连续内部 RAM，并确认关闭的函数符号没有出现在 map 中。

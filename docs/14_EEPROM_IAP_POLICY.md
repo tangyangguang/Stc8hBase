@@ -70,6 +70,26 @@ EEPROM/IAP 示例必须：
 
 基础库只提供读、写、擦除基础能力，不定义应用参数格式。
 
+小内存应用可以关闭未使用的通用 API：
+
+```c
+#define STC8H_EEPROM_ENABLE_READ 0
+#define STC8H_EEPROM_ENABLE_WRITE 0
+#define STC8H_EEPROM_ENABLE_ERASE 0
+```
+
+以上宏默认均为 `1`，关闭后对应 public API 不声明、不编译，用于避免 8KB 目标因未使用函数和 public 参数区符号超限。
+
+固定小配置块可以启用：
+
+```c
+#define STC8H_EEPROM_ENABLE_FIXED_BLOCK 1
+#define STC8H_EEPROM_FIXED_ADDR
+#define STC8H_EEPROM_FIXED_SIZE
+```
+
+固定块地址必须 512 字节扇区对齐，大小必须为 `1..512` 且不能越过 EEPROM 边界。`stc8h_eeprom_save_fixed()` 会擦除固定扇区再写入固定长度数据，因此该扇区不得混放其他需要保留的数据。
+
 ## 6. 中断和时序
 
 EEPROM/IAP 写擦期间可能影响中断和时序。

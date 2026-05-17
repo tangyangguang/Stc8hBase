@@ -101,6 +101,11 @@
 - 已将 `ir_nec_rx_int_sleep` 中的 INT0 配置和 power-down 入口改为复用 `stc8h_exti` / `stc8h_power`。
 - 已新增 `docs/19_MODULE_ACCEPTANCE.md`，明确新增基础模块准入标准，避免按想象扩展外设。
 - 已根据红外夜灯和红外遥控器两个真实应用复盘，补充 GPIO XFR mask 辅助、EXTI 批量清标志、PWM 共享周期 API 和应用项目引用模式文档。
+- 已完成一轮 wrapper-include 模式下的资源裁剪复查：确认单纯拆分 `.c` 不能改善现有 PlatformIO wrapper 示例，改为给 nRF24L01 TX-only/RX 相关 public API 增加默认开启的编译宏，并修正 EC11 small API null-check 裁剪漏包。
+- 已继续裁剪 wrapper-include 模式下的 SPI 批量写死代码：新增默认开启的 `STC8H_SPI_ENABLE_WRITE`，`rf_link_nrf24_small` 只使用单字节 transfer 时关闭该 API。
+- 已根据 `delay_us_probe` 示波器复测结果优化 11.0592MHz Timer0 1T 微秒换算，避免热路径拉入 `__divulong`/`__mullong` 长整数库函数。
+- 已根据 `delay_us_probe` 新版示波器复测确认五档脉宽收敛到 NEC 可接受范围，并记录硬件实测结果。
+- 已继续裁剪 `proto_rf_link` fixed-path 死状态：新增默认开启的 `PROTO_RF_LINK_TRACK_STATE` / `PROTO_RF_LINK_TRACK_SEQ_RX` / `PROTO_RF_LINK_TRACK_ACK_PENDING`，`rf_link_nrf24_small` 关闭未读取字段。
 
 ## 2. 待优化项
 

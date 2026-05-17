@@ -337,22 +337,21 @@ void stc8h_spi_write(const STC8H_DATA stc8h_u8 *data, stc8h_u8 len);
 接口方向：
 
 ```c
-stc8h_status_t stc8h_pwm_init_period(stc8h_u16 period);
-stc8h_status_t stc8h_pwm_channel_init(stc8h_u8 channel);
-stc8h_status_t stc8h_pwm_init(stc8h_u8 channel, stc8h_u16 period);
-stc8h_status_t stc8h_pwm_set_duty(stc8h_u8 channel, stc8h_u16 duty);
-stc8h_status_t stc8h_pwm_enable(stc8h_u8 channel);
-stc8h_status_t stc8h_pwm_disable(stc8h_u8 channel);
+stc8h_status_t stc8h_pwm_set_prescaler(stc8h_u8 group, stc8h_u16 prescaler);
+stc8h_status_t stc8h_pwm_set_period(stc8h_u8 group, stc8h_u16 period);
+stc8h_status_t stc8h_pwm_init_channel(stc8h_u8 group, stc8h_u8 channel, stc8h_u8 pin_select);
+stc8h_status_t stc8h_pwm_set_duty(stc8h_u8 group, stc8h_u8 channel, stc8h_u16 duty);
+stc8h_status_t stc8h_pwm_enable(stc8h_u8 group, stc8h_u8 channel);
+stc8h_status_t stc8h_pwm_disable(stc8h_u8 group, stc8h_u8 channel);
 ```
 
 取舍：
 
-- 第一版实现 `PWMA` 1..4 的基础 PWM mode 1 输出。
-- 默认引脚选择为官方默认 P1 组：PWM1P/P1.0、PWM2P/P1.2、PWM3P/P1.4、PWM4P/P1.6。
-- `PWMA` 1..4 共用同一个周期；`stc8h_pwm_init_period()` 或 `stc8h_pwm_init()` 会更新全局 ARR 周期。
-- `stc8h_pwm_channel_init()` 只初始化单个通道模式和默认占空比，不改全局周期。
-- `stc8h_pwm_init(channel, period)` 是便捷入口，等价于先设置全局周期再初始化一个通道。
-- 第一版不实现互补输出、死区、刹车、中断、PWMB 和运行期引脚自动适配。
+- 实现 `PWMA` 1..4 和 `PWMB` 5..8 的基础 PWM mode 1 输出。
+- `PWMA` 与 `PWMB` 各自维护周期和 prescaler；同组通道共享同一个周期和 prescaler。
+- 引脚选择由 `stc8h_pwm_init_channel()` 的 `pin_select` 显式传入，基础库不做运行期自动推断。
+- 旧的 PWMA-only 便捷 API 不保留，避免在应用项目里继续传播不完整抽象。
+- 不实现互补输出、死区、刹车、中断、捕获、同步和运行期引脚自动适配。
 - 用于红外发射载波和无源蜂鸣器时，必须在资源策略中声明占用。
 
 ### 3.7 `stc8h_adc`
@@ -389,6 +388,29 @@ stc8h_status_t stc8h_eeprom_read(stc8h_u16 addr, STC8H_DATA stc8h_u8 *data, stc8
 stc8h_status_t stc8h_eeprom_write(stc8h_u16 addr, const STC8H_DATA stc8h_u8 *data, stc8h_u16 len);
 stc8h_status_t stc8h_eeprom_erase_sector(stc8h_u16 addr);
 ```
+
+小内存裁剪：
+
+```c
+#define STC8H_EEPROM_ENABLE_READ
+#define STC8H_EEPROM_ENABLE_WRITE
+#define STC8H_EEPROM_ENABLE_ERASE
+```
+
+以上宏默认均为 `1`，保持完整通用 API。STC8H1K08 小内存应用可在编译配置中关闭未使用的 API，让对应声明、定义和 public 参数区符号不进入目标文件。
+
+固定小配置块接口：
+
+```c
+#define STC8H_EEPROM_ENABLE_FIXED_BLOCK 1
+#define STC8H_EEPROM_FIXED_ADDR
+#define STC8H_EEPROM_FIXED_SIZE
+
+stc8h_status_t stc8h_eeprom_read_fixed(STC8H_DATA stc8h_u8 *data);
+stc8h_status_t stc8h_eeprom_save_fixed(const STC8H_DATA stc8h_u8 *data);
+```
+
+`fixed` 模式默认关闭。启用后，固定地址必须 512 字节扇区对齐，固定大小必须为 `1..512` 且不能越过 EEPROM 边界。`stc8h_eeprom_save_fixed()` 会擦除固定扇区再写入固定长度数据，适合只保存少量参数的 8KB flash 目标；同一扇区存在其他数据时不能使用该接口。
 
 实现约束：
 

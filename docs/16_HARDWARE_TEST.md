@@ -770,26 +770,30 @@ ir nec ok
 当前测试接线：
 
 ```text
-逻辑分析仪 CH0 -> P1.0
-GND            -> GND
+示波器 CH1 -> P1.0
+GND        -> GND
 ```
 
 烧录：
 
 ```sh
-cd examples/platformio/delay_us_probe
-pio run -t upload --upload-port /dev/cu.usbserial-110
-pio device monitor --port /dev/cu.usbserial-110 --baud 115200
+./tools/upload_delay_probe.sh 562
+./tools/upload_delay_probe.sh 1687
+./tools/upload_delay_probe.sh 2250
+./tools/upload_delay_probe.sh 4500
+./tools/upload_delay_probe.sh 9000
 ```
 
 预期：
 
 - 串口输出 `delay us probe P10`。
-- P1.0 循环输出 562us、1687us、2250us、4500us、9000us 高脉冲，脉冲之间约 2ms 低电平间隔。
+- 每个固件只循环输出一种高脉宽，周期约 20ms。
 
 实测：
 
-- 待在 STC8H1K08 + 逻辑分析仪上补充。
+- 优化前在 STC8H1K08 + Rigol DS1202Z-E 上复测，五档分别约为 650us、1.85ms、2.35ms、4.65ms、9.20ms，周期约 20.55ms。
+- 优化后在同一硬件上复测，五档分别约为 550us、1.65ms、2.25ms、4.45ms、9.00ms，周期约 19.95ms..20.00ms。
+- 该结果确认测试链路有效，也确认 11.0592MHz Timer0 1T 延时热路径去除长整数换算后，NEC 关键码元长度已落入可接受范围。
 
 说明：
 

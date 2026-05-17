@@ -140,7 +140,7 @@ reload = 65536 - MAIN_Fosc / 4 / baud
 - `PWMA_ENO` 控制输出使能，`PWMA_CCERx` 控制捕获/比较输出使能和极性。
 - `PWMA_ARRH/L` 设置周期，`PWMA_CCRnH/L` 设置占空比，`PWMA_BKR.MOE` 需要打开主输出。
 
-本库第一版只实现 `PWMA` 1..4 基础 P 输出，不启用互补输出、死区、刹车、中断和 `PWMB`。
+本库实现 `PWMA` 1..4 与 `PWMB` 5..8 基础 P 输出，允许两组使用独立周期和 prescaler；不启用互补输出、死区、刹车、中断、捕获和同步。
 
 ## 4. 后续模块参考清单
 
