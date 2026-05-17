@@ -43,6 +43,7 @@ stc8h_u8 stc8h_spi_transfer(stc8h_u8 value)
     return value;
 }
 
+#if STC8H_SPI_ENABLE_WRITE
 void stc8h_spi_write(const STC8H_DATA stc8h_u8 *data, stc8h_u8 len)
 {
     while (len != 0u) {
@@ -51,3 +52,4 @@ void stc8h_spi_write(const STC8H_DATA stc8h_u8 *data, stc8h_u8 len)
         --len;
     }
 }
+#endif
