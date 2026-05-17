@@ -67,6 +67,22 @@
 #define STC8H_PWM_ENABLE_SET_DUTY_CLAMP 1
 #endif
 
+/* When 0, the per-group period and prescaler shadow variables are
+ * not stored in RAM. Apps that set the prescaler / period exactly
+ * once at init and rely on STC8H_PWM_ENABLE_SET_DUTY_CLAMP=0 can
+ * shave 4-8 bytes of XDATA (one shadow pair per enabled group).
+ * When 0, stc8h_pwm_set_period and stc8h_pwm_set_prescaler still
+ * write the SFRs but skip the "running guard" that requires
+ * remembering the previously stored value. Default 1 preserves the
+ * existing run-time guard. */
+#ifndef STC8H_PWM_TRACK_PERIOD_PRESCALER
+#define STC8H_PWM_TRACK_PERIOD_PRESCALER 1
+#endif
+
+#if !STC8H_PWM_TRACK_PERIOD_PRESCALER && STC8H_PWM_ENABLE_SET_DUTY_CLAMP
+#error "STC8H_PWM_ENABLE_SET_DUTY_CLAMP requires STC8H_PWM_TRACK_PERIOD_PRESCALER."
+#endif
+
 stc8h_status_t stc8h_pwm_set_prescaler(stc8h_u8 group, stc8h_u16 prescaler);
 stc8h_status_t stc8h_pwm_set_period(stc8h_u8 group, stc8h_u16 period);
 stc8h_status_t stc8h_pwm_init_channel(stc8h_u8 group, stc8h_u8 channel, stc8h_u8 pin_select);

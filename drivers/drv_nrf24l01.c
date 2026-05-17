@@ -374,6 +374,7 @@ static stc8h_status_t drv_nrf24l01_enable_feature_bits(stc8h_u8 bits)
         return STC8H_OK;
     }
 
+#if DRV_NRF24L01_REQUIRES_ACTIVATE
     DRV_NRF24L01_CSN_LOW();
     (void)stc8h_spi_transfer(NRF24_CMD_ACTIVATE);
     (void)stc8h_spi_transfer(0x73u);
@@ -385,6 +386,7 @@ static stc8h_status_t drv_nrf24l01_enable_feature_bits(stc8h_u8 bits)
     if ((drv_nrf24l01_read_reg(NRF24_REG_FEATURE) & bits) == bits) {
         return STC8H_OK;
     }
+#endif
     return STC8H_ERROR;
 }
 #endif

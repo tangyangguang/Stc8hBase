@@ -46,9 +46,11 @@ static stc8h_status_t proto_rf_link_make_packet(proto_rf_link_t *link, stc8h_u8 
 
 void proto_rf_link_init(proto_rf_link_t *link)
 {
+#if PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK
     if (link == 0) {
         return;
     }
+#endif
 
     link->state = PROTO_RF_LINK_STATE_IDLE;
     link->local_id = 0u;
@@ -65,9 +67,11 @@ void proto_rf_link_init(proto_rf_link_t *link)
 #if PROTO_RF_LINK_ENABLE_SET_IDS
 void proto_rf_link_set_ids(proto_rf_link_t *link, stc8h_u8 local_id, stc8h_u8 peer_id)
 {
+#if PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK
     if (link == 0) {
         return;
     }
+#endif
 
     link->local_id = local_id;
     link->peer_id = peer_id;
@@ -77,16 +81,20 @@ void proto_rf_link_set_ids(proto_rf_link_t *link, stc8h_u8 local_id, stc8h_u8 pe
 #if PROTO_RF_LINK_ENABLE_RESET
 void proto_rf_link_reset(proto_rf_link_t *link)
 {
+#if PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK
     if (link == 0) {
         return;
     }
+#endif
 
     link->state = PROTO_RF_LINK_STATE_IDLE;
     link->seq_tx = 0u;
     link->seq_rx = 0u;
     link->ack_pending = 0u;
+#if PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
     link->timeout_ms = 0u;
     link->heartbeat_ms = 0u;
+#endif
 }
 #endif
 
@@ -204,7 +212,9 @@ proto_rf_link_event_t proto_rf_link_poll(proto_rf_link_t *link, const stc8h_u8 *
 
     link->seq_rx = packet[3];
     link->ack_pending = 0u;
+#if PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
     link->timeout_ms = 0u;
+#endif
 
     if ((packet_type == PROTO_RF_LINK_PACKET_HELLO_ACK) || (packet_type == PROTO_RF_LINK_PACKET_HELLO)) {
         link->state = PROTO_RF_LINK_STATE_CONNECTED;
@@ -253,7 +263,9 @@ stc8h_status_t proto_rf_link_poll_data_fixed(proto_rf_link_t *link, const stc8h_
     link->seq_rx = packet[3];
 #if PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED_TRACK_LINK
     link->ack_pending = 0u;
+#if PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
     link->timeout_ms = 0u;
+#endif
     link->state = PROTO_RF_LINK_STATE_CONNECTED;
 #endif
     return STC8H_OK;

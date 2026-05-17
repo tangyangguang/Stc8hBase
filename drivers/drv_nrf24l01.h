@@ -88,6 +88,17 @@
 #define DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE (DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD || DRV_NRF24L01_ENABLE_ACK_PAYLOAD)
 #endif
 
+/* The original nRF24L01 (non +) requires sending the ACTIVATE 0x73
+ * command before FEATURE bits become writable. nRF24L01+ accepts
+ * FEATURE writes directly. Apps that have positively identified the
+ * chip as nRF24L01+ can set this to 0 to drop the second-attempt
+ * ACTIVATE fallback inside enable_dynamic_payload /
+ * enable_ack_payload. Default 1 preserves the legacy-compatible
+ * path. */
+#ifndef DRV_NRF24L01_REQUIRES_ACTIVATE
+#define DRV_NRF24L01_REQUIRES_ACTIVATE 1
+#endif
+
 typedef enum {
     DRV_NRF24L01_RATE_250KBPS = 0,
     DRV_NRF24L01_RATE_1MBPS,

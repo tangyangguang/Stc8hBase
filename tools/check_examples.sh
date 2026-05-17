@@ -33,6 +33,28 @@ check_map_absent() {
     done
 }
 
+# Asserts the .mem ROM line reports at most $2 bytes used.
+# Catches accidental regressions when trim macros stop working.
+check_mem_rom_at_most() {
+    mem_file=$1
+    max_bytes=$2
+    used=$(python3 - "${ROOT_DIR}/${mem_file}" <<'PY'
+import sys
+with open(sys.argv[1], "r", encoding="utf-8", errors="ignore") as fh:
+    for line in fh:
+        if "ROM/EPROM/FLASH" in line:
+            print(int(line.split()[3]))
+            break
+    else:
+        raise SystemExit("ROM/EPROM/FLASH line not found")
+PY
+)
+    if [ "${used}" -gt "${max_bytes}" ]; then
+        echo "ROM ${used} exceeds guard ${max_bytes} in ${mem_file}" >&2
+        exit 1
+    fi
+}
+
 check_sdcc_interrupt_using() {
     tmp_dir=$(mktemp -d)
     trap 'rm -rf "${tmp_dir}"' EXIT
@@ -149,6 +171,20 @@ check_map_absent \
 check_map_absent \
     "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.mem" \
     "Could not get" "DSEG.*overflow" "OSEG.*overflow"
+
+# Hard ROM ceilings for the "small" fixed-path examples. The guards
+# catch regressions in:
+#   - STC8H_PWM_TRACK_PERIOD_PRESCALER / SET_DUTY_CHANNEL_CHECK / CLAMP
+#   - PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
+#   - PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_TRACK_ACK / POLL_DATA_FIXED_TRACK_LINK
+#   - DRV_EC11_ENABLE_NULL_CHECK
+# Raise the ceiling deliberately if a real feature has been added.
+check_mem_rom_at_most \
+    "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.mem" \
+    2350
+check_mem_rom_at_most \
+    "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.mem" \
+    2080
 
 if grep -Eq '\(stc8h_u32\)1u? *<< *rx->bit_index' "${ROOT_DIR}/drivers/drv_ir_rx.c"; then
     echo "forbidden variable u32 shift found in drivers/drv_ir_rx.c" >&2

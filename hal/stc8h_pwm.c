@@ -76,6 +76,7 @@
 #define STC8H_PWM_A_CHANNEL_ENABLED(channel) ((STC8H_PWM_A_CHANNEL_MASK & (1u << ((channel) - 1u))) != 0u)
 #define STC8H_PWM_B_CHANNEL_ENABLED(channel) ((STC8H_PWM_B_CHANNEL_MASK & (1u << ((channel) - 5u))) != 0u)
 
+#if STC8H_PWM_TRACK_PERIOD_PRESCALER
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_A)
 static stc8h_u16 stc8h_pwm_period_a;
 static stc8h_u16 stc8h_pwm_prescaler_a;
@@ -83,6 +84,7 @@ static stc8h_u16 stc8h_pwm_prescaler_a;
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_B)
 static stc8h_u16 stc8h_pwm_period_b;
 static stc8h_u16 stc8h_pwm_prescaler_b;
+#endif
 #endif
 
 static stc8h_u8 stc8h_pwm_group_valid(stc8h_u8 group)
@@ -151,6 +153,7 @@ static stc8h_u8 stc8h_pwm_ps_shift(stc8h_u8 group, stc8h_u8 channel)
     return (stc8h_u8)((channel - STC8H_PWM_CHANNEL_5) << 1);
 }
 
+#if STC8H_PWM_TRACK_PERIOD_PRESCALER
 static stc8h_u16 stc8h_pwm_get_period(stc8h_u8 group)
 {
     if (group == STC8H_PWM_GROUP_A) {
@@ -189,17 +192,18 @@ static stc8h_u8 stc8h_pwm_group_running(stc8h_u8 group)
         (stc8h_u8)(PWMA_ENO & STC8H_PWM_OUTPUT_MASK) :
         (stc8h_u8)(PWMB_ENO & STC8H_PWM_OUTPUT_MASK);
 }
+#endif
 
-static void stc8h_pwm_apply_prescaler(stc8h_u8 group)
+static void stc8h_pwm_apply_prescaler(stc8h_u8 group, stc8h_u16 prescaler)
 {
     if (group == STC8H_PWM_GROUP_A) {
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_A)
-        stc8h_pwm_write16(&PWMA_PSCRH, &PWMA_PSCRL, stc8h_pwm_prescaler_a);
+        stc8h_pwm_write16(&PWMA_PSCRH, &PWMA_PSCRL, prescaler);
         PWMA_EGR = STC8H_PWM_EGR_UG;
 #endif
     } else {
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_B)
-        stc8h_pwm_write16(&PWMB_PSCRH, &PWMB_PSCRL, stc8h_pwm_prescaler_b);
+        stc8h_pwm_write16(&PWMB_PSCRH, &PWMB_PSCRL, prescaler);
         PWMB_EGR = STC8H_PWM_EGR_UG;
 #endif
     }
@@ -275,27 +279,33 @@ stc8h_status_t stc8h_pwm_set_prescaler(stc8h_u8 group, stc8h_u16 prescaler)
     if (stc8h_pwm_group_valid(group) == 0u) {
         return STC8H_ERROR;
     }
+#if STC8H_PWM_TRACK_PERIOD_PRESCALER
     if (stc8h_pwm_group_running(group) != 0u) {
         return (prescaler == stc8h_pwm_get_prescaler(group)) ? STC8H_OK : STC8H_ERROR;
     }
+#endif
 
     P_SW2 |= 0x80u;
     if (group == STC8H_PWM_GROUP_A) {
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_A)
+#if STC8H_PWM_TRACK_PERIOD_PRESCALER
         stc8h_pwm_prescaler_a = prescaler;
+#endif
 #else
         return STC8H_ERROR;
 #endif
     } else if (group == STC8H_PWM_GROUP_B) {
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_B)
+#if STC8H_PWM_TRACK_PERIOD_PRESCALER
         stc8h_pwm_prescaler_b = prescaler;
+#endif
 #else
         return STC8H_ERROR;
 #endif
     } else {
         return STC8H_ERROR;
     }
-    stc8h_pwm_apply_prescaler(group);
+    stc8h_pwm_apply_prescaler(group, prescaler);
 
     return STC8H_OK;
 }
@@ -308,15 +318,19 @@ stc8h_status_t stc8h_pwm_set_period(stc8h_u8 group, stc8h_u16 period)
     if (stc8h_pwm_group_valid(group) == 0u) {
         return STC8H_ERROR;
     }
+#if STC8H_PWM_TRACK_PERIOD_PRESCALER
     if (stc8h_pwm_group_running(group) != 0u) {
         return (period == stc8h_pwm_get_period(group)) ? STC8H_OK : STC8H_ERROR;
     }
+#endif
 
     P_SW2 |= 0x80u;
     if (group == STC8H_PWM_GROUP_A) {
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_A)
         PWMA_CR1 &= (stc8h_u8)~STC8H_PWM_CR1_CEN;
+#if STC8H_PWM_TRACK_PERIOD_PRESCALER
         stc8h_pwm_period_a = period;
+#endif
         stc8h_pwm_write16(&PWMA_ARRH, &PWMA_ARRL, period);
         PWMA_RCR = 0u;
         PWMA_DTR = 0u;
@@ -329,7 +343,9 @@ stc8h_status_t stc8h_pwm_set_period(stc8h_u8 group, stc8h_u16 period)
     } else {
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_B)
         PWMB_CR1 &= (stc8h_u8)~STC8H_PWM_CR1_CEN;
+#if STC8H_PWM_TRACK_PERIOD_PRESCALER
         stc8h_pwm_period_b = period;
+#endif
         stc8h_pwm_write16(&PWMB_ARRH, &PWMB_ARRL, period);
         PWMB_RCR = 0u;
         PWMB_DTR = 0u;

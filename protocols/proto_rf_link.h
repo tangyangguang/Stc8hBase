@@ -28,6 +28,28 @@
 #define PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS 1
 #endif
 
+/* Include timeout_ms / heartbeat_ms in the proto_rf_link_t struct.
+ * Default 1 keeps existing ABI. Apps that never tick the link and
+ * never read those fields can set this to 0 to save 4 bytes of RAM
+ * per link instance. When 0, all _TICK / _TIMEOUT bookkeeping is
+ * automatically off and any code referencing the fields must also
+ * be gated by this same macro. */
+#ifndef PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
+#define PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS 1
+#endif
+
+#if !PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
+#if PROTO_RF_LINK_ENABLE_TICK
+#error "PROTO_RF_LINK_ENABLE_TICK requires PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS."
+#endif
+#if PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS
+#error "PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS requires PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS."
+#endif
+#if PROTO_RF_LINK_ENABLE_SEND_HEARTBEAT
+#error "PROTO_RF_LINK_ENABLE_SEND_HEARTBEAT requires PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS."
+#endif
+#endif
+
 #ifndef PROTO_RF_LINK_FIXED_PAYLOAD_LEN
 #define PROTO_RF_LINK_FIXED_PAYLOAD_LEN 11u
 #endif
@@ -111,8 +133,10 @@ typedef struct {
     stc8h_u8 seq_tx;
     stc8h_u8 seq_rx;
     stc8h_u8 ack_pending;
+#if PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
     stc8h_u16 timeout_ms;
     stc8h_u16 heartbeat_ms;
+#endif
 } proto_rf_link_t;
 
 void proto_rf_link_init(proto_rf_link_t *link);
