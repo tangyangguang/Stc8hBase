@@ -606,6 +606,7 @@ stc8h_s16 drv_ec11_get_delta(drv_ec11_t *ec11);
 - 运行中可用 `drv_ec11_set_fast` 修改当前对象的快速阈值和快速步进值。
 - 运行中可用 `drv_ec11_set_reverse` 修改当前对象方向；通常只在初始化或用户设置变更时调用，不建议在旋转过程中频繁切换。
 - 每定位格需要的有效相位跳变数可通过 `DRV_EC11_STEPS_PER_DETENT` 或 `drv_ec11_set_steps_per_detent` 配置，默认 `4`，可选范围 `1..4`。如果旋转不灵敏，可降低；如果一次旋转计数过多，可提高。
+- small API 面向固定硬件和低内存构建，按首次采样到的静止相位作为 detent 相位；只有回到该相位时才提交一次增量，并用净同向相位数过滤抖动。这样完整 4 相不会因较低 `DRV_EC11_SMALL_STEPS_PER_DETENT` 在一格内重复输出，漏采一个中间相位时仍能在回到 detent 后输出一次。
 - 加速只影响输出增量，不改变 A/B 相解码逻辑。
 - `drv_ec11_get_delta` 读取后清零累计增量。
 

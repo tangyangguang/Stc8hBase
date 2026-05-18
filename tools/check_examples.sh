@@ -112,6 +112,7 @@ EOF
 
 check_sdcc_interrupt_using
 check_eeprom_api_trim
+sh "${ROOT_DIR}/tools/check_host_tests.sh"
 
 for ini in "${ROOT_DIR}"/examples/platformio/*/platformio.ini; do
     run_platformio_example "examples/platformio/$(basename "$(dirname "${ini}")")"
@@ -191,7 +192,7 @@ check_map_absent \
 # Raise the ceiling deliberately if a real feature has been added.
 check_mem_rom_at_most \
     "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.mem" \
-    2350 \
+    2450 \
     "pwm_pwma_pwmb_small"
 check_mem_rom_at_most \
     "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.mem" \

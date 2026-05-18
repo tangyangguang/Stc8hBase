@@ -72,6 +72,7 @@ typedef struct {
 #if DRV_EC11_ENABLE_SMALL_API
 typedef struct {
     stc8h_u8 last_state;
+    stc8h_u8 detent_state;
     stc8h_s8 step_accum;
 } drv_ec11_small_t;
 #endif
