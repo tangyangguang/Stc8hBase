@@ -18,5 +18,6 @@ run_c_test() {
 
 run_c_test "tests/host/test_drv_ec11_small.c"
 run_c_test "tests/host/test_drv_ec11_small_full_detent.c"
+run_c_test "tests/host/test_drv_ec11_small_isr.c"
 
 echo "host tests passed"

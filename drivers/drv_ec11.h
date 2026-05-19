@@ -27,6 +27,10 @@
 #define DRV_EC11_ENABLE_SMALL_API 0
 #endif
 
+#ifndef DRV_EC11_ENABLE_SMALL_ISR_API
+#define DRV_EC11_ENABLE_SMALL_ISR_API 0
+#endif
+
 #ifndef DRV_EC11_ENABLE_SET_FAST
 #define DRV_EC11_ENABLE_SET_FAST 1
 #endif
@@ -69,7 +73,7 @@ typedef struct {
 } drv_ec11_t;
 #endif
 
-#if DRV_EC11_ENABLE_SMALL_API
+#if DRV_EC11_ENABLE_SMALL_API || DRV_EC11_ENABLE_SMALL_ISR_API
 typedef struct {
     stc8h_u8 last_state;
     stc8h_u8 detent_state;
@@ -95,6 +99,13 @@ stc8h_s16 drv_ec11_get_delta(drv_ec11_t *ec11);
 #if DRV_EC11_ENABLE_SMALL_API
 void drv_ec11_small_init(drv_ec11_small_t *ec11);
 stc8h_s8 drv_ec11_scan_delta_small(drv_ec11_small_t *ec11, stc8h_u8 a_level, stc8h_u8 b_level);
+#endif
+
+#if DRV_EC11_ENABLE_SMALL_ISR_API
+void drv_ec11_small_init_isr(STC8H_DATA drv_ec11_small_t *ec11) STC8H_REENTRANT;
+stc8h_s8 drv_ec11_scan_delta_small_isr(STC8H_DATA drv_ec11_small_t *ec11,
+                                       stc8h_u8 a_level,
+                                       stc8h_u8 b_level) STC8H_REENTRANT;
 #endif
 
 #endif

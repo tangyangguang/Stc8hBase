@@ -191,10 +191,13 @@ docs/vendor/stc/stc8g-stc8h-lib-demo-code.rar
 - `xdata`
 - `interrupt`
 - `using`
+- `reentrant`
 - `nop`
 - xdata SFR 访问
 
 所有这些都通过编译期宏处理，不能产生运行期开销。
+
+SDCC mcs51 small model 下，普通函数参数和局部变量会使用静态分配区并参与 overlay；需要被 ISR 异步调用的函数应单独评估 `__reentrant`、指针存储区限定和运行时 helper 调用。EC11 small ISR API 按这个规则独立实现，不复用普通 small scan 的 generic pointer 路径。
 
 ### 4.2 Makefile 是基础验证入口
 

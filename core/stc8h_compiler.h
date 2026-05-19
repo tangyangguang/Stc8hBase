@@ -19,6 +19,7 @@
 
 #define STC8H_INTERRUPT(name, vector) void name(void) __interrupt(vector)
 #define STC8H_INTERRUPT_USING(name, vector, reg_bank) void name(void) __interrupt(vector) __using(reg_bank)
+#define STC8H_REENTRANT __reentrant
 #define STC8H_NOP() __asm nop __endasm
 
 #elif defined(__C51__) || defined(__CX51__)
@@ -41,6 +42,7 @@
 
 #define STC8H_INTERRUPT(name, vector) void name(void) interrupt vector
 #define STC8H_INTERRUPT_USING(name, vector, reg_bank) void name(void) interrupt vector using reg_bank
+#define STC8H_REENTRANT reentrant
 #define STC8H_NOP() _nop_()
 
 #else
@@ -61,6 +63,7 @@
 
 #define STC8H_INTERRUPT(name, vector) void name(void)
 #define STC8H_INTERRUPT_USING(name, vector, reg_bank) void name(void)
+#define STC8H_REENTRANT
 #define STC8H_NOP() ((void)0)
 
 #endif

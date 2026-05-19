@@ -249,6 +249,7 @@ SDCC/mcs51 对跨函数、跨模块的 dead-code elimination 不稳定；8051 �
 #define PROTO_RF_LINK_FIXED_PAYLOAD_LEN 11u
 #define DRV_EC11_ENABLE_FULL_API 0
 #define DRV_EC11_ENABLE_SMALL_API 1
+#define DRV_EC11_ENABLE_SMALL_ISR_API 0
 #define DRV_TM1637_ENABLE_DISPLAY_RAW 0
 #define DRV_TM1637_ENABLE_DISPLAY_RAW4 1
 #define DRV_TM1637_ENABLE_SET_DISPLAY 0
@@ -273,7 +274,8 @@ SDCC/mcs51 对跨函数、跨模块的 dead-code elimination 不稳定；8051 �
 - `DRV_NRF24L01_ENABLE_READ_FIFO_STATUS=0` 和 `DRV_NRF24L01_ENABLE_READ_OBSERVE_TX=0` 适合不做运行期 radio 诊断的小固件。
 - `DRV_NRF24L01_ENABLE_ADDRESS_API=0` 搭配 `DRV_NRF24L01_ENABLE_PIPE0_FIXED_API=1`，适合固定 5-byte 地址、固定 pipe0、固定 32-byte payload 的 nRF24 链路。
 - `PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED=1` 和 `PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED=1` 适合固定 DATA 包、固定 payload 长度的控制器/接收端；关闭 `PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK` 后，调用方必须保证 packet/data 指针合法。
-- `DRV_EC11_ENABLE_FULL_API=0` 搭配 `DRV_EC11_ENABLE_SMALL_API=1` 适合单个 EC11、固定每格步数、不需要快速旋转加速或运行期反向配置的 UI。
+- `DRV_EC11_ENABLE_FULL_API=0` 搭配 `DRV_EC11_ENABLE_SMALL_API=1` 适合单个 EC11、固定每格步数、不需要快速旋转加速或运行期反向配置的主循环轮询 UI。
+- `DRV_EC11_ENABLE_SMALL_ISR_API=1` 只保留可从 ISR 调用的 small scan 入口；SDCC mcs51 small model 下，普通 `drv_ec11_scan_delta_small()` 不允许在 ISR 中调用。
 - `DRV_TM1637_ENABLE_DISPLAY_RAW4=1` 搭配 `DRV_TM1637_ENABLE_DISPLAY_RAW=0` 适合应用已经生成 4 位段码、只写固定 4 位显示的固件。
 - `DRV_TM1637_ENABLE_BRIGHTNESS_STATE=0` 后 `drv_tm1637_set_brightness()` 不再改变运行期亮度，显示控制命令使用 `DRV_TM1637_FIXED_BRIGHTNESS`；只适合亮度固定的产品构建。
 - `DRV_TM1637_ENABLE_RAW_LEN_CHECK=0` 后不会检查空指针和长度，调用方必须保证传入 4 位段码数组。
@@ -281,4 +283,23 @@ SDCC/mcs51 对跨函数、跨模块的 dead-code elimination 不稳定；8051 �
 
 不要关闭项目仍会调用的函数。例如红外夜灯接收端会调用 `stc8h_timer0_reset()`，因此必须保留默认的 `STC8H_TIMER_ENABLE_TIMER0_RESET=1`。关闭 UART 日志的生产构建应同时不编译 `hal/stc8h_uart.c`，而不是只依赖链接器清理。
 
-ToyRemote 这类 STC8H1K08 8KB 固定路径构建的推荐方向是：controller 保留 nRF24 ACK payload 启用和必要的 `write_payload/pulse_ce/irq/flush`，关闭 raw/诊断/dynamic 独立 API，使用 `proto_rf_link_send_data_fixed()` 发送 11-byte DATA；receiver 保留 ACK payload 写入路径和 `proto_rf_link_poll_data_fixed()`。TM1637 只保留 `init/set_brightness/display_raw4`，EC11 使用 small API，PWM 用 group/channel mask 只保留 PWMA1 和 PWMB6/7/8。
+ToyRemote 这类 STC8H1K08 8KB 固定路径构建的推荐方向是：controller 保留 nRF24 ACK payload 启用和必要的 `write_payload/pulse_ce/irq/flush`，关闭 raw/诊断/dynamic 独立 API，使用 `proto_rf_link_send_data_fixed()` 发送 11-byte DATA；receiver 保留 ACK payload 写入路径和 `proto_rf_link_poll_data_fixed()`。TM1637 只保留 `init/set_brightness/display_raw4`，EC11 主循环轮询使用 ordinary small API；如果必须在 Timer ISR 固定周期扫描，则关闭 ordinary small scan，开启 `DRV_EC11_ENABLE_SMALL_ISR_API=1` 并使用 internal data 状态对象。PWM 用 group/channel mask 只保留 PWMA1 和 PWMB6/7/8。
+
+SDCC mcs51 small model 下，普通函数参数、局部变量和部分运行时 helper 参数会使用静态分配的内部 RAM/overlay 区。ISR 异步调用普通函数可能破坏主循环正在使用的 overlay 参数。因此 EC11 在 ISR 中只能使用专用 small ISR API：
+
+```c
+#define DRV_EC11_ENABLE_FULL_API 0
+#define DRV_EC11_ENABLE_SMALL_API 0
+#define DRV_EC11_ENABLE_SMALL_ISR_API 1
+
+static STC8H_DATA drv_ec11_small_t encoder;
+static volatile stc8h_s8 encoder_delta;
+
+STC8H_INTERRUPT_USING(timer0_isr, STC8H_VECTOR_TIMER0, 1)
+{
+    encoder_delta = (stc8h_s8)(encoder_delta +
+        drv_ec11_scan_delta_small_isr(&encoder, BOARD_EC11_A_READ(), BOARD_EC11_B_READ()));
+}
+```
+
+`drv_ec11_small_init_isr()` 和 `drv_ec11_scan_delta_small_isr()` 要求 `drv_ec11_small_t` 放在 internal data 区。主循环读取并清零 `encoder_delta` 时，如果该变量可能被 ISR 同时更新，应用应只在这个很小的临界区内关中断。

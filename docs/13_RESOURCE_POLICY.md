@@ -86,6 +86,7 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | TM1637 | `DRV_TM1637_ENABLE_CLEAR` | `1` | 是否编译清屏便捷 API |
 | EC11 | `DRV_EC11_ENABLE_FULL_API` | `1` | 是否编译完整对象 API：scan + get_delta + fast/reverse/steps 状态 |
 | EC11 | `DRV_EC11_ENABLE_SMALL_API` | `0` | 是否编译 small 状态 API：固定 steps、无 reverse runtime、无 fast、scan 直接返回 delta |
+| EC11 | `DRV_EC11_ENABLE_SMALL_ISR_API` | `0` | 是否编译可从 ISR 调用的 small 状态 API；要求状态对象放 internal data |
 | EC11 | `DRV_EC11_SMALL_STEPS_PER_DETENT` | `DRV_EC11_STEPS_PER_DETENT` | small API 每定位格有效跳变数，范围 1..4 |
 | EC11 | `DRV_EC11_SMALL_REVERSE` | `DRV_EC11_REVERSE` | small API 编译期方向反转 |
 | EC11 | `DRV_EC11_ENABLE_SET_FAST` | `1` | 是否编译快速步进运行期配置 API |

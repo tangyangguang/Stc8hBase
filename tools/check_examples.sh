@@ -110,8 +110,45 @@ EOF
     fi
 }
 
+check_ec11_small_isr_api() {
+    tmp_dir=$(mktemp -d)
+    trap 'rm -rf "${tmp_dir}"' EXIT
+
+    cat > "${tmp_dir}/ec11_small_isr.c" <<EOF
+#define DRV_EC11_ENABLE_FULL_API 0
+#define DRV_EC11_ENABLE_SMALL_API 0
+#define DRV_EC11_ENABLE_SMALL_ISR_API 1
+#define DRV_EC11_ENABLE_NULL_CHECK 0
+#include "${ROOT_DIR}/drivers/drv_ec11.h"
+static STC8H_DATA drv_ec11_small_t ec11;
+void main(void)
+{
+    drv_ec11_small_init_isr(&ec11);
+    (void)drv_ec11_scan_delta_small_isr(&ec11, 1u, 1u);
+}
+#include "${ROOT_DIR}/drivers/drv_ec11.c"
+EOF
+
+    sdcc -mmcs51 --std-sdcc11 -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/drivers" \
+        --out-fmt-ihx --code-size 8192 --iram-size 256 \
+        -o "${tmp_dir}/ec11_small_isr.ihx" "${tmp_dir}/ec11_small_isr.c"
+
+    if grep -Eq '__gptr(get|put)|_drv_ec11_transition_PARM_2' \
+        "${tmp_dir}/ec11_small_isr.map" "${tmp_dir}/ec11_small_isr.rst"; then
+        echo "EC11 small ISR API emitted generic pointer helpers or ordinary transition overlay parameter" >&2
+        exit 1
+    fi
+
+    if grep -Eq '^OSEG[[:space:]]+[[:xdigit:]]+[[:space:]]+[[:xdigit:]]*[1-9A-Fa-f]' \
+        "${tmp_dir}/ec11_small_isr.map"; then
+        echo "EC11 small ISR API generated OSEG usage" >&2
+        exit 1
+    fi
+}
+
 check_sdcc_interrupt_using
 check_eeprom_api_trim
+check_ec11_small_isr_api
 sh "${ROOT_DIR}/tools/check_host_tests.sh"
 
 for ini in "${ROOT_DIR}"/examples/platformio/*/platformio.ini; do
