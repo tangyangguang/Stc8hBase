@@ -453,6 +453,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 
 - SPI 第一版使用硬件 SPI 主机轮询实现。
 - 默认 P1.3/P1.4/P1.5；硬件 SS 使用 `SSIG=1` 忽略，不占用 P1.2 LED。
+- HAL 默认保持 MOSI/MISO/SCLK 为准双向，并通过 `P_SW2.EAXFR=1` 后设置 `P1IE.4=1`，保证 group 0 MISO 数字输入打开。
 - 默认 mode 0、MSB first、`SYSclk/4`。
 - 片选由板级或应用代码自行控制。
 

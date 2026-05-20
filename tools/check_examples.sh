@@ -146,9 +146,40 @@ EOF
     fi
 }
 
+check_spi_miso_input_codegen() {
+    tmp_dir=$(mktemp -d)
+    trap 'rm -rf "${tmp_dir}"' EXIT
+
+    for group in 0 1 2 3; do
+        case "${group}" in
+            0) ie_addr='0xfe31' ;;
+            1) ie_addr='0xfe32' ;;
+            2) ie_addr='0xfe34' ;;
+            3) ie_addr='0xfe33' ;;
+        esac
+
+        cat > "${tmp_dir}/spi_group_${group}.c" <<EOF
+#define STC8H_SPI_PIN_GROUP ${group}u
+#include "${ROOT_DIR}/hal/stc8h_spi.c"
+EOF
+        sdcc -mmcs51 --std-sdcc11 -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" \
+            -c -o "${tmp_dir}/spi_group_${group}.rel" "${tmp_dir}/spi_group_${group}.c"
+
+        if ! grep -Eq 'orl[[:space:]]+_P_SW2,#0x80' "${tmp_dir}/spi_group_${group}.asm"; then
+            echo "SPI group ${group} init does not enable XFR access before MISO PxIE" >&2
+            exit 1
+        fi
+        if ! grep -Eiq "#0x0*${ie_addr#0x}" "${tmp_dir}/spi_group_${group}.asm"; then
+            echo "SPI group ${group} init does not touch expected MISO input-enable register ${ie_addr}" >&2
+            exit 1
+        fi
+    done
+}
+
 check_sdcc_interrupt_using
 check_eeprom_api_trim
 check_ec11_small_isr_api
+check_spi_miso_input_codegen
 sh "${ROOT_DIR}/tools/check_host_tests.sh"
 
 for ini in "${ROOT_DIR}"/examples/platformio/*/platformio.ini; do

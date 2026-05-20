@@ -73,7 +73,7 @@ docs/vendor/titan/TM1637_TitanMicro.pdf
 - Timer0 free-run 按官方 STC8H Timer0 mode1 16-bit non-auto-reload 示例方向实现：`TMOD[1:0]=01`、12T、关闭时钟输出，调用方用 16-bit 回绕差值测量边沿间隔。
 - I2C 当前板级配置按官方 STC8H GPIO 资料校准：开漏输出需要上拉；`P1PU/P3PU` 内部 4.1K 上拉和 `P1IE/P3IE` 数字输入使能均属于 XFR 扩展寄存器，访问前必须设置 `P_SW2.EAXFR=1`。
 - ADC 当前实现按官方 STC8H ADC 资料校准：STC8H1K08 为 10-bit ADC，P3.3 对应 ADC11；ADC 引脚需配置为高阻输入；ADC 上电后等待约 1ms；`ADCTIM` 推荐 `0x3f`；10-bit ADC 速度不高于 500kHz。
-- SPI 当前实现按官方 STC8H SPI 资料校准：`SPSTAT/SPCTL/SPDAT` 为普通 SFR，`P_SW1[3:2]` 选择引脚组，`SPIF/WCOL` 写 1 清除；第一版采用硬件 SPI 主机轮询，不启用中断和 DMA。
+- SPI 当前实现按官方 STC8H SPI/GPIO 资料校准：`SPSTAT/SPCTL/SPDAT` 为普通 SFR，`P_SW1[3:2]` 选择引脚组，`SPIF/WCOL` 写 1 清除；MISO 是数字输入，所选引脚组的 `PxIE` 必须为 1，访问 `PxIE` 前必须设置 `P_SW2.EAXFR=1`；第一版采用硬件 SPI 主机轮询，不启用中断和 DMA。
 - EEPROM/IAP 当前实现按官方 STC8H 资料和官方库校准：STC8H1K08 为 4KB EEPROM/IAP，地址 `0x0000..0x0FFF`，512 字节扇区擦除，IAP 触发序列为 `0x5A`、`0xA5`，触发窗口临时关闭全局中断。
 - PWM 当前实现按官方 STC8H PWM 资料和 `STC8H_PWM.c/.h` 校准：支持 `PWMA` 1..4 与 `PWMB` 5..8、PWM mode 1、P 输出和显式引脚组选择；不启用互补输出、死区、刹车、中断、捕获或同步。
 - WDT 当前实现按官方 `WDT_CONTR` 位定义和官方库函数校准：`WDT_FLAG` 位于 bit7，`EN_WDT` 位于 bit5，`CLR_WDT` 位于 bit4，`IDLE_WDT` 位于 bit3，分频系数使用 bit2..0，喂狗通过置位 `CLR_WDT` 完成。
