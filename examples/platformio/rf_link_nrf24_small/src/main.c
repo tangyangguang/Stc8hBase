@@ -30,6 +30,7 @@ static stc8h_status_t radio_init(void)
         return STC8H_ERROR;
     }
 
+    drv_nrf24l01_set_rx_pipes(DRV_NRF24L01_PIPE0);
     drv_nrf24l01_set_auto_ack(DRV_NRF24L01_PIPE0);
     if (drv_nrf24l01_set_auto_retransmit(3u, 10u) != STC8H_OK) {
         return STC8H_ERROR;

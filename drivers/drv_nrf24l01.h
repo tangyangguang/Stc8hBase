@@ -15,6 +15,9 @@
 #define DRV_NRF24L01_FIFO_RX_EMPTY 0x01u
 
 #define DRV_NRF24L01_PIPE0 0x01u
+#define DRV_NRF24L01_PIPE_MASK_ALL 0x3Fu
+#define DRV_NRF24L01_IRQ_MASK 0x70u
+#define DRV_NRF24L01_PAYLOAD_MAX 32u
 
 #ifndef DRV_NRF24L01_ENABLE_CHECK_PRESENT
 #define DRV_NRF24L01_ENABLE_CHECK_PRESENT 1
@@ -100,6 +103,26 @@
 #define DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE (DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD || DRV_NRF24L01_ENABLE_ACK_PAYLOAD)
 #endif
 
+#ifndef DRV_NRF24L01_ENABLE_RX_PIPE_API
+#define DRV_NRF24L01_ENABLE_RX_PIPE_API 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_TX_RESULT_API
+#define DRV_NRF24L01_ENABLE_TX_RESULT_API (DRV_NRF24L01_ENABLE_READ_PAYLOAD && DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE)
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_RX_PACKET_API
+#define DRV_NRF24L01_ENABLE_RX_PACKET_API (DRV_NRF24L01_ENABLE_READ_STATUS && DRV_NRF24L01_ENABLE_READ_PAYLOAD && DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE)
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_ACK_PRELOAD_API
+#define DRV_NRF24L01_ENABLE_ACK_PRELOAD_API (DRV_NRF24L01_ENABLE_WRITE_ACK_PAYLOAD && DRV_NRF24L01_ENABLE_READ_FIFO_STATUS)
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_RECOVER
+#define DRV_NRF24L01_ENABLE_RECOVER (DRV_NRF24L01_ENABLE_ENTER_STANDBY && DRV_NRF24L01_ENABLE_ENTER_RX)
+#endif
+
 /* The original nRF24L01 (non +) requires sending the ACTIVATE 0x73
  * command before FEATURE bits become writable. nRF24L01+ accepts
  * FEATURE writes directly. Apps that have positively identified the
@@ -141,6 +164,21 @@ typedef enum {
     DRV_NRF24L01_POWER_NEG6DBM,
     DRV_NRF24L01_POWER_0DBM
 } drv_nrf24l01_power_t;
+
+typedef enum {
+    DRV_NRF24L01_TX_PENDING = 0,
+    DRV_NRF24L01_TX_DONE,
+    DRV_NRF24L01_TX_MAX_RT,
+    DRV_NRF24L01_TX_ACK_EMPTY,
+    DRV_NRF24L01_TX_ACK_PAYLOAD_OK,
+    DRV_NRF24L01_TX_ACK_PAYLOAD_INVALID
+} drv_nrf24l01_tx_result_t;
+
+typedef enum {
+    DRV_NRF24L01_RECOVER_STANDBY = 0,
+    DRV_NRF24L01_RECOVER_PTX,
+    DRV_NRF24L01_RECOVER_PRX
+} drv_nrf24l01_recover_mode_t;
 
 void drv_nrf24l01_init_pins(void);
 #if DRV_NRF24L01_ENABLE_CHECK_PRESENT
@@ -189,6 +227,9 @@ stc8h_status_t drv_nrf24l01_config_pipe0_fixed(const stc8h_u8 *addr);
 stc8h_status_t drv_nrf24l01_set_rate_power(drv_nrf24l01_rate_t rate, drv_nrf24l01_power_t power);
 stc8h_status_t drv_nrf24l01_set_auto_retransmit(stc8h_u8 delay_code, stc8h_u8 count);
 void drv_nrf24l01_set_auto_ack(stc8h_u8 pipe_mask);
+#if DRV_NRF24L01_ENABLE_RX_PIPE_API
+void drv_nrf24l01_set_rx_pipes(stc8h_u8 pipe_mask);
+#endif
 
 stc8h_u8 drv_nrf24l01_write_payload(const stc8h_u8 *data, stc8h_u8 len);
 #if DRV_NRF24L01_ENABLE_READ_PAYLOAD
@@ -215,6 +256,19 @@ void drv_nrf24l01_disable_ack_payload(void);
 #endif
 #if DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE
 stc8h_u8 drv_nrf24l01_read_dynamic_payload_size(void);
+#endif
+
+#if DRV_NRF24L01_ENABLE_TX_RESULT_API
+drv_nrf24l01_tx_result_t drv_nrf24l01_complete_tx(stc8h_u8 status, stc8h_u8 *ack_payload, stc8h_u8 *ack_len, stc8h_u8 ack_max_len);
+#endif
+#if DRV_NRF24L01_ENABLE_RX_PACKET_API
+stc8h_status_t drv_nrf24l01_read_rx_packet(stc8h_u8 *data, stc8h_u8 *len, stc8h_u8 max_len);
+#endif
+#if DRV_NRF24L01_ENABLE_ACK_PRELOAD_API
+stc8h_status_t drv_nrf24l01_preload_ack_payload(stc8h_u8 pipe, const stc8h_u8 *data, stc8h_u8 len, stc8h_u8 replace_pending);
+#endif
+#if DRV_NRF24L01_ENABLE_RECOVER
+void drv_nrf24l01_recover(drv_nrf24l01_recover_mode_t mode);
 #endif
 
 #endif

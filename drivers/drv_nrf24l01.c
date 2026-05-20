@@ -183,7 +183,7 @@ DRV_NRF24L01_RAW_SCOPE stc8h_u8 drv_nrf24l01_write_buf(stc8h_u8 cmd, const stc8h
 #if DRV_NRF24L01_ENABLE_CHECK_PRESENT
 stc8h_status_t drv_nrf24l01_check_present(void)
 {
-    static const STC8H_CODE stc8h_u8 pattern[5] = { 0x11u, 0x22u, 0x33u, 0x44u, 0x55u };
+    static STC8H_CODE stc8h_u8 pattern[5] = { 0x11u, 0x22u, 0x33u, 0x44u, 0x55u };
     stc8h_u8 i;
     stc8h_u8 ok;
 
@@ -375,15 +375,22 @@ stc8h_status_t drv_nrf24l01_set_auto_retransmit(stc8h_u8 delay_code, stc8h_u8 co
 
 void drv_nrf24l01_set_auto_ack(stc8h_u8 pipe_mask)
 {
-    pipe_mask &= 0x3Fu;
+    pipe_mask &= DRV_NRF24L01_PIPE_MASK_ALL;
     (void)drv_nrf24l01_write_reg(NRF24_REG_EN_AA, pipe_mask);
+}
+
+#if DRV_NRF24L01_ENABLE_RX_PIPE_API
+void drv_nrf24l01_set_rx_pipes(stc8h_u8 pipe_mask)
+{
+    pipe_mask &= DRV_NRF24L01_PIPE_MASK_ALL;
     (void)drv_nrf24l01_write_reg(NRF24_REG_EN_RXADDR, pipe_mask);
 }
+#endif
 
 stc8h_u8 drv_nrf24l01_write_payload(const stc8h_u8 *data, stc8h_u8 len)
 {
 #if DRV_NRF24L01_ENABLE_ARG_CHECK
-    if ((data == 0) || (len > 32u)) {
+    if ((data == 0) || (len > DRV_NRF24L01_PAYLOAD_MAX)) {
 #if DRV_NRF24L01_ENABLE_READ_STATUS
         return drv_nrf24l01_read_status();
 #else
@@ -398,7 +405,7 @@ stc8h_u8 drv_nrf24l01_write_payload(const stc8h_u8 *data, stc8h_u8 len)
 stc8h_u8 drv_nrf24l01_read_payload(stc8h_u8 *data, stc8h_u8 len)
 {
 #if DRV_NRF24L01_ENABLE_ARG_CHECK
-    if ((data == 0) || (len > 32u)) {
+    if ((data == 0) || (len > DRV_NRF24L01_PAYLOAD_MAX)) {
 #if DRV_NRF24L01_ENABLE_READ_STATUS
         return drv_nrf24l01_read_status();
 #else
@@ -464,7 +471,7 @@ static stc8h_status_t drv_nrf24l01_enable_feature_bits(stc8h_u8 bits)
 #if DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD
 stc8h_status_t drv_nrf24l01_enable_dynamic_payload(stc8h_u8 pipe_mask)
 {
-    pipe_mask &= 0x3Fu;
+    pipe_mask &= DRV_NRF24L01_PIPE_MASK_ALL;
     if (drv_nrf24l01_enable_feature_bits(NRF24_FEATURE_EN_DPL) != STC8H_OK) {
         return STC8H_ERROR;
     }
@@ -492,7 +499,7 @@ void drv_nrf24l01_disable_dynamic_payload(void)
 #if DRV_NRF24L01_ENABLE_ACK_PAYLOAD
 stc8h_status_t drv_nrf24l01_enable_ack_payload(stc8h_u8 pipe_mask)
 {
-    pipe_mask &= 0x3Fu;
+    pipe_mask &= DRV_NRF24L01_PIPE_MASK_ALL;
     if (drv_nrf24l01_enable_feature_bits((stc8h_u8)(NRF24_FEATURE_EN_DPL | NRF24_FEATURE_EN_ACK_PAY)) != STC8H_OK) {
         return STC8H_ERROR;
     }
@@ -505,7 +512,7 @@ stc8h_status_t drv_nrf24l01_enable_ack_payload(stc8h_u8 pipe_mask)
 stc8h_u8 drv_nrf24l01_write_ack_payload(stc8h_u8 pipe, const stc8h_u8 *data, stc8h_u8 len)
 {
 #if DRV_NRF24L01_ENABLE_ARG_CHECK
-    if ((pipe > 5u) || (data == 0) || (len > 32u)) {
+    if ((pipe > 5u) || (data == 0) || (len == 0u) || (len > DRV_NRF24L01_PAYLOAD_MAX)) {
 #if DRV_NRF24L01_ENABLE_READ_STATUS
         return drv_nrf24l01_read_status();
 #else
@@ -538,5 +545,118 @@ stc8h_u8 drv_nrf24l01_read_dynamic_payload_size(void)
     value = stc8h_spi_transfer(NRF24_CMD_NOP);
     DRV_NRF24L01_CSN_HIGH();
     return value;
+}
+#endif
+
+#if DRV_NRF24L01_ENABLE_TX_RESULT_API
+drv_nrf24l01_tx_result_t drv_nrf24l01_complete_tx(stc8h_u8 status, stc8h_u8 *ack_payload, stc8h_u8 *ack_len, stc8h_u8 ack_max_len)
+{
+    stc8h_u8 width;
+
+    if (ack_len != 0) {
+        *ack_len = 0u;
+    }
+
+    if ((status & DRV_NRF24L01_STATUS_MAX_RETRY) != 0u) {
+        drv_nrf24l01_flush_tx();
+        drv_nrf24l01_clear_irq(DRV_NRF24L01_STATUS_MAX_RETRY);
+        return DRV_NRF24L01_TX_MAX_RT;
+    }
+
+    if ((status & DRV_NRF24L01_STATUS_TX_DONE) == 0u) {
+        return DRV_NRF24L01_TX_PENDING;
+    }
+
+    if ((status & DRV_NRF24L01_STATUS_RX_READY) != 0u) {
+        width = drv_nrf24l01_read_dynamic_payload_size();
+        if (width == 0u) {
+            drv_nrf24l01_flush_rx();
+            drv_nrf24l01_clear_irq(status);
+            return DRV_NRF24L01_TX_ACK_EMPTY;
+        }
+        if ((width > DRV_NRF24L01_PAYLOAD_MAX) || (ack_payload == 0) || (ack_len == 0) || (width > ack_max_len)) {
+            drv_nrf24l01_flush_rx();
+            drv_nrf24l01_clear_irq(status);
+            return DRV_NRF24L01_TX_ACK_PAYLOAD_INVALID;
+        }
+        (void)drv_nrf24l01_read_payload(ack_payload, width);
+        *ack_len = width;
+        drv_nrf24l01_clear_irq(status);
+        return DRV_NRF24L01_TX_ACK_PAYLOAD_OK;
+    }
+
+    drv_nrf24l01_clear_irq(status);
+    if (ack_len != 0) {
+        return DRV_NRF24L01_TX_ACK_EMPTY;
+    }
+    return DRV_NRF24L01_TX_DONE;
+}
+#endif
+
+#if DRV_NRF24L01_ENABLE_RX_PACKET_API
+stc8h_status_t drv_nrf24l01_read_rx_packet(stc8h_u8 *data, stc8h_u8 *len, stc8h_u8 max_len)
+{
+    stc8h_u8 status;
+    stc8h_u8 width;
+
+#if DRV_NRF24L01_ENABLE_ARG_CHECK
+    if ((data == 0) || (len == 0) || (max_len == 0u) || (max_len > DRV_NRF24L01_PAYLOAD_MAX)) {
+        return STC8H_ERROR;
+    }
+#endif
+    *len = 0u;
+    status = drv_nrf24l01_read_status();
+    if ((status & DRV_NRF24L01_STATUS_RX_READY) == 0u) {
+        return STC8H_BUSY;
+    }
+
+    width = drv_nrf24l01_read_dynamic_payload_size();
+    if ((width == 0u) || (width > DRV_NRF24L01_PAYLOAD_MAX) || (width > max_len)) {
+        drv_nrf24l01_flush_rx();
+        drv_nrf24l01_clear_irq(status);
+        return STC8H_ERROR;
+    }
+
+    (void)drv_nrf24l01_read_payload(data, width);
+    *len = width;
+    drv_nrf24l01_clear_irq(status);
+    return STC8H_OK;
+}
+#endif
+
+#if DRV_NRF24L01_ENABLE_ACK_PRELOAD_API
+stc8h_status_t drv_nrf24l01_preload_ack_payload(stc8h_u8 pipe, const stc8h_u8 *data, stc8h_u8 len, stc8h_u8 replace_pending)
+{
+#if DRV_NRF24L01_ENABLE_ARG_CHECK
+    if ((pipe > 5u) || (data == 0) || (len == 0u) || (len > DRV_NRF24L01_PAYLOAD_MAX)) {
+        return STC8H_ERROR;
+    }
+#endif
+    if (replace_pending != 0u) {
+        drv_nrf24l01_flush_tx();
+    } else if ((drv_nrf24l01_read_fifo_status() & DRV_NRF24L01_FIFO_TX_FULL) != 0u) {
+        return STC8H_BUSY;
+    }
+
+    (void)drv_nrf24l01_write_ack_payload(pipe, data, len);
+    return STC8H_OK;
+}
+#endif
+
+#if DRV_NRF24L01_ENABLE_RECOVER
+void drv_nrf24l01_recover(drv_nrf24l01_recover_mode_t mode)
+{
+    DRV_NRF24L01_CE_LOW();
+    drv_nrf24l01_flush_tx();
+    drv_nrf24l01_flush_rx();
+    drv_nrf24l01_clear_irq(DRV_NRF24L01_IRQ_MASK);
+
+    if (mode == DRV_NRF24L01_RECOVER_PRX) {
+        drv_nrf24l01_enter_rx();
+    } else if (mode == DRV_NRF24L01_RECOVER_PTX) {
+        drv_nrf24l01_enter_tx();
+    } else {
+        drv_nrf24l01_enter_standby();
+    }
 }
 #endif

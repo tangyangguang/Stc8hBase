@@ -47,21 +47,36 @@ STC8H 等上电默认高阻的芯片应在该 hook 中配置 CE/CSN 端口模式
 
 公共 API 使用完整前缀 `drv_nrf24l01_`，不提供旧命名兼容。
 
-驱动提供五类能力：
+驱动提供六类能力：
 
 - 原始命令和寄存器读写，用于调试和高级用法。
-- 模式与参数配置，包括频道、地址、速率、功率、CRC、auto retransmit。
+- 模式与参数配置，包括频道、地址、速率、功率、CRC、auto retransmit、RX pipe enable 和 auto-ack。
 - FIFO 和 IRQ 状态处理，包括 `STATUS`、`FIFO_STATUS`、`OBSERVE_TX`、flush 和 clear IRQ。
 - 非阻塞收发动作，包括写 payload、读 payload 和 CE 脉冲。
 - nRF24L01+ 可选能力，包括 dynamic payload 和 ACK payload。
+- 小型稳定性 helper，包括 PTX 结果分类、动态 RX payload 校验读取、PRX ACK payload 预装和统一 FIFO/IRQ 恢复。
 
-发送完成后应用读取 `STATUS`，自行处理 `TX_DONE`、`MAX_RETRY` 和可能同时出现的 `RX_READY`。
+`drv_nrf24l01_set_rx_pipes()` 只写 `EN_RXADDR`；`drv_nrf24l01_set_auto_ack()` 只写 `EN_AA`。这两个寄存器不能再绑在一个 API 里，否则无法诊断“PRX 仍接收，但只关闭 ACK payload 或 auto-ack”的配置。
+
+发送完成后应用可直接读取 `STATUS` 自行处理，也可调用 `drv_nrf24l01_complete_tx()`。该 helper 会把结果分类为：
+
+- `DRV_NRF24L01_TX_DONE`：发送完成，不读取 ACK payload。
+- `DRV_NRF24L01_TX_MAX_RT`：达到最大重发，函数会 flush TX 并清 `MAX_RT`。
+- `DRV_NRF24L01_TX_ACK_EMPTY`：发送成功但没有 ACK payload。
+- `DRV_NRF24L01_TX_ACK_PAYLOAD_OK`：发送成功并已读出 ACK payload。
+- `DRV_NRF24L01_TX_ACK_PAYLOAD_INVALID`：ACK payload 宽度非法或超过调用方缓冲区，函数会 flush RX 并清 IRQ。
+
+`drv_nrf24l01_read_rx_packet()` 只用于 dynamic payload 模式。它先用 `R_RX_PL_WID` 读取宽度，宽度为 0、超过 32 或超过调用方缓冲区时按 Nordic 要求 flush RX。
+
+`drv_nrf24l01_preload_ack_payload(pipe, data, len, replace_pending)` 用于 PRX。单 PTX 诊断推荐 `replace_pending=1`，先 flush TX 再写最新 ACK，避免三层 ACK FIFO 里残留旧状态；多 PTX 场景可用 `replace_pending=0`，TX FIFO 满时返回 `STC8H_BUSY`。
+
+`drv_nrf24l01_recover(mode)` 会 CE low、flush TX/RX、清 IRQ，然后进入 standby/PTX/PRX 目标模式。
 
 ## 5. ACK Payload 规则
 
 ACK payload 只作为短状态回传优化。它不是复杂双向协议的唯一通道。
 
-使用 ACK payload 时必须同时启用 dynamic payload。PRX 端的 ACK payload 会占用 TX FIFO，最多挂起 3 个 payload。链路断开或 payload 堵塞时，应用需要 `drv_nrf24l01_flush_tx()` 恢复。
+使用 ACK payload 时必须同时启用 dynamic payload。PRX 端的 ACK payload 会占用 TX FIFO，最多挂起 3 个 payload。链路断开、同一 pipe 多个旧 ACK 排队或 payload 堵塞时，应用需要 flush TX 恢复；单 peer 状态回传推荐每次 RX 后用 `drv_nrf24l01_preload_ack_payload(..., replace_pending=1)` 保留最新 ACK。
 
 PTX 发送后如果 `STATUS` 同时包含 `TX_DONE` 和 `RX_READY`，表示发送成功且收到 ACK payload。此时应读取 dynamic payload 长度，再读取 RX payload。
 
@@ -80,7 +95,38 @@ PTX 发送后如果 `STATUS` 同时包含 `TX_DONE` 和 `RX_READY`，表示发�
 - 异常寄存器值、ACK 不稳定、payload 错乱时，优先检查供电、线长和 SPI 速度。
 - `MAX_RETRY` 后必须清 IRQ，必要时 flush TX。
 
-## 8. 双板 RF 诊断示例
+## 8. UART 单板诊断
+
+`examples/platformio/nrf24_uart_diag` 只验证单模块 SPI、寄存器和 FEATURE/DYNPD，不进行空中收发。
+
+默认 PCB 引脚：
+
+```text
+CE=P1.6, CSN=P1.2, SCK=P1.5, MOSI=P1.3, MISO=P1.4, IRQ=P3.2
+```
+
+构建：
+
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/nrf24_uart_diag
+pio run -e STC8H1K08
+pio run -e STC8H1K08 -t upload
+```
+
+UART PASS 判断：
+
+- `STATUS=0x0E` 或其他非 `0x00/0xFF` 的合理 nRF24 状态。
+- `CHECK_PASS=8/8`。
+- `DPL: OK` 和 `ACK_PAYLOAD: OK`，或按编译宏配置的 `ENABLE_DPL/ENABLE_ACK_PAYLOAD: OK`。
+- `FEATURE` 和 `DYNPD` 与配置一致。
+
+FAIL 方向：
+
+- `STATUS=0x00`：优先查 MISO 数字输入、CSN、MISO 线、模块供电。
+- `STATUS=0xFF`：优先查 CSN 未选中、MISO 上拉/断线、模块未供电。
+- `CHECK_PASS` 不是 `8/8`：SPI 寄存器写读仍不稳定，不应继续调应用协议。
+
+## 9. 双板 RF 诊断示例
 
 `examples/platformio/nrf24_pair_diag` 用于隔离两块板之间的 nRF24 空中 auto-ack 链路，不依赖应用项目的显示、EEPROM、绑定、输出或业务 payload。
 
@@ -90,15 +136,82 @@ PTX 发送后如果 `STATUS` 同时包含 `TX_DONE` 和 `RX_READY`，表示发�
 CE=P1.6, CSN=P1.2, SCK=P1.5, MOSI=P1.3, MISO=P1.4, IRQ=P3.2
 ```
 
-示例提供两个 PlatformIO 环境：
+默认 `ptx`/`prx` 环境是推荐起点：频道 76、地址 `TOYR1`、1Mbps、0dBm、15-byte payload、ACK payload 开、dynamic payload 开、ARD=500us、ARC=15、每 100 包汇总一次。
 
-- `ptx`：烧录到发送端，固定频道 76、地址 `TOYR1`、250kbps、0dBm、ACK payload 开启，周期发送 32 字节 payload，并通过 UART 打印 `TX_DONE`、`MAX_RETRY`、`STATUS`、`OBSERVE_TX`、ACK payload 长度和内容摘要。
-- `prx`：烧录到接收端，使用同一频道和地址持续 RX，收到 payload 后打印包计数、长度、序号和 `STATUS`，并重新装载 32 字节 ACK payload。
+常用构建/烧录命令：
 
-如果单板 `nrf24_uart_diag` 通过而 `nrf24_pair_diag` 仍持续 `MAX_RETRY`，优先排查 RF 配置一致性、供电、模块、天线、距离和外部干扰；如果 `nrf24_pair_diag` 稳定成功，再回到应用项目排查接收端主循环、配置保存、绑定和输出控制对 RX 状态的影响。
+```sh
+cd /Users/tyg/dir/codex_dir/Stc8hBase/examples/platformio/nrf24_pair_diag
+pio run -e prx
+pio run -e prx -t upload
+pio run -e ptx
+pio run -e ptx -t upload
+```
 
-## 9. 参考资料
+验证矩阵环境：
 
-- Nordic nRF24L01+ Product Specification v1.0：`https://docs-be.nordicsemi.com/bundle/nRF24L01P_PS_v1.0/raw/resource/enus/nRF24L01P_PS_v1.0.pdf`
+```sh
+pio run -e ptx && pio run -e prx
+pio run -e ptx_1m_no_ack && pio run -e prx_1m_no_ack
+pio run -e ptx_250k_15ack && pio run -e prx_250k_15ack
+pio run -e ptx_250k_32ack && pio run -e prx_250k_32ack
+pio run -e ptx_2m_no_ack && pio run -e prx_2m_no_ack
+```
+
+每个环境烧录时先烧 PRX，再烧 PTX。上传命令在环境名后加 `-t upload`。
+
+汇总输出：
+
+- PTX：`PTX_SUM tx_count=... tx_ok=... max_rt=... ack_ok=... ack_empty=... ack_bad=... OBSERVE_TX=0x.. STATUS=0x.. FIFO_STATUS=0x..`
+- PRX：`PRX_SUM rx_count=... seq=0x.. lost=... dup=... bad_width=... STATUS=0x.. FIFO_STATUS=0x.. ack_load=... ack_busy=... ack_fail=...`
+
+PASS 判断：
+
+- 推荐默认配置连续几百到几千包，`max_rt` 为 0 或极低，且不成串增长。
+- ACK payload 开启时，PTX `ack_ok` 应持续增长；`ack_empty` 若持续增长，说明 PRX 没有及时预装 ACK 或 ACK FIFO/时序异常。
+- ACK payload 关闭时，PTX `tx_ok` 应持续增长，`ack_ok` 维持 0 是正常的。
+- PRX `lost/dup` 应为 0 或极低；`bad_width` 必须为 0。
+
+FAIL 方向：
+
+- 单板 diag PASS，但 pair diag `max_rt` 连续增长：优先查频道/速率/地址两端是否一致、距离、天线、2.4GHz 干扰和 3.3V 供电瞬态。
+- `ack_empty` 高而 `rx_count` 正常：重点查 PRX ACK preload 逻辑和三层 TX FIFO 是否堵塞。
+- `OBSERVE_TX` 高 nibble `PLOS_CNT` 增长：链路层已有丢包，写 `RF_CH` 会清此计数；用它比较不同频道/速率。
+- `bad_width` 增长：dynamic payload 收到非法宽度，优先查 SPI/RF 噪声、供电、DPL 配置一致性。
+
+## 10. 稳定性验证矩阵
+
+| 场景 | 环境 | 推荐 ARD/ARC | 说明 |
+| --- | --- | --- | --- |
+| 1Mbps + 15-byte ACK payload | `ptx` / `prx` | 500us / 15 | 默认推荐配置。Nordic 说明 1Mbps 下 ACK payload 超过 5 字节时 ARD 至少 500us。 |
+| 1Mbps + no ACK payload | `ptx_1m_no_ack` / `prx_1m_no_ack` | 500us / 15 | 隔离 ACK payload FIFO，只验证普通 auto-ack。 |
+| 250kbps + 15-byte ACK payload | `ptx_250k_15ack` / `prx_250k_15ack` | 1000us / 15 | Nordic 表格要求 250kbps、5-byte 地址、ACK payload 小于 16 字节时 ARD 至少 1000us。 |
+| 250kbps + 32-byte ACK payload | `ptx_250k_32ack` / `prx_250k_32ack` | 1500us / 15 | 最容易暴露供电/RF/时序问题；250kbps 空中时间最长，Nordic 表格要求全 ACK payload 长度用 1500us。 |
+| 2Mbps + no ACK payload | `ptx_2m_no_ack` / `prx_2m_no_ack` | 500us / 15 | 验证高数据率下普通 auto-ack；2Mbps 链路预算低于 1Mbps/250kbps。 |
+
+如果默认配置稳定而 ToyRemote 仍不稳定，再回到应用项目接入；如果默认配置也不稳定，先不要改应用代码，按 UART 日志定位到 SPI、RF、供电或 ACK payload 方向。
+
+## 11. 编译宏
+
+`nrf24_pair_diag` 支持这些宏：
+
+- `NRF24_PAIR_CHANNEL`
+- `NRF24_PAIR_DATA_RATE`: `NRF24_PAIR_RATE_250KBPS` / `NRF24_PAIR_RATE_1MBPS` / `NRF24_PAIR_RATE_2MBPS`
+- `NRF24_PAIR_RF_POWER`: `NRF24_PAIR_POWER_NEG18DBM` / `NEG12DBM` / `NEG6DBM` / `0DBM`
+- `NRF24_PAIR_PAYLOAD_SIZE`: 8..32，常用 8/15/32
+- `NRF24_PAIR_ACK_PAYLOAD`
+- `NRF24_PAIR_DYNAMIC_PAYLOAD`
+- `NRF24_PAIR_AUTO_ACK`
+- `NRF24_PAIR_RETRANSMIT_DELAY_CODE`
+- `NRF24_PAIR_RETRANSMIT_COUNT_CODE`
+- `NRF24_PAIR_SEND_PERIOD_MS`
+- `NRF24_PAIR_SUMMARY_INTERVAL`
+- `NRF24_PAIR_LOG_EACH_PACKET`
+
+`nrf24_uart_diag` 使用同名风格的 `NRF24_UART_DIAG_*` 宏，适合先做单模块寄存器验证。
+
+## 12. 参考资料
+
+- Nordic nRF24L01+ Product Specification v1.0：`https://docs.nordicsemi.com/bundle/nRF24L01P_PS_v1.0/resource/nRF24L01P_PS_v1.0.pdf`
 - TMRh20/RF24 文档和 common issues。
 - CircuitPython nRF24L01 文档用于交叉核对 ACK payload 与 dynamic payload 关系。

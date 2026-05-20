@@ -118,7 +118,7 @@ https://docs.platformio.org/en/latest/boards/intel_mcs51/STC8H1K08.html
 参考来源：
 
 ```text
-https://docs-be.nordicsemi.com/bundle/nRF24L01P_PS_v1.0/raw/resource/enus/nRF24L01P_PS_v1.0.pdf
+https://docs.nordicsemi.com/bundle/nRF24L01P_PS_v1.0/resource/nRF24L01P_PS_v1.0.pdf
 ```
 
 用途：
@@ -133,6 +133,12 @@ https://docs-be.nordicsemi.com/bundle/nRF24L01P_PS_v1.0/raw/resource/enus/nRF24L
 - 从 power down 置 `PWR_UP=1` 后，进入 TX/RX 前必须等待 `Tpd2stby`；本库默认等待 5ms，项目确认晶体参数后可覆盖。
 - ACK payload 依赖 dynamic payload；PTX 收到带 payload 的 ACK 时 `TX_DS` 与 `RX_DR` 会同时置位。
 - 250kbps 下 32-byte ACK payload 需要 PTX `SETUP_RETR.ARD` 至少 1500us。
+- SPI 命令必须由 CSN 高到低开始，命令字和每个字节均 MSB first；当前 STC8H `SPCTL=0xD0` 是 SS ignored、SPI enable、MSB first、master、CPOL=0、CPHA=0、SYSclk/4，符合 nRF24 10MHz 上限。
+- Dynamic payload 必须启用 `FEATURE.EN_DPL` 和对应 `DYNPD.DPL_Px`；使用 `R_RX_PL_WID` 时宽度超过 32 必须 flush RX。
+- ACK payload 必须启用 `FEATURE.EN_ACK_PAY`，并依赖 dynamic payload。PRX ACK payload 占用 PRX 的 TX FIFO，最多三层；同一 pipe 多个 pending payload 按 FIFO 发送，链路丢失或旧 ACK 堵塞时需要 `FLUSH_TX`。
+- `MAX_RT` 后 PTX payload 不会自动从 TX FIFO 移除；必须清 `MAX_RT`，必要时 `FLUSH_TX` 后才能恢复后续通信。
+- `OBSERVE_TX.ARC_CNT` 统计当前包重发次数，`PLOS_CNT` 统计写 `RF_CH` 后累计丢包，可用于比较频道/速率/供电/RF 环境。
+- Nordic ARD 约束：2Mbps + 5-byte 地址时 250us 只覆盖最多 15-byte ACK payload；1Mbps 时 250us 只覆盖最多 5-byte ACK payload；1Mbps/2Mbps 任意 ACK payload 长度用 500us 足够；250kbps 下 empty ACK 用 500us、<8 用 750us、<16 用 1000us、<24 用 1250us、全部 ACK payload 长度用 1500us。
 
 ### 3.5 按键和 EC11 行为参考
 

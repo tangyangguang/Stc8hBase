@@ -38,6 +38,7 @@ void main(void)
     (void)drv_nrf24l01_set_tx_address(address, 5u);
     (void)drv_nrf24l01_set_rx_address(0u, address, 5u);
     (void)drv_nrf24l01_set_payload_size(0u, NRF24_PING_PACKET_SIZE);
+    drv_nrf24l01_set_rx_pipes(DRV_NRF24L01_PIPE0);
     drv_nrf24l01_set_auto_ack(0x01u);
     (void)drv_nrf24l01_set_auto_retransmit(3u, 10u);
     (void)drv_nrf24l01_set_rate_power(DRV_NRF24L01_RATE_1MBPS, DRV_NRF24L01_POWER_NEG6DBM);
