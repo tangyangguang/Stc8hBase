@@ -113,7 +113,28 @@ https://docs.platformio.org/en/latest/boards/intel_mcs51/STC8H1K08.html
 - 基础库源码不依赖 PlatformIO。
 - 如果 PlatformIO 和 Makefile 行为不一致，以 Makefile 的透明构建结果作为基础验证。
 
-### 3.4 按键和 EC11 行为参考
+### 3.4 Nordic nRF24L01+
+
+参考来源：
+
+```text
+https://docs-be.nordicsemi.com/bundle/nRF24L01P_PS_v1.0/raw/resource/enus/nRF24L01P_PS_v1.0.pdf
+```
+
+用途：
+
+- 核对 nRF24L01+ CE、PWR_UP、PRIM_RX、TX/RX 模式切换和 IRQ 清除时序。
+- 核对 dynamic payload、ACK payload、`FEATURE`、`DYNPD`、`R_RX_PL_WID` 和 `W_ACK_PAYLOAD` 规则。
+- 核对 250kbps 下 ACK payload 长度与 auto retransmit delay 的约束。
+
+吸收结论：
+
+- PTX 单包发送必须保证 CE high 至少 10us。
+- 从 power down 置 `PWR_UP=1` 后，进入 TX/RX 前必须等待 `Tpd2stby`；本库默认等待 5ms，项目确认晶体参数后可覆盖。
+- ACK payload 依赖 dynamic payload；PTX 收到带 payload 的 ACK 时 `TX_DS` 与 `RX_DR` 会同时置位。
+- 250kbps 下 32-byte ACK payload 需要 PTX `SETUP_RETR.ARD` 至少 1500us。
+
+### 3.5 按键和 EC11 行为参考
 
 参考来源：
 
@@ -139,7 +160,7 @@ docs/vendor/stc/STC8H-en.pdf
 - 示例程序不能逐格阻塞打印，否则快速旋转会因为 UART 阻塞导致漏扫。`ec11_counter` 采用 1ms 扫描、100ms 汇总打印。
 - STC8H 官方手册提供 PWMA/TIM1 硬件正交编码器模式，适合高速编码器或电机类输入；第一版 EC11 人机输入继续采用轻量轮询状态机，避免占用高级定时器/PWM 资源。
 
-### 3.5 STC8G/STC8H 官方库函数包
+### 3.6 STC8G/STC8H 官方库函数包
 
 参考来源：
 

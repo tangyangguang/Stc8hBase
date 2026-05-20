@@ -111,6 +111,17 @@
 #define DRV_NRF24L01_REQUIRES_ACTIVATE 1
 #endif
 
+/* Timing defaults follow nRF24L01+ Product Specification v1.0.
+ * Override these only after confirming the module crystal/startup
+ * characteristics and target clock. */
+#ifndef DRV_NRF24L01_CE_PULSE_MIN_US
+#define DRV_NRF24L01_CE_PULSE_MIN_US 12UL
+#endif
+
+#ifndef DRV_NRF24L01_POWER_UP_DELAY_US
+#define DRV_NRF24L01_POWER_UP_DELAY_US 5000u
+#endif
+
 typedef enum {
     DRV_NRF24L01_RATE_250KBPS = 0,
     DRV_NRF24L01_RATE_1MBPS,

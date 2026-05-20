@@ -35,6 +35,36 @@
 #define NRF24_FEATURE_EN_DPL 0x04u
 #define NRF24_FEATURE_EN_ACK_PAY 0x02u
 
+#ifndef DRV_NRF24L01_CE_PULSE_MIN_US
+#define DRV_NRF24L01_CE_PULSE_MIN_US 12UL
+#endif
+
+#ifndef DRV_NRF24L01_TIMING_LOOP_CYCLES
+#define DRV_NRF24L01_TIMING_LOOP_CYCLES 3UL
+#endif
+
+#define DRV_NRF24L01_CE_PULSE_DELAY_LOOPS_CALC \
+    ((((STC8H_SYSCLK_HZ / 1000UL) * DRV_NRF24L01_CE_PULSE_MIN_US) + ((DRV_NRF24L01_TIMING_LOOP_CYCLES * 1000UL) - 1UL)) / (DRV_NRF24L01_TIMING_LOOP_CYCLES * 1000UL))
+
+#if DRV_NRF24L01_CE_PULSE_DELAY_LOOPS_CALC < 64UL
+#define DRV_NRF24L01_CE_PULSE_DELAY_LOOPS 64UL
+#else
+#define DRV_NRF24L01_CE_PULSE_DELAY_LOOPS DRV_NRF24L01_CE_PULSE_DELAY_LOOPS_CALC
+#endif
+
+#ifndef DRV_NRF24L01_POWER_UP_DELAY_US
+#define DRV_NRF24L01_POWER_UP_DELAY_US 5000u
+#endif
+
+#define DRV_NRF24L01_DELAY_LOOPS_PER_US_CALC \
+    ((STC8H_SYSCLK_HZ + ((DRV_NRF24L01_TIMING_LOOP_CYCLES * 1000000UL) - 1UL)) / (DRV_NRF24L01_TIMING_LOOP_CYCLES * 1000000UL))
+
+#if DRV_NRF24L01_DELAY_LOOPS_PER_US_CALC == 0UL
+#define DRV_NRF24L01_DELAY_LOOPS_PER_US 1UL
+#else
+#define DRV_NRF24L01_DELAY_LOOPS_PER_US DRV_NRF24L01_DELAY_LOOPS_PER_US_CALC
+#endif
+
 #ifndef DRV_NRF24L01_DEFAULT_CONFIG
 #define DRV_NRF24L01_DEFAULT_CONFIG (NRF24_CONFIG_EN_CRC | NRF24_CONFIG_CRCO)
 #endif
@@ -45,14 +75,36 @@
 #define DRV_NRF24L01_RAW_SCOPE static
 #endif
 
-static void drv_nrf24l01_short_delay(void)
+#ifndef DRV_NRF24L01_CE_PULSE_DELAY
+static void drv_nrf24l01_ce_pulse_delay(void)
 {
+#if DRV_NRF24L01_CE_PULSE_DELAY_LOOPS > 255UL
+    stc8h_u16 i;
+#else
     stc8h_u8 i;
+#endif
 
-    for (i = 0u; i < 64u; ++i) {
+    for (i = 0u; i < DRV_NRF24L01_CE_PULSE_DELAY_LOOPS; ++i) {
         STC8H_NOP();
     }
 }
+#define DRV_NRF24L01_CE_PULSE_DELAY() drv_nrf24l01_ce_pulse_delay()
+#endif
+
+#ifndef DRV_NRF24L01_POWER_UP_DELAY
+static void drv_nrf24l01_delay_us(stc8h_u16 us)
+{
+    stc8h_u8 i;
+
+    while (us != 0u) {
+        for (i = 0u; i < DRV_NRF24L01_DELAY_LOOPS_PER_US; ++i) {
+            STC8H_NOP();
+        }
+        --us;
+    }
+}
+#define DRV_NRF24L01_POWER_UP_DELAY() drv_nrf24l01_delay_us(DRV_NRF24L01_POWER_UP_DELAY_US)
+#endif
 
 void drv_nrf24l01_init_pins(void)
 {
@@ -182,6 +234,7 @@ void drv_nrf24l01_enter_standby(void)
 {
     DRV_NRF24L01_CE_LOW();
     (void)drv_nrf24l01_write_reg(NRF24_REG_CONFIG, (stc8h_u8)(DRV_NRF24L01_DEFAULT_CONFIG | NRF24_CONFIG_PWR_UP));
+    DRV_NRF24L01_POWER_UP_DELAY();
 }
 #endif
 
@@ -189,6 +242,7 @@ void drv_nrf24l01_enter_standby(void)
 void drv_nrf24l01_enter_rx(void)
 {
     (void)drv_nrf24l01_write_reg(NRF24_REG_CONFIG, (stc8h_u8)(DRV_NRF24L01_DEFAULT_CONFIG | NRF24_CONFIG_PWR_UP | NRF24_CONFIG_PRIM_RX));
+    DRV_NRF24L01_POWER_UP_DELAY();
     DRV_NRF24L01_CE_HIGH();
 }
 #endif
@@ -197,6 +251,7 @@ void drv_nrf24l01_enter_tx(void)
 {
     DRV_NRF24L01_CE_LOW();
     (void)drv_nrf24l01_write_reg(NRF24_REG_CONFIG, (stc8h_u8)(DRV_NRF24L01_DEFAULT_CONFIG | NRF24_CONFIG_PWR_UP));
+    DRV_NRF24L01_POWER_UP_DELAY();
 }
 
 stc8h_status_t drv_nrf24l01_set_channel(stc8h_u8 channel)
@@ -357,7 +412,7 @@ stc8h_u8 drv_nrf24l01_read_payload(stc8h_u8 *data, stc8h_u8 len)
 void drv_nrf24l01_pulse_ce(void)
 {
     DRV_NRF24L01_CE_HIGH();
-    drv_nrf24l01_short_delay();
+    DRV_NRF24L01_CE_PULSE_DELAY();
     DRV_NRF24L01_CE_LOW();
 }
 

@@ -57,7 +57,14 @@ ACK payload 只作为短状态回传优化。它不是复杂双向协议的唯�
 
 PTX 发送后如果 `STATUS` 同时包含 `TX_DONE` 和 `RX_READY`，表示发送成功且收到 ACK payload。此时应读取 dynamic payload 长度，再读取 RX payload。
 
-## 6. 硬件注意事项
+## 6. 时序规则
+
+- `PWR_UP` 从 0 变为 1 后，进入 TX/RX 前必须等待 nRF24L01+ datasheet 的 `Tpd2stby`。驱动默认按 5ms 处理，项目确认晶体参数后可用 `DRV_NRF24L01_POWER_UP_DELAY_US` 下调。
+- PTX 发送单包时，CE 高电平必须大于 10us。驱动按 `STC8H_SYSCLK_HZ` 计算 CE 脉冲循环，且不低于旧 11.0592MHz/SDCC 实测路径的 64 次循环。
+- 250kbps + ACK payload 时，PTX `SETUP_RETR.ARD` 必须按 ACK payload 长度选择。32-byte ACK payload 需要至少 1500us。
+- PRX 端 ACK payload 使用 TX FIFO，最多预装 3 个。链路断开或 FIFO 堵塞时，应用需要 `drv_nrf24l01_flush_tx()` 恢复。
+
+## 7. 硬件注意事项
 
 - nRF24L01 是 2.4GHz，穿墙和楼板能力有限，远距离项目必须实测。
 - 模块附近建议放 10uF 电解或钽电容，并并联 100nF。
@@ -65,8 +72,8 @@ PTX 发送后如果 `STATUS` 同时包含 `TX_DONE` 和 `RX_READY`，表示发�
 - 异常寄存器值、ACK 不稳定、payload 错乱时，优先检查供电、线长和 SPI 速度。
 - `MAX_RETRY` 后必须清 IRQ，必要时 flush TX。
 
-## 7. 参考资料
+## 8. 参考资料
 
-- Nordic nRF24L01+ Product Specification v1.0。
+- Nordic nRF24L01+ Product Specification v1.0：`https://docs-be.nordicsemi.com/bundle/nRF24L01P_PS_v1.0/raw/resource/enus/nRF24L01P_PS_v1.0.pdf`
 - TMRh20/RF24 文档和 common issues。
 - CircuitPython nRF24L01 文档用于交叉核对 ACK payload 与 dynamic payload 关系。
