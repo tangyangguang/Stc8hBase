@@ -80,7 +80,24 @@ PTX 发送后如果 `STATUS` 同时包含 `TX_DONE` 和 `RX_READY`，表示发�
 - 异常寄存器值、ACK 不稳定、payload 错乱时，优先检查供电、线长和 SPI 速度。
 - `MAX_RETRY` 后必须清 IRQ，必要时 flush TX。
 
-## 8. 参考资料
+## 8. 双板 RF 诊断示例
+
+`examples/platformio/nrf24_pair_diag` 用于隔离两块板之间的 nRF24 空中 auto-ack 链路，不依赖应用项目的显示、EEPROM、绑定、输出或业务 payload。
+
+诊断示例使用当前硬件测试接线：
+
+```text
+CE=P1.6, CSN=P1.2, SCK=P1.5, MOSI=P1.3, MISO=P1.4, IRQ=P3.2
+```
+
+示例提供两个 PlatformIO 环境：
+
+- `ptx`：烧录到发送端，固定频道 76、地址 `TOYR1`、250kbps、0dBm、ACK payload 开启，周期发送 32 字节 payload，并通过 UART 打印 `TX_DONE`、`MAX_RETRY`、`STATUS`、`OBSERVE_TX`、ACK payload 长度和内容摘要。
+- `prx`：烧录到接收端，使用同一频道和地址持续 RX，收到 payload 后打印包计数、长度、序号和 `STATUS`，并重新装载 32 字节 ACK payload。
+
+如果单板 `nrf24_uart_diag` 通过而 `nrf24_pair_diag` 仍持续 `MAX_RETRY`，优先排查 RF 配置一致性、供电、模块、天线、距离和外部干扰；如果 `nrf24_pair_diag` 稳定成功，再回到应用项目排查接收端主循环、配置保存、绑定和输出控制对 RX 状态的影响。
+
+## 9. 参考资料
 
 - Nordic nRF24L01+ Product Specification v1.0：`https://docs-be.nordicsemi.com/bundle/nRF24L01P_PS_v1.0/raw/resource/enus/nRF24L01P_PS_v1.0.pdf`
 - TMRh20/RF24 文档和 common issues。
