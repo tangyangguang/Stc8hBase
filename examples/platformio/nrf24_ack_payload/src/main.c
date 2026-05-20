@@ -26,8 +26,8 @@ void main(void)
     stc8h_u8 width;
 
     (void)stc8h_uart_init(STC8H_UART1);
-    stc8h_spi_init();
     drv_nrf24l01_init_pins();
+    stc8h_spi_init();
     configure_radio();
     drv_nrf24l01_enter_tx();
 

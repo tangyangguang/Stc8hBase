@@ -23,8 +23,8 @@ void main(void)
     stc8h_u8 status;
 
     (void)stc8h_uart_init(STC8H_UART1);
-    stc8h_spi_init();
     drv_nrf24l01_init_pins();
+    stc8h_spi_init();
 
     payload[0] = 0xA5u;
     payload[1] = 0x01u;

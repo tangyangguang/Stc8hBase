@@ -85,6 +85,7 @@ Keil C51 验证按模块进行。每个已实现模块至少完成 Keil C51 编�
 | `soft_timer_tick` | 非阻塞软件定时器 |
 | `i2c_scan` | I2C 基础通信 |
 | `spi_loopback` | SPI 基础收发 |
+| `nrf24_uart_diag` | ToyRemote PCB nRF24L01 单模块串口诊断 |
 | `nrf24_fixed_ping` | nRF24L01 固定 payload 发送和状态处理 |
 | `nrf24_ack_payload` | nRF24L01+ dynamic payload 与 ACK payload |
 | `rf_link_status_demo` | 通用 RF 链路层包格式、状态和状态回传编译验证 |
@@ -178,8 +179,10 @@ docs/RESOURCE_REPORT.md
 
 ### 6.4.2 nRF24L01 验收
 
+- `nrf24_uart_diag` 示例使用 ToyRemote PCB 引脚，且只依赖 UART1 输出，先验证单个 nRF24 模块的 SPI、寄存器读写和 FEATURE/DYNPD。
 - `nrf24_fixed_ping` 示例使用硬件 SPI、板级 CE/CSN 宏和固定 32 字节 payload。
 - `nrf24_ack_payload` 示例启用 nRF24L01+ dynamic payload 和 ACK payload。
+- 所有 nRF24 PlatformIO 示例必须在启用 SPI 前调用 `drv_nrf24l01_init_pins()`，防止 CE/CSN 在 STC8H 上电高阻阶段漂浮。
 - TX 端发送后应正确处理 `TX_DONE`、`MAX_RETRY` 和可能同时出现的 `RX_READY`。
 - `MAX_RETRY` 后必须清 IRQ，并 flush TX。
 - RX 端 ACK payload 会占用 TX FIFO，实测时需要验证堵塞后 flush TX 可恢复。

@@ -190,6 +190,8 @@ for ini in "${ROOT_DIR}"/examples/platformio/*/platformio.ini; do
     run_platformio_example "examples/platformio/$(basename "$(dirname "${ini}")")"
 done
 
+sh "${ROOT_DIR}/tools/check_nrf24_examples.sh"
+
 run_platformio_env "examples/platformio/delay_us_probe" "pulse_1687"
 run_platformio_env "examples/platformio/delay_us_probe" "pulse_2250"
 run_platformio_env "examples/platformio/delay_us_probe" "pulse_4500"

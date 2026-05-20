@@ -44,6 +44,7 @@ static stc8h_status_t radio_init(void)
 
 void main(void)
 {
+    drv_nrf24l01_init_pins();
     stc8h_spi_init();
     proto_rf_link_init(&link);
     proto_rf_link_set_ids(&link, 1u, 2u);
