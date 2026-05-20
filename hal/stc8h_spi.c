@@ -25,6 +25,10 @@
 #define STC8H_SPI_ENABLE_MISO_INPUT 1
 #endif
 
+#ifndef STC8H_SPI_LATCH_MISO_HIGH
+#define STC8H_SPI_LATCH_MISO_HIGH 1
+#endif
+
 #ifndef STC8H_SPI_EAXFR
 #define STC8H_SPI_EAXFR 0x80u
 #endif
@@ -54,6 +58,18 @@ void stc8h_spi_init(void)
 #else
     P3M0 &= (stc8h_u8)~0x1Cu;
     P3M1 &= (stc8h_u8)~0x1Cu;
+#endif
+#endif
+
+#if STC8H_SPI_LATCH_MISO_HIGH
+#if STC8H_SPI_PIN_GROUP == 0
+    P1 |= 0x10u;
+#elif STC8H_SPI_PIN_GROUP == 1
+    P2 |= 0x10u;
+#elif STC8H_SPI_PIN_GROUP == 2
+    P4 |= 0x02u;
+#else
+    P3 |= 0x08u;
 #endif
 #endif
 

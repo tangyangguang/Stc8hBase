@@ -122,6 +122,13 @@
 #define DRV_NRF24L01_POWER_UP_DELAY_US 5000u
 #endif
 
+/* Optional board hook called by drv_nrf24l01_init_pins() before CE/CSN
+ * are driven. Use it to configure CE/CSN port modes and latches on MCUs
+ * where GPIOs do not reset to output-capable quasi-bidirectional mode. */
+#ifndef DRV_NRF24L01_CONFIGURE_PINS
+#define DRV_NRF24L01_CONFIGURE_PINS() do { } while (0)
+#endif
+
 typedef enum {
     DRV_NRF24L01_RATE_250KBPS = 0,
     DRV_NRF24L01_RATE_1MBPS,

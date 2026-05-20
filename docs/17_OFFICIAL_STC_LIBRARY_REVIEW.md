@@ -101,7 +101,7 @@ reload = 65536 - MAIN_Fosc / 4 / baud
 
 - 第一版冻结为硬件 SPI 主机轮询实现。
 - 默认 P1.3/P1.4/P1.5，`SSIG=1` 忽略硬件 SS，避免占用当前 P1.2 LED。
-- 默认保持 MOSI/MISO/SCLK 为准双向，匹配官方 SPI 切换示例；同时按当前 SPI 引脚组启用 MISO `PxIE` 数字输入，访问 `PxIE` 前设置 `P_SW2.EAXFR=1`。
+- 默认保持 MOSI/MISO/SCLK 为准双向，匹配官方 SPI 切换示例；同时释放 MISO 端口锁存，并按当前 SPI 引脚组启用 MISO `PxIE` 数字输入，访问 `PxIE` 前设置 `P_SW2.EAXFR=1`。
 - 不启用 SPI 中断，不保存 RX 缓冲，不做主从自动切换。
 - 片选由板级或应用代码自行控制，避免在 HAL 中保存运行期 CS 引脚。
 

@@ -152,10 +152,10 @@ check_spi_miso_input_codegen() {
 
     for group in 0 1 2 3; do
         case "${group}" in
-            0) ie_addr='0xfe31' ;;
-            1) ie_addr='0xfe32' ;;
-            2) ie_addr='0xfe34' ;;
-            3) ie_addr='0xfe33' ;;
+            0) ie_addr='0xfe31'; port_sfr='_P1'; miso_mask='0x10' ;;
+            1) ie_addr='0xfe32'; port_sfr='_P2'; miso_mask='0x10' ;;
+            2) ie_addr='0xfe34'; port_sfr='_P4'; miso_mask='0x02' ;;
+            3) ie_addr='0xfe33'; port_sfr='_P3'; miso_mask='0x08' ;;
         esac
 
         cat > "${tmp_dir}/spi_group_${group}.c" <<EOF
@@ -167,6 +167,10 @@ EOF
 
         if ! grep -Eq 'orl[[:space:]]+_P_SW2,#0x80' "${tmp_dir}/spi_group_${group}.asm"; then
             echo "SPI group ${group} init does not enable XFR access before MISO PxIE" >&2
+            exit 1
+        fi
+        if ! grep -Eq "orl[[:space:]]+${port_sfr},#${miso_mask}" "${tmp_dir}/spi_group_${group}.asm"; then
+            echo "SPI group ${group} init does not latch MISO high before quasi-bidirectional reads" >&2
             exit 1
         fi
         if ! grep -Eiq "#0x0*${ie_addr#0x}" "${tmp_dir}/spi_group_${group}.asm"; then

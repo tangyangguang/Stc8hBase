@@ -19,6 +19,7 @@ static void test_ce_high(void);
 static void test_ce_low(void);
 static void test_csn_high(void);
 static void test_csn_low(void);
+static void test_configure_pins(void);
 static void test_power_up_delay(void);
 static void test_ce_pulse_delay(void);
 
@@ -26,6 +27,7 @@ static void test_ce_pulse_delay(void);
 #define DRV_NRF24L01_CE_LOW() test_ce_low()
 #define DRV_NRF24L01_CSN_HIGH() test_csn_high()
 #define DRV_NRF24L01_CSN_LOW() test_csn_low()
+#define DRV_NRF24L01_CONFIGURE_PINS() test_configure_pins()
 #define DRV_NRF24L01_POWER_UP_DELAY() test_power_up_delay()
 #define DRV_NRF24L01_CE_PULSE_DELAY() test_ce_pulse_delay()
 
@@ -64,6 +66,11 @@ static void test_csn_high(void)
 static void test_csn_low(void)
 {
     test_event('l');
+}
+
+static void test_configure_pins(void)
+{
+    test_event('C');
 }
 
 static void test_power_up_delay(void)
@@ -115,6 +122,12 @@ int main(void)
     int ce_high_index;
 
     failures = 0;
+
+    reset_events();
+    drv_nrf24l01_init_pins();
+    failures += require(index_of('C') == 0, "init_pins must configure board pins before driving CE/CSN");
+    failures += require((index_of('L') > index_of('C')) && (index_of('h') > index_of('L')),
+                        "init_pins must drive CE low then CSN high after board pin configuration");
 
     reset_events();
     drv_nrf24l01_enter_rx();

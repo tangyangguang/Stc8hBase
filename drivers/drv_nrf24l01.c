@@ -108,6 +108,7 @@ static void drv_nrf24l01_delay_us(stc8h_u16 us)
 
 void drv_nrf24l01_init_pins(void)
 {
+    DRV_NRF24L01_CONFIGURE_PINS();
     DRV_NRF24L01_CE_LOW();
     DRV_NRF24L01_CSN_HIGH();
 }

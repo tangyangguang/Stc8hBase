@@ -25,6 +25,14 @@
 #define DRV_NRF24L01_IRQ_READ()
 ```
 
+`drv_nrf24l01_init_pins()` 会在驱动 CE/CSN 空闲电平前调用可选板级 hook：
+
+```c
+#define DRV_NRF24L01_CONFIGURE_PINS()
+```
+
+STC8H 等上电默认高阻的芯片应在该 hook 中配置 CE/CSN 端口模式并预置锁存；驱动不直接保存端口号或引脚号。
+
 不新增软件 SPI，不隐藏全局 TX/RX 缓冲区。
 
 ## 3. 默认策略

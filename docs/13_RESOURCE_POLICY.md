@@ -101,7 +101,9 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | Delay | `STC8H_DELAY_TIMER0_1T_CHUNK_US` | `5000` | Timer0 1T 微秒延时单次分片上限；过大会触发编译期溢出保护 |
 | SPI | `STC8H_SPI_ENABLE_WRITE` | `1` | 是否编译批量写 `stc8h_spi_write()`；只使用单字节 transfer 的 fixed-path 应用可关闭 |
 | SPI | `STC8H_SPI_CONFIGURE_PORT_MODE` | `1` | 初始化时是否把 MOSI/MISO/SCLK 设为准双向，匹配 STC 官方 SPI 示例和 legacy 用法 |
+| SPI | `STC8H_SPI_LATCH_MISO_HIGH` | `1` | 初始化时是否释放当前 SPI group 的 MISO 端口锁存；准双向输入读外部电平前必须为 1 |
 | SPI | `STC8H_SPI_ENABLE_MISO_INPUT` | `1` | 初始化时是否打开 `P_SW2.EAXFR` 并启用当前 SPI group 的 MISO `PxIE` 数字输入 |
+| nRF24L01 | `DRV_NRF24L01_CONFIGURE_PINS()` | 空操作 | `drv_nrf24l01_init_pins()` 驱动 CE/CSN 前调用的板级 hook，用于配置 CE/CSN 端口模式和锁存 |
 | UART | `STC8H_UART_ASSUME_UART1` | `0` | 只使用 UART1 时省去 id 检查 |
 | UART | `STC8H_UART_ENABLE_WRITE_RAM` | `1` | 是否编译 RAM 字符串输出 |
 | UART | `STC8H_UART_ENABLE_RX` | `1` | 是否编译轮询接收 |
@@ -228,7 +230,7 @@ SPI 第一版已冻结为硬件 SPI 主机轮询实现。
 
 片选由板级或应用代码自行控制，HAL 不保存 CS 引脚，不做运行期引脚分派。
 
-初始化默认只配置 MOSI/MISO/SCLK 为准双向，并显式启用所选引脚组的 MISO 数字输入：group 0 `P1IE.4`、group 1 `P2IE.4`、group 2 `P4IE.1`、group 3 `P3IE.3`。访问 `PxIE` 前必须先设置 `P_SW2.EAXFR=1`。
+初始化默认只配置 MOSI/MISO/SCLK 为准双向，释放所选引脚组的 MISO 端口锁存，并显式启用 MISO 数字输入：group 0 `P1IE.4`、group 1 `P2IE.4`、group 2 `P4IE.1`、group 3 `P3IE.3`。访问 `PxIE` 前必须先设置 `P_SW2.EAXFR=1`。
 
 第一版不同时维护硬件 SPI 和软件 SPI 两套实现。
 
