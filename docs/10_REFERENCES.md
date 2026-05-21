@@ -132,6 +132,7 @@ https://docs.nordicsemi.com/bundle/nRF24L01P_PS_v1.0/resource/nRF24L01P_PS_v1.0.
 - PTX 单包发送必须保证 CE high 至少 10us。
 - 从 power down 置 `PWR_UP=1` 后，进入 TX/RX 前必须等待 `Tpd2stby`；本库默认等待 5ms，项目确认晶体参数后可覆盖。
 - ACK payload 依赖 dynamic payload；PTX 收到带 payload 的 ACK 时 `TX_DS` 与 `RX_DR` 会同时置位。
+- PTX 的 RX FIFO 可在 PTX 模式下用 `R_RX_PAYLOAD` 读取；诊断中若看到 `STATUS` 未带 `RX_DR` 但 `FIFO_STATUS.RX_EMPTY=0`，应按 RX FIFO 为准读 ACK payload，避免把已入 FIFO 的 ACK payload 误判成空 ACK。
 - 250kbps 下 32-byte ACK payload 需要 PTX `SETUP_RETR.ARD` 至少 1500us。
 - SPI 命令必须由 CSN 高到低开始，命令字和每个字节均 MSB first；当前 STC8H `SPCTL=0xD0` 是 SS ignored、SPI enable、MSB first、master、CPOL=0、CPHA=0、SYSclk/4，符合 nRF24 10MHz 上限。
 - Dynamic payload 必须启用 `FEATURE.EN_DPL` 和对应 `DYNPD.DPL_Px`；使用 `R_RX_PL_WID` 时宽度超过 32 必须 flush RX。

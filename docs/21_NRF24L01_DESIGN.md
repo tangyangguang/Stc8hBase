@@ -66,6 +66,8 @@ STC8H 等上电默认高阻的芯片应在该 hook 中配置 CE/CSN 端口模式
 - `DRV_NRF24L01_TX_ACK_PAYLOAD_OK`：发送成功并已读出 ACK payload。
 - `DRV_NRF24L01_TX_ACK_PAYLOAD_INVALID`：ACK payload 宽度非法或超过调用方缓冲区，函数会 flush RX 并清 IRQ。
 
+ACK payload 预期路径下，`drv_nrf24l01_complete_tx()` 不只依赖调用方传入的 `STATUS.RX_DR`。如果 `STATUS` 只有 `TX_DS`，但 `FIFO_STATUS.RX_EMPTY=0`，helper 仍会读取 RX FIFO 中的 ACK payload。实测 250kbps + 32-byte ACK payload 曾出现 `STATUS=0x20` 但 `FIFO_STATUS=0x10`，只看旧 `STATUS` 会误计为 `ACK_EMPTY`。
+
 `drv_nrf24l01_read_rx_packet()` 只用于 dynamic payload 模式。它先用 `R_RX_PL_WID` 读取宽度，宽度为 0、超过 32 或超过调用方缓冲区时按 Nordic 要求 flush RX。
 
 `drv_nrf24l01_preload_ack_payload(pipe, data, len, replace_pending)` 用于 PRX。正常收包后推荐 `replace_pending=0` 追加下一份 ACK payload，TX FIFO 满时返回 `STC8H_BUSY`；启动、链路恢复或确认无 ACK 正在发送时才用 `replace_pending=1` 清掉旧的三层 ACK FIFO。不要在每次 `RX_DR` 后立刻 `FLUSH_TX` 再写 ACK payload，250kbps 大 ACK payload 下这会撞上当前 ACK 发送窗口，造成 PTX 看到空 ACK。

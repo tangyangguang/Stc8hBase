@@ -567,21 +567,22 @@ drv_nrf24l01_tx_result_t drv_nrf24l01_complete_tx(stc8h_u8 status, stc8h_u8 *ack
         return DRV_NRF24L01_TX_PENDING;
     }
 
-    if ((status & DRV_NRF24L01_STATUS_RX_READY) != 0u) {
+    if (((status & DRV_NRF24L01_STATUS_RX_READY) != 0u) ||
+        ((ack_len != 0) && ((drv_nrf24l01_read_fifo_status() & DRV_NRF24L01_FIFO_RX_EMPTY) == 0u))) {
         width = drv_nrf24l01_read_dynamic_payload_size();
         if (width == 0u) {
             drv_nrf24l01_flush_rx();
-            drv_nrf24l01_clear_irq(status);
+            drv_nrf24l01_clear_irq((stc8h_u8)(status | DRV_NRF24L01_STATUS_RX_READY));
             return DRV_NRF24L01_TX_ACK_EMPTY;
         }
         if ((width > DRV_NRF24L01_PAYLOAD_MAX) || (ack_payload == 0) || (ack_len == 0) || (width > ack_max_len)) {
             drv_nrf24l01_flush_rx();
-            drv_nrf24l01_clear_irq(status);
+            drv_nrf24l01_clear_irq((stc8h_u8)(status | DRV_NRF24L01_STATUS_RX_READY));
             return DRV_NRF24L01_TX_ACK_PAYLOAD_INVALID;
         }
         (void)drv_nrf24l01_read_payload(ack_payload, width);
         *ack_len = width;
-        drv_nrf24l01_clear_irq(status);
+        drv_nrf24l01_clear_irq((stc8h_u8)(status | DRV_NRF24L01_STATUS_RX_READY));
         return DRV_NRF24L01_TX_ACK_PAYLOAD_OK;
     }
 

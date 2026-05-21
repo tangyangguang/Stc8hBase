@@ -219,6 +219,36 @@ static int test_complete_tx_reads_ack_payload_and_clears_irq(void)
     return failures;
 }
 
+static int test_complete_tx_reads_ack_payload_when_status_rx_ready_lags_fifo(void)
+{
+    int failures;
+    stc8h_u8 ack[4];
+    stc8h_u8 ack_len;
+    drv_nrf24l01_tx_result_t result;
+
+    failures = 0;
+    fake_reset();
+    regs[TEST_REG_STATUS] = DRV_NRF24L01_STATUS_TX_DONE;
+    regs[TEST_REG_FIFO_STATUS] = DRV_NRF24L01_FIFO_TX_EMPTY;
+    rx_payload_width = 3u;
+    rx_payload[0] = 'A';
+    rx_payload[1] = 'C';
+    rx_payload[2] = 'K';
+    ack_len = 0u;
+
+    result = drv_nrf24l01_complete_tx(regs[TEST_REG_STATUS], ack, &ack_len, sizeof(ack));
+
+    failures += require(result == DRV_NRF24L01_TX_ACK_PAYLOAD_OK,
+                        "complete_tx must read ACK payload when RX FIFO is non-empty even if RX_DR is absent from the supplied STATUS");
+    failures += require(ack_len == 3u,
+                        "complete_tx must report ACK payload length from FIFO fallback");
+    failures += require((ack[0] == 'A') && (ack[1] == 'C') && (ack[2] == 'K'),
+                        "complete_tx must read ACK payload bytes from FIFO fallback");
+    failures += require((regs[TEST_REG_STATUS] & DRV_NRF24L01_STATUS_TX_DONE) == 0u,
+                        "complete_tx FIFO fallback must clear TX_DS");
+    return failures;
+}
+
 static int test_complete_tx_max_rt_flushes_tx_and_clears_irq(void)
 {
     int failures;
@@ -302,6 +332,7 @@ int main(void)
     failures = 0;
     failures += test_auto_ack_does_not_disable_rx_pipe();
     failures += test_complete_tx_reads_ack_payload_and_clears_irq();
+    failures += test_complete_tx_reads_ack_payload_when_status_rx_ready_lags_fifo();
     failures += test_complete_tx_max_rt_flushes_tx_and_clears_irq();
     failures += test_read_rx_packet_flushes_invalid_dynamic_width();
     failures += test_preload_ack_payload_replace_policy();

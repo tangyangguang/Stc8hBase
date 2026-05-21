@@ -62,7 +62,7 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | nRF24L01 | `DRV_NRF24L01_ENABLE_DISABLE_ACK_PAYLOAD` | `ACK payload` | 是否编译关闭 ACK payload API |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE` | `Dynamic/ACK payload` | 是否编译读取动态 payload 长度 API |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_RX_PIPE_API` | `1` | 是否编译独立 `EN_RXADDR` pipe 使能 API；需要把接收 pipe 与 auto-ack 解耦时保持开启 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_TX_RESULT_API` | `READ_PAYLOAD && READ_DYNAMIC_PAYLOAD_SIZE` | 是否编译 PTX 完成分类 helper，会处理 ACK payload、MAX_RT flush 和 IRQ 清除 |
+| nRF24L01 | `DRV_NRF24L01_ENABLE_TX_RESULT_API` | `READ_PAYLOAD && READ_DYNAMIC_PAYLOAD_SIZE && READ_FIFO_STATUS` | 是否编译 PTX 完成分类 helper，会处理 ACK payload、MAX_RT flush、RX FIFO fallback 和 IRQ 清除 |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_RX_PACKET_API` | `READ_STATUS && READ_PAYLOAD && READ_DYNAMIC_PAYLOAD_SIZE` | 是否编译 dynamic RX payload 宽度校验读取 helper |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_ACK_PRELOAD_API` | `WRITE_ACK_PAYLOAD && READ_FIFO_STATUS` | 是否编译 PRX ACK payload 预装 helper |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_RECOVER` | `ENTER_STANDBY && ENTER_RX` | 是否编译统一 CE/FIFO/IRQ 恢复 helper |
