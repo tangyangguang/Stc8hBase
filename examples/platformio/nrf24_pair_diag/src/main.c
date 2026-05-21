@@ -2,6 +2,7 @@
 #include "stc8h_delay.h"
 #include "stc8h_spi.h"
 #include "stc8h_uart.h"
+#include "nrf24_pair_diag_logic.h"
 
 #if defined(NRF24_PAIR_DIAG_PTX) && defined(NRF24_PAIR_DIAG_PRX)
 #error "Select only one nRF24 pair diagnostic role."
@@ -370,6 +371,19 @@ static void print_ptx_summary(stc8h_u16 tx_count, stc8h_u16 tx_ok, stc8h_u16 max
     uart_crlf();
 }
 
+#if NRF24_PAIR_ACK_PAYLOAD
+static stc8h_u8 ack_payload_valid(stc8h_u8 len)
+{
+    if (len != NRF24_PAIR_PAYLOAD_SIZE) {
+        return 0u;
+    }
+    if ((ack_payload[0] != 'A') || (ack_payload[1] != 'C') || (ack_payload[2] != 'K')) {
+        return 0u;
+    }
+    return 1u;
+}
+#endif
+
 static void run_ptx(void)
 {
     stc8h_u8 seq;
@@ -433,12 +447,18 @@ static void run_ptx(void)
 #endif
             if (result == DRV_NRF24L01_TX_MAX_RT) {
                 ++max_rt;
+#if NRF24_PAIR_ACK_PAYLOAD
             } else if (result == DRV_NRF24L01_TX_ACK_PAYLOAD_OK) {
                 ++tx_ok;
-                ++ack_ok;
+                if (ack_payload_valid(ack_len) != 0u) {
+                    ++ack_ok;
+                } else {
+                    ++ack_bad;
+                }
             } else if (result == DRV_NRF24L01_TX_ACK_EMPTY) {
                 ++tx_ok;
                 ++ack_empty;
+#endif
             } else if (result == DRV_NRF24L01_TX_DONE) {
                 ++tx_ok;
             } else if (result == DRV_NRF24L01_TX_ACK_PAYLOAD_INVALID) {
@@ -473,46 +493,34 @@ static void run_ptx(void)
 #endif
 
 #if NRF24_PAIR_DIAG_PRX
-static stc8h_status_t load_ack_payload(stc8h_u8 last_seq, stc8h_u16 rx_count)
+static stc8h_status_t load_ack_payload(stc8h_u8 last_seq, stc8h_u16 rx_count, stc8h_u8 replace_pending)
 {
 #if NRF24_PAIR_ACK_PAYLOAD
     fill_ack_payload(last_seq, rx_count);
-    return drv_nrf24l01_preload_ack_payload(0u, ack_payload, NRF24_PAIR_PAYLOAD_SIZE, 1u);
+    return drv_nrf24l01_preload_ack_payload(0u, ack_payload, NRF24_PAIR_PAYLOAD_SIZE, replace_pending);
 #else
     (void)last_seq;
     (void)rx_count;
+    (void)replace_pending;
     return STC8H_OK;
 #endif
 }
 
-static void update_seq_stats(stc8h_u8 seq, stc8h_u8 *last_seq, stc8h_u8 *have_seq, stc8h_u16 *lost_count, stc8h_u16 *dup_count)
+static stc8h_u16 payload_tx_count(void)
 {
-    stc8h_u8 expected;
-
-    if (*have_seq == 0u) {
-        *have_seq = 1u;
-        *last_seq = seq;
-        return;
-    }
-
-    expected = (stc8h_u8)(*last_seq + 1u);
-    if (seq == *last_seq) {
-        ++(*dup_count);
-    } else if (seq != expected) {
-        *lost_count = (stc8h_u16)(*lost_count + (stc8h_u8)(seq - expected));
-    }
-    *last_seq = seq;
+    return (stc8h_u16)(payload[3] | ((stc8h_u16)payload[4] << 8));
 }
 
-static void print_prx_summary(stc8h_u16 rx_count, stc8h_u8 last_seq, stc8h_u16 lost_count,
-                              stc8h_u16 dup_count, stc8h_u16 bad_width, stc8h_u16 ack_load,
+static void print_prx_summary(stc8h_u16 rx_count, const nrf24_pair_diag_rx_stats_t *stats,
+                              stc8h_u16 bad_width, stc8h_u16 ack_load,
                               stc8h_u16 ack_busy, stc8h_u16 ack_fail)
 {
     stc8h_uart_write_code(STC8H_UART1, "PRX_SUM");
     print_u16_field("rx_count", rx_count);
-    print_hex_field("seq", last_seq);
-    print_u16_field("lost", lost_count);
-    print_u16_field("dup", dup_count);
+    print_hex_field("seq", stats->last_seq);
+    print_u16_field("lost", stats->lost_count);
+    print_u16_field("dup", stats->dup_count);
+    print_u16_field("ptx_reset", stats->ptx_reset_count);
     print_u16_field("bad_width", bad_width);
     print_hex_field("STATUS", drv_nrf24l01_read_status());
     print_hex_field("FIFO_STATUS", drv_nrf24l01_read_fifo_status());
@@ -526,18 +534,17 @@ static void run_prx(void)
 {
     stc8h_u8 status;
     stc8h_u8 len;
-    stc8h_u8 last_seq;
-    stc8h_u8 have_seq;
     stc8h_u8 idle_ticks;
     stc8h_u16 rx_count;
-    stc8h_u16 lost_count;
-    stc8h_u16 dup_count;
     stc8h_u16 bad_width;
     stc8h_u16 ack_load;
     stc8h_u16 ack_busy;
     stc8h_u16 ack_fail;
+    nrf24_pair_diag_rx_stats_t stats;
     stc8h_status_t rx_status;
+#if NRF24_PAIR_ACK_PAYLOAD
     stc8h_status_t ack_status;
+#endif
 
     if (configure_radio_common() != STC8H_OK) {
         while (1) {
@@ -546,18 +553,16 @@ static void run_prx(void)
     }
 
     rx_count = 0u;
-    lost_count = 0u;
-    dup_count = 0u;
     bad_width = 0u;
     ack_load = 0u;
     ack_busy = 0u;
     ack_fail = 0u;
-    last_seq = 0u;
-    have_seq = 0u;
     idle_ticks = 0u;
+    nrf24_pair_diag_rx_stats_init(&stats);
 
     drv_nrf24l01_enter_rx();
-    ack_status = load_ack_payload(last_seq, rx_count);
+#if NRF24_PAIR_ACK_PAYLOAD
+    ack_status = load_ack_payload(stats.last_seq, rx_count, nrf24_pair_diag_ack_replace_on_recover());
     if (ack_status == STC8H_OK) {
         ++ack_load;
     } else if (ack_status == STC8H_BUSY) {
@@ -565,6 +570,7 @@ static void run_prx(void)
     } else {
         ++ack_fail;
     }
+#endif
 
     while (1) {
 #if NRF24_PAIR_DYNAMIC_PAYLOAD
@@ -580,8 +586,9 @@ static void run_prx(void)
             rx_status = STC8H_OK;
 #endif
             ++rx_count;
-            update_seq_stats(payload[2], &last_seq, &have_seq, &lost_count, &dup_count);
-            ack_status = load_ack_payload(last_seq, rx_count);
+            nrf24_pair_diag_rx_stats_update(&stats, payload[2], payload_tx_count());
+#if NRF24_PAIR_ACK_PAYLOAD
+            ack_status = load_ack_payload(stats.last_seq, rx_count, nrf24_pair_diag_ack_replace_after_rx());
             if (ack_status == STC8H_OK) {
                 ++ack_load;
             } else if (ack_status == STC8H_BUSY) {
@@ -589,11 +596,12 @@ static void run_prx(void)
             } else {
                 ++ack_fail;
             }
+#endif
 
 #if NRF24_PAIR_LOG_EACH_PACKET
             stc8h_uart_write_code(STC8H_UART1, "PRX_PACKET");
             print_u16_field("rx_count", rx_count);
-            print_hex_field("seq", last_seq);
+            print_hex_field("seq", stats.last_seq);
             print_hex_field("LEN", len);
             print_hex_field("STATUS", status);
             print_hex_field("FIFO", drv_nrf24l01_read_fifo_status());
@@ -601,7 +609,7 @@ static void run_prx(void)
             uart_crlf();
 #endif
             if ((rx_count % NRF24_PAIR_SUMMARY_INTERVAL) == 0u) {
-                print_prx_summary(rx_count, last_seq, lost_count, dup_count, bad_width,
+                print_prx_summary(rx_count, &stats, bad_width,
                                   ack_load, ack_busy, ack_fail);
             }
             idle_ticks = 0u;
@@ -609,7 +617,7 @@ static void run_prx(void)
         } else if (rx_status == STC8H_ERROR) {
             ++bad_width;
             if ((bad_width % NRF24_PAIR_SUMMARY_INTERVAL) == 0u) {
-                print_prx_summary(rx_count, last_seq, lost_count, dup_count, bad_width,
+                print_prx_summary(rx_count, &stats, bad_width,
                                   ack_load, ack_busy, ack_fail);
             }
 #endif
@@ -617,7 +625,7 @@ static void run_prx(void)
             ++idle_ticks;
             if (idle_ticks >= 100u) {
                 idle_ticks = 0u;
-                print_prx_summary(rx_count, last_seq, lost_count, dup_count, bad_width,
+                print_prx_summary(rx_count, &stats, bad_width,
                                   ack_load, ack_busy, ack_fail);
             }
             stc8h_delay_ms(10u);

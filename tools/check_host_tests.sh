@@ -21,5 +21,6 @@ run_c_test "tests/host/test_drv_ec11_small_full_detent.c"
 run_c_test "tests/host/test_drv_ec11_small_isr.c"
 run_c_test "tests/host/test_drv_nrf24l01_core.c"
 run_c_test "tests/host/test_drv_nrf24l01_timing.c"
+run_c_test "tests/host/test_nrf24_pair_diag_logic.c"
 
 echo "host tests passed"

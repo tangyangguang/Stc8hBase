@@ -17,7 +17,7 @@ Keep the driver register-oriented and compile-time configurable. Add only helper
 - separate RX pipe enable from auto-ack enable;
 - classify a completed PTX transaction as pending, TX done, MAX_RT, ACK empty, ACK payload OK, or ACK payload invalid;
 - read one dynamic RX packet with the datasheet-mandated width check and flush-on-invalid behavior;
-- preload PRX ACK payload with an explicit replace-pending flag, so single-peer diagnostics can flush stale three-level FIFO entries before loading the latest ACK;
+- preload PRX ACK payload with an explicit replace-pending flag: normal RX paths append the next ACK payload, while startup/recovery paths can flush stale three-level FIFO entries before loading a fresh ACK;
 - recover to standby, PTX, or PRX by driving CE low, flushing FIFOs, clearing IRQs, then entering the requested mode.
 
 Existing raw register and FIFO APIs stay available for diagnostics. No application payload format, binding protocol, display handling, motor/servo logic, or ToyRemote compatibility layer belongs in this driver.
@@ -28,7 +28,7 @@ Existing raw register and FIFO APIs stay available for diagnostics. No applicati
 
 `nrf24_pair_diag` becomes the long-run RF diagnostic. The same source builds PTX or PRX with macros for channel, data rate, RF power, payload length, ACK payload, dynamic payload, ARD/ARC, send period, and summary interval. Defaults use the PCB pinout `CE=P1.6`, `CSN=P1.2`, `SCK=P1.5`, `MOSI=P1.3`, `MISO=P1.4`, `IRQ=P3.2` and UART1 logging only.
 
-PTX prints per-summary totals: `tx_count`, `tx_ok`, `max_rt`, `ack_ok`, `ack_empty`, last `OBSERVE_TX`, `STATUS`, and `FIFO_STATUS`. PRX prints `rx_count`, last sequence, lost/duplicate counters, `STATUS`, `FIFO_STATUS`, and ACK preload counters. Optional per-packet logging can be enabled by macro when needed.
+PTX prints per-summary totals: `tx_count`, `tx_ok`, `max_rt`, `ack_ok`, `ack_empty`, `ack_bad`, last `OBSERVE_TX`, `STATUS`, and `FIFO_STATUS`. PRX prints `rx_count`, last sequence, lost/duplicate counters, PTX reset counter, `STATUS`, `FIFO_STATUS`, and ACK preload counters. Optional per-packet logging can be enabled by macro when needed.
 
 ## Verification Matrix
 

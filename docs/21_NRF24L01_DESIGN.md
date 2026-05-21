@@ -68,7 +68,7 @@ STC8H 等上电默认高阻的芯片应在该 hook 中配置 CE/CSN 端口模式
 
 `drv_nrf24l01_read_rx_packet()` 只用于 dynamic payload 模式。它先用 `R_RX_PL_WID` 读取宽度，宽度为 0、超过 32 或超过调用方缓冲区时按 Nordic 要求 flush RX。
 
-`drv_nrf24l01_preload_ack_payload(pipe, data, len, replace_pending)` 用于 PRX。单 PTX 诊断推荐 `replace_pending=1`，先 flush TX 再写最新 ACK，避免三层 ACK FIFO 里残留旧状态；多 PTX 场景可用 `replace_pending=0`，TX FIFO 满时返回 `STC8H_BUSY`。
+`drv_nrf24l01_preload_ack_payload(pipe, data, len, replace_pending)` 用于 PRX。正常收包后推荐 `replace_pending=0` 追加下一份 ACK payload，TX FIFO 满时返回 `STC8H_BUSY`；启动、链路恢复或确认无 ACK 正在发送时才用 `replace_pending=1` 清掉旧的三层 ACK FIFO。不要在每次 `RX_DR` 后立刻 `FLUSH_TX` 再写 ACK payload，250kbps 大 ACK payload 下这会撞上当前 ACK 发送窗口，造成 PTX 看到空 ACK。
 
 `drv_nrf24l01_recover(mode)` 会 CE low、flush TX/RX、清 IRQ，然后进入 standby/PTX/PRX 目标模式。
 
@@ -76,7 +76,7 @@ STC8H 等上电默认高阻的芯片应在该 hook 中配置 CE/CSN 端口模式
 
 ACK payload 只作为短状态回传优化。它不是复杂双向协议的唯一通道。
 
-使用 ACK payload 时必须同时启用 dynamic payload。PRX 端的 ACK payload 会占用 TX FIFO，最多挂起 3 个 payload。链路断开、同一 pipe 多个旧 ACK 排队或 payload 堵塞时，应用需要 flush TX 恢复；单 peer 状态回传推荐每次 RX 后用 `drv_nrf24l01_preload_ack_payload(..., replace_pending=1)` 保留最新 ACK。
+使用 ACK payload 时必须同时启用 dynamic payload。PRX 端的 ACK payload 会占用 TX FIFO，最多挂起 3 个 payload。同一 pipe 多个 pending payload 按 FIFO 发送。单 peer 状态回传的稳妥策略是：上电/恢复时先 flush TX 并预装一份 ACK；之后每次收到新包后只追加下一份 ACK。链路断开、旧 ACK 堵塞或长时间 `STC8H_BUSY` 时，再进入恢复路径 flush TX。
 
 PTX 发送后如果 `STATUS` 同时包含 `TX_DONE` 和 `RX_READY`，表示发送成功且收到 ACK payload。此时应读取 dynamic payload 长度，再读取 RX payload。
 
@@ -85,7 +85,7 @@ PTX 发送后如果 `STATUS` 同时包含 `TX_DONE` 和 `RX_READY`，表示发�
 - `PWR_UP` 从 0 变为 1 后，进入 TX/RX 前必须等待 nRF24L01+ datasheet 的 `Tpd2stby`。驱动默认按 5ms 处理，项目确认晶体参数后可用 `DRV_NRF24L01_POWER_UP_DELAY_US` 下调。
 - PTX 发送单包时，CE 高电平必须大于 10us。驱动按 `STC8H_SYSCLK_HZ` 计算 CE 脉冲循环，且不低于旧 11.0592MHz/SDCC 实测路径的 64 次循环。
 - 250kbps + ACK payload 时，PTX `SETUP_RETR.ARD` 必须按 ACK payload 长度选择。32-byte ACK payload 需要至少 1500us。
-- PRX 端 ACK payload 使用 TX FIFO，最多预装 3 个。链路断开或 FIFO 堵塞时，应用需要 `drv_nrf24l01_flush_tx()` 恢复。
+- PRX 端 ACK payload 使用 TX FIFO，最多预装 3 个。正常收包路径不应 `FLUSH_TX`；链路断开、FIFO 堵塞或恢复路径才用 `drv_nrf24l01_flush_tx()`。
 
 ## 7. 硬件注意事项
 
@@ -163,19 +163,19 @@ pio run -e ptx_2m_no_ack && pio run -e prx_2m_no_ack
 汇总输出：
 
 - PTX：`PTX_SUM tx_count=... tx_ok=... max_rt=... ack_ok=... ack_empty=... ack_bad=... OBSERVE_TX=0x.. STATUS=0x.. FIFO_STATUS=0x..`
-- PRX：`PRX_SUM rx_count=... seq=0x.. lost=... dup=... bad_width=... STATUS=0x.. FIFO_STATUS=0x.. ack_load=... ack_busy=... ack_fail=...`
+- PRX：`PRX_SUM rx_count=... seq=0x.. lost=... dup=... ptx_reset=... bad_width=... STATUS=0x.. FIFO_STATUS=0x.. ack_load=... ack_busy=... ack_fail=...`
 
 PASS 判断：
 
 - 推荐默认配置连续几百到几千包，`max_rt` 为 0 或极低，且不成串增长。
 - ACK payload 开启时，PTX `ack_ok` 应持续增长；`ack_empty` 若持续增长，说明 PRX 没有及时预装 ACK 或 ACK FIFO/时序异常。
-- ACK payload 关闭时，PTX `tx_ok` 应持续增长，`ack_ok` 维持 0 是正常的。
-- PRX `lost/dup` 应为 0 或极低；`bad_width` 必须为 0。
+- ACK payload 关闭时，PTX `tx_ok` 应持续增长，`ack_ok`、`ack_empty` 和 PRX `ack_load` 维持 0 是正常的。
+- PRX `lost/dup` 应为 0 或极低；PTX 重新烧录/复位会计入 `ptx_reset`，不再混入 `lost`；`bad_width` 必须为 0。
 
 FAIL 方向：
 
 - 单板 diag PASS，但 pair diag `max_rt` 连续增长：优先查频道/速率/地址两端是否一致、距离、天线、2.4GHz 干扰和 3.3V 供电瞬态。
-- `ack_empty` 高而 `rx_count` 正常：重点查 PRX ACK preload 逻辑和三层 TX FIFO 是否堵塞。
+- `ack_empty` 高而 `rx_count` 正常：重点查 PRX ACK preload 逻辑和三层 TX FIFO 是否堵塞；尤其确认正常收包路径没有每包后 `FLUSH_TX`。
 - `OBSERVE_TX` 高 nibble `PLOS_CNT` 增长：链路层已有丢包，写 `RF_CH` 会清此计数；用它比较不同频道/速率。
 - `bad_width` 增长：dynamic payload 收到非法宽度，优先查 SPI/RF 噪声、供电、DPL 配置一致性。
 
