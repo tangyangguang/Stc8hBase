@@ -99,7 +99,8 @@ for env_name in \
     ptx_250k_32ack prx_250k_32ack \
     ptx_250k_32ack_2ms prx_250k_32ack_2ms \
     ptx_250k_32ack_2500us prx_250k_32ack_2500us \
-    ptx_2m_no_ack prx_2m_no_ack
+    ptx_2m_no_ack prx_2m_no_ack \
+    ptx_matrix_fast prx_matrix_fast
 do
     check_example_env nrf24_pair_diag "$env_name"
 done

@@ -84,6 +84,51 @@ static int test_ack_payload_loaded_after_rx_does_not_replace_pending_fifo(void)
     return failures;
 }
 
+static int has_matrix_stage(stc8h_u8 rate, stc8h_u8 payload_size, stc8h_u8 ack_payload,
+                            stc8h_u8 dynamic_payload, stc8h_u8 ard_code,
+                            stc8h_u16 packet_count)
+{
+    stc8h_u8 i;
+    nrf24_pair_diag_matrix_stage_t stage;
+
+    for (i = 0u; i < nrf24_pair_diag_matrix_stage_count(); ++i) {
+        if ((nrf24_pair_diag_matrix_stage_init(i, &stage) != 0u) &&
+            (stage.rate == rate) &&
+            (stage.payload_size == payload_size) &&
+            (stage.ack_payload == ack_payload) &&
+            (stage.dynamic_payload == dynamic_payload) &&
+            (stage.ard_code == ard_code) &&
+            (stage.packet_count == packet_count)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static int test_fast_matrix_covers_required_conditions(void)
+{
+    int failures;
+
+    failures = 0;
+    failures += require(nrf24_pair_diag_matrix_stage_count() == 7u,
+                        "fast matrix must cover all seven required soak-test stages");
+    failures += require(has_matrix_stage(NRF24_PAIR_DIAG_RATE_1MBPS, 15u, 1u, 1u, 1u, 2000u) != 0,
+                        "matrix must include 1Mbps + 15-byte ACK payload at 500us ARD");
+    failures += require(has_matrix_stage(NRF24_PAIR_DIAG_RATE_1MBPS, 15u, 0u, 0u, 1u, 2000u) != 0,
+                        "matrix must include 1Mbps + no ACK payload at 500us ARD");
+    failures += require(has_matrix_stage(NRF24_PAIR_DIAG_RATE_250KBPS, 15u, 1u, 1u, 3u, 2000u) != 0,
+                        "matrix must include 250kbps + 15-byte ACK payload at 1000us ARD");
+    failures += require(has_matrix_stage(NRF24_PAIR_DIAG_RATE_250KBPS, 32u, 1u, 1u, 5u, 2000u) != 0,
+                        "matrix must include 250kbps + 32-byte ACK payload at 1500us ARD");
+    failures += require(has_matrix_stage(NRF24_PAIR_DIAG_RATE_250KBPS, 32u, 1u, 1u, 7u, 5000u) != 0,
+                        "matrix must include 250kbps + 32-byte ACK payload at 2000us ARD");
+    failures += require(has_matrix_stage(NRF24_PAIR_DIAG_RATE_250KBPS, 32u, 1u, 1u, 9u, 5000u) != 0,
+                        "matrix must include 250kbps + 32-byte ACK payload at 2500us ARD");
+    failures += require(has_matrix_stage(NRF24_PAIR_DIAG_RATE_2MBPS, 15u, 0u, 0u, 1u, 2000u) != 0,
+                        "matrix must include 2Mbps + no ACK payload at 500us ARD");
+    return failures;
+}
+
 int main(void)
 {
     int failures;
@@ -93,6 +138,7 @@ int main(void)
     failures += test_forward_gap_counts_lost_packets();
     failures += test_duplicate_packet_counts_duplicate();
     failures += test_ack_payload_loaded_after_rx_does_not_replace_pending_fifo();
+    failures += test_fast_matrix_covers_required_conditions();
 
     return failures == 0 ? 0 : 1;
 }

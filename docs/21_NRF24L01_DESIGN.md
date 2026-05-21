@@ -160,12 +160,24 @@ pio run -e ptx_250k_32ack && pio run -e prx_250k_32ack
 pio run -e ptx_2m_no_ack && pio run -e prx_2m_no_ack
 ```
 
+一键快测环境会在同一次烧录后自动跑完整矩阵，PTX 用当前阶段配置发送切换包，PRX 收到切换包后再改下一阶段配置，避免两边速率或 ACK payload 配置不同步：
+
+```sh
+pio run -e prx_matrix_fast -t upload --upload-port /dev/cu.usbserial-120
+pio run -e ptx_matrix_fast -t upload --upload-port /dev/cu.usbserial-110
+pio device monitor -p /dev/cu.usbserial-120 -b 115200
+pio device monitor -p /dev/cu.usbserial-110 -b 115200
+```
+
+`matrix_fast` 默认每 5ms 发一包、每 1000 包汇总一次，阶段为：1Mbps+15-byte ACK、1Mbps+no ACK、250kbps+15-byte ACK、250kbps+32-byte ACK/1500us、250kbps+32-byte ACK/2000us、250kbps+32-byte ACK/2500us、2Mbps+no ACK。普通阶段 2000 包，250kbps 32-byte 的 2000us/2500us margin 阶段各 5000 包。
+
 每个环境烧录时先烧 PRX，再烧 PTX。上传命令在环境名后加 `-t upload`。
 
 汇总输出：
 
 - PTX：`PTX_SUM tx_count=... tx_ok=... max_rt=... ack_ok=... ack_empty=... ack_bad=... OBSERVE_TX=0x.. STATUS=0x.. FIFO_STATUS=0x..`
 - PRX：`PRX_SUM rx_count=... seq=0x.. lost=... dup=... ptx_reset=... bad_width=... STATUS=0x.. FIFO_STATUS=0x.. ack_load=... ack_busy=... ack_fail=...`
+- 矩阵快测：`MATRIX_STAGE_BEGIN` 表示阶段配置，`MATRIX_PTX_SUM`/`MATRIX_PRX_SUM` 是阶段内汇总，`MATRIX_STAGE_END` 是阶段结论，`MATRIX_DONE` 表示全部阶段结束。
 
 PASS 判断：
 
@@ -173,6 +185,7 @@ PASS 判断：
 - ACK payload 开启时，PTX `ack_ok` 应持续增长；`ack_empty` 若持续增长，说明 PRX 没有及时预装 ACK 或 ACK FIFO/时序异常。
 - ACK payload 关闭时，PTX `tx_ok` 应持续增长，`ack_ok`、`ack_empty` 和 PRX `ack_load` 维持 0 是正常的。
 - PRX `lost/dup` 应为 0 或极低；PTX 重新烧录/复位会计入 `ptx_reset`，不再混入 `lost`；`bad_width` 必须为 0。
+- `matrix_fast` 每个阶段看对应的 `MATRIX_STAGE_END`：ACK payload 阶段要求 `ack_ok` 接近 `tx_ok`、`ack_empty=0` 或极低；no-ACK 阶段要求 `tx_ok` 持续增长且 `ack_ok=0`；PRX 侧要求 `lost=0`、`dup=0`、`bad_width=0`。
 
 FAIL 方向：
 
@@ -213,6 +226,7 @@ FAIL 方向：
 - `NRF24_PAIR_SEND_PERIOD_MS`
 - `NRF24_PAIR_SUMMARY_INTERVAL`
 - `NRF24_PAIR_LOG_EACH_PACKET`
+- `NRF24_PAIR_MATRIX_DIAG`: 设为 1 时启用自动矩阵快测；配套环境为 `ptx_matrix_fast` / `prx_matrix_fast`。
 
 `nrf24_uart_diag` 使用同名风格的 `NRF24_UART_DIAG_*` 宏，适合先做单模块寄存器验证。
 
