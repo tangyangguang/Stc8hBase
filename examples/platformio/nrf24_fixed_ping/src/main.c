@@ -3,24 +3,27 @@
 #include "stc8h_uart.h"
 
 #define NRF24_PING_PACKET_SIZE 32u
+#define NRF24_TX_WAIT_LIMIT 30000u
 
 static const stc8h_u8 address[5] = {'S', 'T', 'C', '0', '1'};
 static stc8h_u8 payload[NRF24_PING_PACKET_SIZE];
 
-static void print_status(stc8h_u8 status)
+static void print_result(drv_nrf24l01_tx_result_t result)
 {
-    if ((status & DRV_NRF24L01_STATUS_TX_DONE) != 0u) {
+    if (result == DRV_NRF24L01_TX_DONE) {
         stc8h_uart_write_code(STC8H_UART1, "nrf24 tx ok\r\n");
-    } else if ((status & DRV_NRF24L01_STATUS_MAX_RETRY) != 0u) {
+    } else if (result == DRV_NRF24L01_TX_MAX_RT) {
         stc8h_uart_write_code(STC8H_UART1, "nrf24 max retry\r\n");
     } else {
-        stc8h_uart_write_code(STC8H_UART1, "nrf24 tx pending\r\n");
+        stc8h_uart_write_code(STC8H_UART1, "nrf24 tx error\r\n");
     }
 }
 
 void main(void)
 {
     stc8h_u8 status;
+    stc8h_u16 wait;
+    drv_nrf24l01_tx_result_t result;
 
     (void)stc8h_uart_init(STC8H_UART1);
     drv_nrf24l01_init_pins();
@@ -45,13 +48,25 @@ void main(void)
     drv_nrf24l01_enter_tx();
 
     while (1) {
+        drv_nrf24l01_flush_tx();
+        drv_nrf24l01_clear_irq(DRV_NRF24L01_IRQ_MASK);
         (void)drv_nrf24l01_write_payload(payload, NRF24_PING_PACKET_SIZE);
         drv_nrf24l01_pulse_ce();
-        status = drv_nrf24l01_read_status();
-        drv_nrf24l01_clear_irq(status);
-        if ((status & DRV_NRF24L01_STATUS_MAX_RETRY) != 0u) {
-            drv_nrf24l01_flush_tx();
+
+        status = 0u;
+        for (wait = 0u; wait < NRF24_TX_WAIT_LIMIT; ++wait) {
+            status = drv_nrf24l01_read_status();
+            if ((status & (DRV_NRF24L01_STATUS_TX_DONE | DRV_NRF24L01_STATUS_MAX_RETRY)) != 0u) {
+                break;
+            }
         }
-        print_status(status);
+
+        if (wait >= NRF24_TX_WAIT_LIMIT) {
+            drv_nrf24l01_recover(DRV_NRF24L01_RECOVER_PTX);
+            stc8h_uart_write_code(STC8H_UART1, "nrf24 tx timeout\r\n");
+        } else {
+            result = drv_nrf24l01_complete_tx(status, 0, 0, 0u);
+            print_result(result);
+        }
     }
 }

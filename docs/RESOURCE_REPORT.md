@@ -18,6 +18,8 @@ tools/check_examples.sh
 2026-05-16：`proto_rf_link` 增加 SDCC/8051 功能裁剪宏，避免 PlatformIO wrapper 拉入未使用公共 API 时占用 DSEG/OSEG。新增 `rf_link_nrf24_small` 示例验证 STC8H1K08 上 `drv_nrf24l01 + stc8h_spi + proto_rf_link` 裁剪接入，flash 占用 2294 bytes。
 
 2026-05-20：新增 `nrf24_uart_diag` 单模块串口诊断示例，并为所有 nRF24 PlatformIO 示例增加 CE/CSN 早期初始化代码生成检查。专项检查通过；`nrf24_uart_diag` flash 占用 2945 bytes。
+
+2026-05-21：nRF24 驱动修复 presence check 地址恢复和 PRX RX FIFO fallback 后，`nrf24_uart_diag` flash 占用 4117 bytes；`nrf24_fixed_ping` / `nrf24_ack_payload` 改为 wait + `complete_tx()` 流程后分别为 2564 / 2577 bytes；`ptx_matrix_fast` / `prx_matrix_fast` 关闭逐阶段 presence check 并加入 ROM guard 后分别为 7671 / 7351 bytes。
 ```
 
 2026-05-12 小容量应用裁剪验证：

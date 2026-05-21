@@ -341,6 +341,7 @@ static stc8h_status_t print_config_fail(const STC8H_CODE char *step)
     return STC8H_ERROR;
 }
 
+#if !NRF24_PAIR_MATRIX_DIAG
 static stc8h_status_t configure_radio_common(void)
 {
     drv_nrf24l01_power_down();
@@ -408,6 +409,7 @@ static stc8h_status_t configure_radio_common(void)
     uart_crlf();
     return STC8H_OK;
 }
+#endif
 
 static void init_platform(void)
 {
@@ -494,6 +496,7 @@ static stc8h_status_t matrix_configure_radio(stc8h_u8 stage_index,
     drv_nrf24l01_flush_rx();
     drv_nrf24l01_clear_irq(DRV_NRF24L01_IRQ_MASK);
 
+#if DRV_NRF24L01_ENABLE_CHECK_PRESENT
     if (drv_nrf24l01_check_present() != STC8H_OK) {
         stc8h_uart_write_code(STC8H_UART1, "MATRIX_CHECK_FAIL");
         print_u16_field("stage", (stc8h_u16)(stage_index + 1u));
@@ -501,6 +504,7 @@ static stc8h_status_t matrix_configure_radio(stc8h_u8 stage_index,
         uart_crlf();
         return STC8H_ERROR;
     }
+#endif
 
     if (drv_nrf24l01_set_channel(NRF24_PAIR_CHANNEL) != STC8H_OK) {
         return print_config_fail("RF_CH");

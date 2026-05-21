@@ -58,6 +58,8 @@ STC8H 等上电默认高阻的芯片应在该 hook 中配置 CE/CSN 端口模式
 
 `drv_nrf24l01_set_rx_pipes()` 只写 `EN_RXADDR`；`drv_nrf24l01_set_auto_ack()` 只写 `EN_AA`。这两个寄存器不能再绑在一个 API 里，否则无法诊断“PRX 仍接收，但只关闭 ACK payload 或 auto-ack”的配置。
 
+`drv_nrf24l01_check_present()` 会用 `RX_ADDR_P0` 做 5 字节写读探测，并在返回前恢复原 pipe0 地址。matrix 快速诊断为了 STC8H1K08 的 8KB ROM 余量关闭了每 stage 重复探测；单模块 diag 和普通 pair diag 仍执行该检查。
+
 发送完成后应用可直接读取 `STATUS` 自行处理，也可调用 `drv_nrf24l01_complete_tx()`。该 helper 会把结果分类为：
 
 - `DRV_NRF24L01_TX_DONE`：发送完成，不读取 ACK payload。
@@ -68,7 +70,7 @@ STC8H 等上电默认高阻的芯片应在该 hook 中配置 CE/CSN 端口模式
 
 ACK payload 预期路径下，`drv_nrf24l01_complete_tx()` 不只依赖调用方传入的 `STATUS.RX_DR`。如果 `STATUS` 只有 `TX_DS`，但 `FIFO_STATUS.RX_EMPTY=0`，helper 仍会读取 RX FIFO 中的 ACK payload。实测 250kbps + 32-byte ACK payload 曾出现 `STATUS=0x20` 但 `FIFO_STATUS=0x10`，只看旧 `STATUS` 会误计为 `ACK_EMPTY`。
 
-`drv_nrf24l01_read_rx_packet()` 只用于 dynamic payload 模式。它先用 `R_RX_PL_WID` 读取宽度，宽度为 0、超过 32 或超过调用方缓冲区时按 Nordic 要求 flush RX。
+`drv_nrf24l01_read_rx_packet()` 只用于 dynamic payload 模式。它优先看 `STATUS.RX_DR`，若 `RX_DR` 未置位但 `FIFO_STATUS.RX_EMPTY=0`，仍按 RX FIFO 非空读取，避免日志或主循环延迟后漏读已排队 payload。随后用 `R_RX_PL_WID` 读取宽度，宽度为 0、超过 32 或超过调用方缓冲区时按 Nordic 要求 flush RX。
 
 `drv_nrf24l01_preload_ack_payload(pipe, data, len, replace_pending)` 用于 PRX。正常收包后推荐 `replace_pending=0` 追加下一份 ACK payload，TX FIFO 满时返回 `STC8H_BUSY`；启动、链路恢复或确认无 ACK 正在发送时才用 `replace_pending=1` 清掉旧的三层 ACK FIFO。不要在每次 `RX_DR` 后立刻 `FLUSH_TX` 再写 ACK payload，250kbps 大 ACK payload 下这会撞上当前 ACK 发送窗口，造成 PTX 看到空 ACK。
 
@@ -169,7 +171,7 @@ pio device monitor -p /dev/cu.usbserial-120 -b 115200
 pio device monitor -p /dev/cu.usbserial-110 -b 115200
 ```
 
-`matrix_fast` 默认每 5ms 发一包、每 1000 包汇总一次，阶段为：1Mbps+15-byte ACK、1Mbps+no ACK、250kbps+15-byte ACK、250kbps+32-byte ACK/1500us、250kbps+32-byte ACK/2000us、250kbps+32-byte ACK/2500us、2Mbps+no ACK。普通阶段 2000 包，250kbps 32-byte 的 2000us/2500us margin 阶段各 5000 包。每个阶段正式计数前会先发送 16 个 `tx_count=0` 预热包；PRX 不把这些包计入 `rx_count/lost/dup`，用于避开阶段切换后首包同步瞬态。ACK payload 阶段的 `ack_load` 会包含预热包触发的 ACK 预装次数，因此可能比 `rx_count+1` 多 16 左右。
+`matrix_fast` 默认每 5ms 发一包、每 1000 包汇总一次，阶段为：1Mbps+15-byte ACK、1Mbps+no ACK、250kbps+15-byte ACK、250kbps+32-byte ACK/1500us、250kbps+32-byte ACK/2000us、250kbps+32-byte ACK/2500us、2Mbps+no ACK。普通阶段 2000 包，250kbps 32-byte 的 2000us/2500us margin 阶段各 5000 包。每个阶段正式计数前会先发送 16 个 `tx_count=0` 预热包；PRX 不把这些包计入 `rx_count/lost/dup`，用于避开阶段切换后首包同步瞬态。ACK payload 阶段的 `ack_load` 会包含预热包触发的 ACK 预装次数，因此可能比 `rx_count+1` 多 16 左右。为给 STC8H1K08 8KB flash 留出余量，matrix 环境关闭逐阶段 write/read presence check；单板 `nrf24_uart_diag` 和普通 `ptx`/`prx` 环境仍执行 presence check。
 
 每个环境烧录时先烧 PRX，再烧 PTX。上传命令在环境名后加 `-t upload`。
 

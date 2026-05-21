@@ -184,15 +184,12 @@ DRV_NRF24L01_RAW_SCOPE stc8h_u8 drv_nrf24l01_write_buf(stc8h_u8 cmd, const stc8h
 stc8h_status_t drv_nrf24l01_check_present(void)
 {
     static STC8H_CODE stc8h_u8 pattern[5] = { 0x11u, 0x22u, 0x33u, 0x44u, 0x55u };
+    stc8h_u8 original[5];
     stc8h_u8 i;
     stc8h_u8 ok;
 
-    DRV_NRF24L01_CSN_LOW();
-    (void)stc8h_spi_transfer((stc8h_u8)(NRF24_CMD_W_REGISTER | NRF24_REG_RX_ADDR_P0));
-    for (i = 0u; i < 5u; ++i) {
-        (void)stc8h_spi_transfer(pattern[i]);
-    }
-    DRV_NRF24L01_CSN_HIGH();
+    (void)drv_nrf24l01_read_buf((stc8h_u8)(NRF24_CMD_R_REGISTER | NRF24_REG_RX_ADDR_P0), original, 5u);
+    (void)drv_nrf24l01_write_buf((stc8h_u8)(NRF24_CMD_W_REGISTER | NRF24_REG_RX_ADDR_P0), pattern, 5u);
 
     ok = 1u;
     DRV_NRF24L01_CSN_LOW();
@@ -203,6 +200,7 @@ stc8h_status_t drv_nrf24l01_check_present(void)
         }
     }
     DRV_NRF24L01_CSN_HIGH();
+    (void)drv_nrf24l01_write_buf((stc8h_u8)(NRF24_CMD_W_REGISTER | NRF24_REG_RX_ADDR_P0), original, 5u);
 
     return (ok != 0u) ? STC8H_OK : STC8H_ERROR;
 }
@@ -485,7 +483,7 @@ void drv_nrf24l01_disable_dynamic_payload(void)
 
     (void)drv_nrf24l01_write_reg(NRF24_REG_DYNPD, 0u);
     feature = drv_nrf24l01_read_reg(NRF24_REG_FEATURE);
-    feature &= (stc8h_u8)~NRF24_FEATURE_EN_DPL;
+    feature &= (stc8h_u8)~(NRF24_FEATURE_EN_DPL | NRF24_FEATURE_EN_ACK_PAY);
     (void)drv_nrf24l01_write_reg(NRF24_REG_FEATURE, feature);
 }
 #endif
@@ -608,7 +606,10 @@ stc8h_status_t drv_nrf24l01_read_rx_packet(stc8h_u8 *data, stc8h_u8 *len, stc8h_
     *len = 0u;
     status = drv_nrf24l01_read_status();
     if ((status & DRV_NRF24L01_STATUS_RX_READY) == 0u) {
-        return STC8H_BUSY;
+        if ((drv_nrf24l01_read_fifo_status() & DRV_NRF24L01_FIFO_RX_EMPTY) != 0u) {
+            return STC8H_BUSY;
+        }
+        status |= DRV_NRF24L01_STATUS_RX_READY;
     }
 
     width = drv_nrf24l01_read_dynamic_payload_size();

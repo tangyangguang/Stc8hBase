@@ -173,15 +173,15 @@ docs/RESOURCE_REPORT.md
 - `spi_loopback` 示例使用硬件 SPI 主机轮询模式。
 - 默认短接 P1.3/MOSI 和 P1.4/MISO 后，串口应输出 `spi loopback ok`。
 - 不短接或接线错误时，应输出 `spi loopback error`。
-- SPI 默认使用 P1.3/P1.4/P1.5，硬件 SS 被忽略，不占用 P1.2 LED。
+- SPI 默认使用 P1.3/P1.4/P1.5，硬件 SS 被 `SSIG=1` 忽略；ToyRemote/nRF24 PCB 同时把 P1.2 用作 nRF CSN，因此 P1.2 LED/PWM 示例与 nRF24 示例互斥。
 - 示例不启用 SPI 中断，不使用 DMA，不保存 RX 缓冲。
 - 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、EEPROM、IR、utils 等未使用模块符号。
 
 ### 6.4.2 nRF24L01 验收
 
 - `nrf24_uart_diag` 示例使用 ToyRemote PCB 引脚，且只依赖 UART1 输出，先验证单个 nRF24 模块的 SPI、寄存器读写和 FEATURE/DYNPD。
-- `nrf24_fixed_ping` 示例使用硬件 SPI、板级 CE/CSN 宏和固定 32 字节 payload。
-- `nrf24_ack_payload` 示例启用 nRF24L01+ dynamic payload 和 ACK payload。
+- `nrf24_fixed_ping` 示例使用硬件 SPI、板级 CE/CSN 宏、固定 32 字节 payload，并等待 `TX_DONE/MAX_RT` 后调用 `drv_nrf24l01_complete_tx()`。
+- `nrf24_ack_payload` 示例启用 nRF24L01+ dynamic payload 和 ACK payload，并通过 `drv_nrf24l01_complete_tx()` 读取 ACK payload。
 - 所有 nRF24 PlatformIO 示例必须在启用 SPI 前调用 `drv_nrf24l01_init_pins()`，防止 CE/CSN 在 STC8H 上电高阻阶段漂浮。
 - TX 端发送后应正确处理 `TX_DONE`、`MAX_RETRY` 和可能同时出现的 `RX_READY`。
 - `MAX_RETRY` 后必须清 IRQ，并 flush TX。
@@ -193,7 +193,7 @@ docs/RESOURCE_REPORT.md
 ### 6.4.3 RF Link 协议验收
 
 - `rf_link_status_demo` 示例能编译通过。
-- `rf_link_nrf24_small` 示例能编译通过，并用于防止 `proto_rf_link` 未使用 API 重新占满 DSEG/OSEG。
+- `rf_link_nrf24_small` 是 STC8H1K08 裁剪/尺寸示例，刻意关闭 nRF24 status/RX 相关 API；不要把它作为运行期 TX 完成流程参考。
 - `proto_rf_link` 固定生成 32 字节包，payload 最大 23 字节。
 - `magic`、`version`、`src_id`、`dst_id` 不匹配时必须丢包。
 - 收到 `HELLO` 或 `HELLO_ACK` 后进入 `CONNECTED`。

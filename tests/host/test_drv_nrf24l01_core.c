@@ -33,9 +33,15 @@ static void test_ce_pulse_delay(void);
 #define TEST_REG_EN_AA 0x01u
 #define TEST_REG_EN_RXADDR 0x02u
 #define TEST_REG_STATUS 0x07u
+#define TEST_REG_RX_ADDR_P0 0x0Au
 #define TEST_REG_FIFO_STATUS 0x17u
+#define TEST_REG_DYNPD 0x1Cu
+#define TEST_REG_FEATURE 0x1Du
+#define TEST_FEATURE_EN_ACK_PAY 0x02u
+#define TEST_FEATURE_EN_DPL 0x04u
 
 static stc8h_u8 regs[0x20];
+static stc8h_u8 rx_addr_p0[5];
 static stc8h_u8 rx_payload[32];
 static stc8h_u8 ack_payload_written[32];
 static stc8h_u8 ack_payload_len;
@@ -53,6 +59,7 @@ static unsigned int csn_high_count;
 static void fake_reset(void)
 {
     memset(regs, 0, sizeof(regs));
+    memset(rx_addr_p0, 0, sizeof(rx_addr_p0));
     memset(rx_payload, 0, sizeof(rx_payload));
     memset(ack_payload_written, 0, sizeof(ack_payload_written));
     regs[TEST_REG_STATUS] = 0x0Eu;
@@ -128,6 +135,8 @@ stc8h_u8 stc8h_spi_transfer(stc8h_u8 value)
         reg = (stc8h_u8)(spi_cmd & 0x1Fu);
         if (reg == TEST_REG_STATUS) {
             regs[TEST_REG_STATUS] &= (stc8h_u8)~(value & 0x70u);
+        } else if ((reg == TEST_REG_RX_ADDR_P0) && (data_index < sizeof(rx_addr_p0))) {
+            rx_addr_p0[data_index] = value;
         } else {
             regs[reg] = value;
         }
@@ -135,6 +144,9 @@ stc8h_u8 stc8h_spi_transfer(stc8h_u8 value)
     }
 
     if ((spi_cmd & 0xE0u) == TEST_CMD_R_REGISTER) {
+        if (((spi_cmd & 0x1Fu) == TEST_REG_RX_ADDR_P0) && (data_index < sizeof(rx_addr_p0))) {
+            return rx_addr_p0[data_index];
+        }
         return regs[spi_cmd & 0x1Fu];
     }
 
@@ -169,6 +181,24 @@ static int require(int condition, const char *message)
         return 1;
     }
     return 0;
+}
+
+static int test_check_present_preserves_rx_addr_p0(void)
+{
+    int failures;
+    static const stc8h_u8 original[5] = { 'T', 'O', 'Y', 'R', '1' };
+    stc8h_status_t status;
+
+    failures = 0;
+    fake_reset();
+    memcpy(rx_addr_p0, original, sizeof(original));
+
+    status = drv_nrf24l01_check_present();
+
+    failures += require(status == STC8H_OK, "check_present must still report a writable/readable RX_ADDR_P0");
+    failures += require(memcmp(rx_addr_p0, original, sizeof(original)) == 0,
+                        "check_present must restore RX_ADDR_P0 after the write/read probe");
+    return failures;
 }
 
 static int test_auto_ack_does_not_disable_rx_pipe(void)
@@ -325,17 +355,65 @@ static int test_preload_ack_payload_replace_policy(void)
     return failures;
 }
 
+static int test_read_rx_packet_reads_when_status_rx_ready_lags_fifo(void)
+{
+    int failures;
+    stc8h_u8 data[4];
+    stc8h_u8 len;
+    stc8h_status_t status;
+
+    failures = 0;
+    fake_reset();
+    regs[TEST_REG_STATUS] = 0u;
+    regs[TEST_REG_FIFO_STATUS] = DRV_NRF24L01_FIFO_TX_EMPTY;
+    rx_payload_width = 3u;
+    rx_payload[0] = 'R';
+    rx_payload[1] = 'X';
+    rx_payload[2] = '!';
+    len = 0u;
+
+    status = drv_nrf24l01_read_rx_packet(data, &len, sizeof(data));
+
+    failures += require(status == STC8H_OK,
+                        "read_rx_packet must read when RX FIFO is non-empty even if RX_DR is absent");
+    failures += require(len == 3u, "read_rx_packet FIFO fallback must report dynamic width");
+    failures += require((data[0] == 'R') && (data[1] == 'X') && (data[2] == '!'),
+                        "read_rx_packet FIFO fallback must read payload bytes");
+    return failures;
+}
+
+static int test_disable_dynamic_payload_clears_ack_payload_feature(void)
+{
+    int failures;
+
+    failures = 0;
+    fake_reset();
+    regs[TEST_REG_DYNPD] = DRV_NRF24L01_PIPE0;
+    regs[TEST_REG_FEATURE] = TEST_FEATURE_EN_DPL | TEST_FEATURE_EN_ACK_PAY;
+
+    drv_nrf24l01_disable_dynamic_payload();
+
+    failures += require(regs[TEST_REG_DYNPD] == 0u,
+                        "disable_dynamic_payload must clear DYNPD");
+    failures += require((regs[TEST_REG_FEATURE] & (TEST_FEATURE_EN_DPL | TEST_FEATURE_EN_ACK_PAY)) == 0u,
+                        "disable_dynamic_payload must clear both EN_DPL and dependent EN_ACK_PAY");
+    return failures;
+}
+
 int main(void)
 {
     int failures;
 
     failures = 0;
+    failures += test_check_present_preserves_rx_addr_p0();
     failures += test_auto_ack_does_not_disable_rx_pipe();
     failures += test_complete_tx_reads_ack_payload_and_clears_irq();
     failures += test_complete_tx_reads_ack_payload_when_status_rx_ready_lags_fifo();
     failures += test_complete_tx_max_rt_flushes_tx_and_clears_irq();
     failures += test_read_rx_packet_flushes_invalid_dynamic_width();
+    failures += test_read_rx_packet_reads_when_status_rx_ready_lags_fifo();
     failures += test_preload_ack_payload_replace_policy();
+    failures += test_disable_dynamic_payload_clears_ack_payload_feature();
 
     return failures == 0 ? 0 : 1;
 }

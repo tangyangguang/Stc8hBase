@@ -63,7 +63,7 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | nRF24L01 | `DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE` | `Dynamic/ACK payload` | 是否编译读取动态 payload 长度 API |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_RX_PIPE_API` | `1` | 是否编译独立 `EN_RXADDR` pipe 使能 API；需要把接收 pipe 与 auto-ack 解耦时保持开启 |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_TX_RESULT_API` | `READ_PAYLOAD && READ_DYNAMIC_PAYLOAD_SIZE && READ_FIFO_STATUS` | 是否编译 PTX 完成分类 helper，会处理 ACK payload、MAX_RT flush、RX FIFO fallback 和 IRQ 清除 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_RX_PACKET_API` | `READ_STATUS && READ_PAYLOAD && READ_DYNAMIC_PAYLOAD_SIZE` | 是否编译 dynamic RX payload 宽度校验读取 helper |
+| nRF24L01 | `DRV_NRF24L01_ENABLE_RX_PACKET_API` | `READ_STATUS && READ_PAYLOAD && READ_DYNAMIC_PAYLOAD_SIZE && READ_FIFO_STATUS` | 是否编译 dynamic RX payload 宽度校验读取 helper；依赖 FIFO status 以处理 `RX_DR` 落后但 RX FIFO 非空的边界 |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_ACK_PRELOAD_API` | `WRITE_ACK_PAYLOAD && READ_FIFO_STATUS` | 是否编译 PRX ACK payload 预装 helper |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_RECOVER` | `ENTER_STANDBY && ENTER_RX` | 是否编译统一 CE/FIFO/IRQ 恢复 helper |
 | nRF24L01 | `DRV_NRF24L01_REQUIRES_ACTIVATE` | `1` | 老 nRF24L01（非 +）才需要 `0x50 0x73 ACTIVATE` 后才能写 FEATURE；硬件确认是 nRF24L01+ 后可关 |
@@ -231,7 +231,7 @@ SPI 第一版提供基础能力。
 
 SPI 第一版已冻结为硬件 SPI 主机轮询实现。
 
-默认使用 P1.3/P1.4/P1.5 引脚组，硬件 SS 使用 `SSIG=1` 忽略，不占用当前 P1.2 LED。
+默认使用 P1.3/P1.4/P1.5 引脚组，硬件 SS 使用 `SSIG=1` 忽略；如果板级代码把 P1.2 作为外部片选，例如 ToyRemote/nRF24 的 CSN，则该引脚与 P1.2 LED/PWM 示例互斥。
 
 片选由板级或应用代码自行控制，HAL 不保存 CS 引脚，不做运行期引脚分派。
 
