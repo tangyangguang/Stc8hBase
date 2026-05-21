@@ -188,8 +188,12 @@ FAIL 方向：
 | 1Mbps + 15-byte ACK payload | `ptx` / `prx` | 500us / 15 | 默认推荐配置。Nordic 说明 1Mbps 下 ACK payload 超过 5 字节时 ARD 至少 500us。 |
 | 1Mbps + no ACK payload | `ptx_1m_no_ack` / `prx_1m_no_ack` | 500us / 15 | 隔离 ACK payload FIFO，只验证普通 auto-ack。 |
 | 250kbps + 15-byte ACK payload | `ptx_250k_15ack` / `prx_250k_15ack` | 1000us / 15 | Nordic 表格要求 250kbps、5-byte 地址、ACK payload 小于 16 字节时 ARD 至少 1000us。 |
-| 250kbps + 32-byte ACK payload | `ptx_250k_32ack` / `prx_250k_32ack` | 1500us / 15 | 最容易暴露供电/RF/时序问题；250kbps 空中时间最长，Nordic 表格要求全 ACK payload 长度用 1500us。 |
+| 250kbps + 32-byte ACK payload | `ptx_250k_32ack` / `prx_250k_32ack` | 1500us / 15 | 规范基线；Nordic 表格要求全 ACK payload 长度用 1500us，RF24/CircuitPython 也把 1500us 作为可靠性默认。 |
+| 250kbps + 32-byte ACK payload, margin | `ptx_250k_32ack_2ms` / `prx_250k_32ack_2ms` | 2000us / 15 | 硬件余量测试；如果 1500us 少量 `MAX_RT` 而 2000us 清零，可作为当前 PCB/供电/RF 环境的长期应用值。 |
+| 250kbps + 32-byte ACK payload, margin | `ptx_250k_32ack_2500us` / `prx_250k_32ack_2500us` | 2500us / 15 | 更保守余量测试；用于确认 2000us 是否已经足够，不作为通用默认。 |
 | 2Mbps + no ACK payload | `ptx_2m_no_ack` / `prx_2m_no_ack` | 500us / 15 | 验证高数据率下普通 auto-ack；2Mbps 链路预算低于 1Mbps/250kbps。 |
+
+`nrf24_pair_diag` 会在编译期检查 Nordic ARD 下限，避免组合出数据手册不允许的 ACK payload/速率/ARD 配置。基础驱动 `drv_nrf24l01_set_auto_retransmit()` 仍保持寄存器级 API，不根据速率或 payload 长度猜默认值。
 
 如果默认配置稳定而 ToyRemote 仍不稳定，再回到应用项目接入；如果默认配置也不稳定，先不要改应用代码，按 UART 日志定位到 SPI、RF、供电或 ACK payload 方向。
 

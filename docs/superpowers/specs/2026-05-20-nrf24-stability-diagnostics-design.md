@@ -40,9 +40,11 @@ Recommended starting points:
 | B | 1Mbps | 15 | off | off | 500us / 15 |
 | C | 250kbps | 15 | on | on | 1000us / 15 |
 | D | 250kbps | 32 | on | on | 1500us / 15 |
+| D2 | 250kbps | 32 | on | on | 2000us / 15 |
+| D3 | 250kbps | 32 | on | on | 2500us / 15 |
 | E | 2Mbps | 15 | off | off | 500us / 15 |
 
-Case D is expected to be the most sensitive to power and RF margin because 250kbps keeps the ACK packet on air much longer; the Nordic table requires 1500us ARD for all ACK payload sizes at 250kbps with 5-byte addresses. Cases with ACK payload off still use auto-ack unless explicitly disabled, so they isolate ACK-payload FIFO/timing problems from basic auto-ack link quality.
+Case D is expected to be the most sensitive to power and RF margin because 250kbps keeps the ACK packet on air much longer; the Nordic table requires 1500us ARD for all ACK payload sizes at 250kbps with 5-byte addresses. RF24 and CircuitPython nRF24L01 also use 1500us as a reliability-oriented default, so 1500us stays the normative baseline. D2/D3 are margin tests for a specific PCB, power supply, and RF environment; they are not driver defaults. Cases with ACK payload off still use auto-ack unless explicitly disabled, so they isolate ACK-payload FIFO/timing problems from basic auto-ack link quality.
 
 ## PASS/FAIL Rules
 

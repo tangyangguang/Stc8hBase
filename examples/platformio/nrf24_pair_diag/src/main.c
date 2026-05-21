@@ -134,6 +134,30 @@
 #error "NRF24_PAIR_RETRANSMIT_DELAY_CODE and NRF24_PAIR_RETRANSMIT_COUNT_CODE must be 0..15."
 #endif
 
+#if (NRF24_PAIR_DATA_RATE == NRF24_PAIR_RATE_250KBPS) && (NRF24_PAIR_RETRANSMIT_DELAY_CODE < 1u)
+#error "Nordic nRF24L01+ requires ARD >= 500us in 250kbps mode."
+#endif
+
+#if NRF24_PAIR_ACK_PAYLOAD && (NRF24_PAIR_DATA_RATE == NRF24_PAIR_RATE_250KBPS) && (NRF24_PAIR_PAYLOAD_SIZE >= 24u) && (NRF24_PAIR_RETRANSMIT_DELAY_CODE < 5u)
+#error "Nordic nRF24L01+ requires ARD >= 1500us for 250kbps ACK payloads up to 32 bytes."
+#endif
+
+#if NRF24_PAIR_ACK_PAYLOAD && (NRF24_PAIR_DATA_RATE == NRF24_PAIR_RATE_250KBPS) && (NRF24_PAIR_PAYLOAD_SIZE >= 16u) && (NRF24_PAIR_PAYLOAD_SIZE < 24u) && (NRF24_PAIR_RETRANSMIT_DELAY_CODE < 4u)
+#error "Nordic nRF24L01+ requires ARD >= 1250us for 250kbps ACK payloads below 24 bytes."
+#endif
+
+#if NRF24_PAIR_ACK_PAYLOAD && (NRF24_PAIR_DATA_RATE == NRF24_PAIR_RATE_250KBPS) && (NRF24_PAIR_PAYLOAD_SIZE < 16u) && (NRF24_PAIR_RETRANSMIT_DELAY_CODE < 3u)
+#error "Nordic nRF24L01+ requires ARD >= 1000us for 250kbps ACK payloads below 16 bytes."
+#endif
+
+#if NRF24_PAIR_ACK_PAYLOAD && (NRF24_PAIR_DATA_RATE == NRF24_PAIR_RATE_1MBPS) && (NRF24_PAIR_PAYLOAD_SIZE > 5u) && (NRF24_PAIR_RETRANSMIT_DELAY_CODE < 1u)
+#error "Nordic nRF24L01+ requires ARD >= 500us for 1Mbps ACK payloads above 5 bytes."
+#endif
+
+#if NRF24_PAIR_ACK_PAYLOAD && (NRF24_PAIR_DATA_RATE == NRF24_PAIR_RATE_2MBPS) && (NRF24_PAIR_PAYLOAD_SIZE > 15u) && (NRF24_PAIR_RETRANSMIT_DELAY_CODE < 1u)
+#error "Nordic nRF24L01+ requires ARD >= 500us for 2Mbps ACK payloads above 15 bytes."
+#endif
+
 static const STC8H_CODE char hex_chars[] = "0123456789ABCDEF";
 static STC8H_CODE stc8h_u8 pair_address[5] = {'T', 'O', 'Y', 'R', '1'};
 

@@ -140,6 +140,8 @@ https://docs.nordicsemi.com/bundle/nRF24L01P_PS_v1.0/resource/nRF24L01P_PS_v1.0.
 - `MAX_RT` 后 PTX payload 不会自动从 TX FIFO 移除；必须清 `MAX_RT`，必要时 `FLUSH_TX` 后才能恢复后续通信。
 - `OBSERVE_TX.ARC_CNT` 统计当前包重发次数，`PLOS_CNT` 统计写 `RF_CH` 后累计丢包，可用于比较频道/速率/供电/RF 环境。
 - Nordic ARD 约束：2Mbps + 5-byte 地址时 250us 只覆盖最多 15-byte ACK payload；1Mbps 时 250us 只覆盖最多 5-byte ACK payload；1Mbps/2Mbps 任意 ACK payload 长度用 500us 足够；250kbps 下 empty ACK 用 500us、<8 用 750us、<16 用 1000us、<24 用 1250us、全部 ACK payload 长度用 1500us。
+- RF24 C++ 库 `setRetries(delay, count)` 直接写 `SETUP_RETR=(min(delay,15)<<ARD)|min(count,15)`；其文档把 delay code 5 解释为 1500us 默认值。
+- CircuitPython nRF24L01 文档把 `ard` 默认设为 1500us for reliability，合法范围 250..4000us；这支持把 1500us 作为规范基线，但不支持把 2000us/2500us 当成通用默认。
 
 ### 3.5 按键和 EC11 行为参考
 

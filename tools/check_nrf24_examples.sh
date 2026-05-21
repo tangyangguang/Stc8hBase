@@ -92,5 +92,14 @@ check_example nrf24_fixed_ping
 check_example nrf24_ack_payload
 check_example rf_link_nrf24_small
 check_example nrf24_uart_diag
-check_example_env nrf24_pair_diag ptx
-check_example_env nrf24_pair_diag prx
+for env_name in \
+    ptx prx \
+    ptx_1m_no_ack prx_1m_no_ack \
+    ptx_250k_15ack prx_250k_15ack \
+    ptx_250k_32ack prx_250k_32ack \
+    ptx_250k_32ack_2ms prx_250k_32ack_2ms \
+    ptx_250k_32ack_2500us prx_250k_32ack_2500us \
+    ptx_2m_no_ack prx_2m_no_ack
+do
+    check_example_env nrf24_pair_diag "$env_name"
+done
