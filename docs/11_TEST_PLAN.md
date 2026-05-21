@@ -182,9 +182,11 @@ docs/RESOURCE_REPORT.md
 - `nrf24_uart_diag` 示例使用 ToyRemote PCB 引脚，且只依赖 UART1 输出，先验证单个 nRF24 模块的 SPI、寄存器读写和 FEATURE/DYNPD。
 - `nrf24_fixed_ping` 示例使用硬件 SPI、板级 CE/CSN 宏、固定 32 字节 payload，并等待 `TX_DONE/MAX_RT` 后调用 `drv_nrf24l01_complete_tx()`。
 - `nrf24_ack_payload` 示例启用 nRF24L01+ dynamic payload 和 ACK payload，并通过 `drv_nrf24l01_complete_tx()` 读取 ACK payload。
-- 所有 nRF24 PlatformIO 示例必须在启用 SPI 前调用 `drv_nrf24l01_init_pins()`，防止 CE/CSN 在 STC8H 上电高阻阶段漂浮。
+- 所有 nRF24 PlatformIO 示例必须把 `drv_nrf24l01_init_pins()` 作为第一项硬件动作，并且必须早于 UART/SPI 初始化，防止 CE/CSN 在 STC8H 上电高阻阶段漂浮。
 - TX 端发送后应正确处理 `TX_DONE`、`MAX_RETRY` 和可能同时出现的 `RX_READY`。
 - `MAX_RETRY` 后必须清 IRQ，并 flush TX。
+- matrix 诊断中 ACK payload 阶段必须校验 ACK 长度、`ACK` header 和正式计数包的上一包 seq；错误 ACK 必须计入 `ack_bad`。
+- matrix 诊断必须输出 `MATRIX_WARMUP`，暴露正式计数前的 PTX `max_rt/ack_empty/ack_bad` 和 PRX `warmup_rx/ack_busy/ack_fail`。
 - RX 端 ACK payload 会占用 TX FIFO，实测时需要验证堵塞后 flush TX 可恢复。
 - IRQ ISR 只允许置位，SPI 收发必须放到主循环。
 - 模块旁边建议 10uF 或更大电容并联 100nF；异常时优先检查供电、线长和 SPI 速度。

@@ -25,8 +25,8 @@ void main(void)
     stc8h_u16 wait;
     drv_nrf24l01_tx_result_t result;
 
-    (void)stc8h_uart_init(STC8H_UART1);
     drv_nrf24l01_init_pins();
+    (void)stc8h_uart_init(STC8H_UART1);
     stc8h_spi_init();
 
     payload[0] = 0xA5u;

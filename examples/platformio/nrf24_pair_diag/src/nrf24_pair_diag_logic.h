@@ -16,6 +16,11 @@
 #endif
 #define nrf24_pair_diag_matrix_warmup_packets() ((stc8h_u8)NRF24_PAIR_MATRIX_WARMUP_PACKETS)
 
+static stc8h_u8 nrf24_pair_diag_matrix_is_warmup_tx_count(stc8h_u16 tx_count)
+{
+    return (tx_count == 0u) ? 1u : 0u;
+}
+
 #define NRF24_PAIR_DIAG_RATE_250KBPS 0u
 #define NRF24_PAIR_DIAG_RATE_1MBPS 1u
 #define NRF24_PAIR_DIAG_RATE_2MBPS 2u
@@ -167,6 +172,33 @@ static stc8h_u8 nrf24_pair_diag_ack_replace_after_rx(void)
 static stc8h_u8 nrf24_pair_diag_ack_replace_on_recover(void)
 {
     return (stc8h_u8)NRF24_PAIR_ACK_REPLACE_ON_RECOVER;
+}
+
+static stc8h_u8 nrf24_pair_diag_ack_payload_valid(const stc8h_u8 *data,
+                                                  stc8h_u8 len,
+                                                  stc8h_u8 expected_len)
+{
+    if (data == 0) {
+        return 0u;
+    }
+    if (len != expected_len) {
+        return 0u;
+    }
+    if ((data[0] != 'A') || (data[1] != 'C') || (data[2] != 'K')) {
+        return 0u;
+    }
+    return 1u;
+}
+
+static stc8h_u8 nrf24_pair_diag_ack_payload_valid_for_seq(const stc8h_u8 *data,
+                                                          stc8h_u8 len,
+                                                          stc8h_u8 expected_len,
+                                                          stc8h_u8 expected_seq)
+{
+    if (nrf24_pair_diag_ack_payload_valid(data, len, expected_len) == 0u) {
+        return 0u;
+    }
+    return (data[3] == expected_seq) ? 1u : 0u;
 }
 
 #endif

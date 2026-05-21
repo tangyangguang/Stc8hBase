@@ -84,6 +84,47 @@ static int test_ack_payload_loaded_after_rx_does_not_replace_pending_fifo(void)
     return failures;
 }
 
+static int test_ack_payload_validation_rejects_bad_length_and_header(void)
+{
+    int failures;
+    stc8h_u8 ack[15] = {'A', 'C', 'K', 0x10u, 0u, 0u};
+
+    failures = 0;
+    failures += require(nrf24_pair_diag_ack_payload_valid(ack, 15u, 15u) != 0u,
+                        "ACK payload validator must accept the expected length and ACK header");
+    failures += require(nrf24_pair_diag_ack_payload_valid(ack, 1u, 15u) == 0u,
+                        "ACK payload validator must reject short ACK payloads");
+    ack[0] = 'X';
+    failures += require(nrf24_pair_diag_ack_payload_valid(ack, 15u, 15u) == 0u,
+                        "ACK payload validator must reject stale or wrong ACK headers");
+    return failures;
+}
+
+static int test_ack_payload_validation_can_check_previous_seq(void)
+{
+    int failures;
+    stc8h_u8 ack[15] = {'A', 'C', 'K', 0x10u, 0u, 0u};
+
+    failures = 0;
+    failures += require(nrf24_pair_diag_ack_payload_valid_for_seq(ack, 15u, 15u, 0x10u) != 0u,
+                        "ACK payload validator must accept the expected ACK seq");
+    failures += require(nrf24_pair_diag_ack_payload_valid_for_seq(ack, 15u, 15u, 0x11u) == 0u,
+                        "ACK payload validator must reject old-stage or out-of-sequence ACK payloads");
+    return failures;
+}
+
+static int test_zero_tx_count_marks_matrix_warmup_payload(void)
+{
+    int failures;
+
+    failures = 0;
+    failures += require(nrf24_pair_diag_matrix_is_warmup_tx_count(0u) != 0u,
+                        "matrix tx_count=0 must be classified as warmup");
+    failures += require(nrf24_pair_diag_matrix_is_warmup_tx_count(1u) == 0u,
+                        "matrix tx_count>0 must be classified as counted traffic");
+    return failures;
+}
+
 static int has_matrix_stage(stc8h_u8 rate, stc8h_u8 payload_size, stc8h_u8 ack_payload,
                             stc8h_u8 dynamic_payload, stc8h_u8 ard_code,
                             stc8h_u16 packet_count)
@@ -148,6 +189,9 @@ int main(void)
     failures += test_forward_gap_counts_lost_packets();
     failures += test_duplicate_packet_counts_duplicate();
     failures += test_ack_payload_loaded_after_rx_does_not_replace_pending_fifo();
+    failures += test_ack_payload_validation_rejects_bad_length_and_header();
+    failures += test_ack_payload_validation_can_check_previous_seq();
+    failures += test_zero_tx_count_marks_matrix_warmup_payload();
     failures += test_fast_matrix_covers_required_conditions();
     failures += test_fast_matrix_uses_warmup_packets_outside_statistics();
 

@@ -20,6 +20,8 @@ tools/check_examples.sh
 2026-05-20：新增 `nrf24_uart_diag` 单模块串口诊断示例，并为所有 nRF24 PlatformIO 示例增加 CE/CSN 早期初始化代码生成检查。专项检查通过；`nrf24_uart_diag` flash 占用 2945 bytes。
 
 2026-05-21：nRF24 驱动修复 presence check 地址恢复和 PRX RX FIFO fallback 后，`nrf24_uart_diag` flash 占用 4117 bytes；`nrf24_fixed_ping` / `nrf24_ack_payload` 改为 wait + `complete_tx()` 流程后分别为 2564 / 2577 bytes；`ptx_matrix_fast` / `prx_matrix_fast` 关闭逐阶段 presence check 并加入 ROM guard 后分别为 7671 / 7351 bytes。
+
+2026-05-21：`nrf24_pair_diag` matrix 增加 ACK payload 内容校验和 warmup 可见统计，matrix 环境按角色裁剪未使用 nRF24 API 后，`ptx_matrix_fast` / `prx_matrix_fast` flash 占用分别为 7821 / 7362 bytes。
 ```
 
 2026-05-12 小容量应用裁剪验证：
@@ -1133,7 +1135,7 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 设计取舍：
 
 - 第一版冻结为硬件 SPI 主机轮询实现。
-- 默认 P1.3/P1.4/P1.5，硬件 SS 使用 `SSIG=1` 忽略，不占用当前 P1.2 LED。
+- 默认 P1.3/P1.4/P1.5，硬件 SS 使用 `SSIG=1` 忽略；若板级外部 CSN 分配到 P1.2，例如 ToyRemote/nRF24 PCB，则 P1.2 LED/PWM 与该片选互斥。
 - 默认 mode 0、MSB first、`SYSclk/4`。
 - 不启用 SPI 中断，不使用 DMA，不保存 RX 缓冲。
 - 片选由板级或应用代码自行控制，HAL 不保存 CS 引脚。

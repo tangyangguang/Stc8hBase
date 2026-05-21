@@ -151,5 +151,8 @@ int main(void)
     failures += require(DRV_NRF24L01_CE_PULSE_DELAY_LOOPS >= 140u,
                         "35MHz CE pulse loop count must cover at least 12us at 3 cycles/loop");
 
+    (void)drv_nrf24l01_read_reg(0u);
+    (void)drv_nrf24l01_read_buf(0u, (stc8h_u8 *)events, 0u);
+
     return failures == 0 ? 0 : 1;
 }

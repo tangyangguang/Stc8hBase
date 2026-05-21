@@ -65,7 +65,7 @@
 - 已新增 PlatformIO `filter_demo` 示例，并完成 SDCC 编译和宿主机边界测试。
 - 已烧录实测 `filter_demo`，串口 115200 连续输出 `filter ok`。
 - 已按 STC 官方 SPI 库和手册寄存器定义核对 SPI。
-- 已冻结 SPI 第一版为硬件 SPI 主机轮询实现，默认 P1.3/P1.4/P1.5，忽略硬件 SS，不占用 P1.2 LED。
+- 已冻结 SPI 第一版为硬件 SPI 主机轮询实现，默认 P1.3/P1.4/P1.5，忽略硬件 SS；ToyRemote/nRF24 PCB 上 P1.2 已作为 CSN，因此 P1.2 LED/PWM 与 nRF24 互斥。
 - 已新增 `stc8h_spi` HAL 和 PlatformIO `spi_loopback` 示例，并完成 SDCC 编译和资源检查。
 - 已短接 P1.3/MOSI 和 P1.4/MISO 后烧录实测 `spi_loopback`，串口 115200 连续输出 `spi loopback ok`。
 - 已按 STC 官方 EEPROM/IAP 库和手册寄存器定义核对 EEPROM/IAP。

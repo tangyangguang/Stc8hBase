@@ -434,11 +434,15 @@ typedef struct {
     stc8h_u16 ack_bad;
     stc8h_u8 status;
 } nrf24_pair_diag_ptx_stage_stats_t;
+
+static stc8h_u8 matrix_expected_ack_seq;
+static stc8h_u8 matrix_check_ack_seq;
 #endif
 
 #if NRF24_PAIR_DIAG_PRX
 typedef struct {
     stc8h_u16 rx_count;
+    stc8h_u16 warmup_rx;
     stc8h_u16 bad_width;
     stc8h_u16 ack_load;
     stc8h_u16 ack_busy;
@@ -671,7 +675,15 @@ static void matrix_count_ptx_result(nrf24_pair_diag_ptx_stage_stats_t *stats,
         ++stats->max_rt;
     } else if (result == DRV_NRF24L01_TX_ACK_PAYLOAD_OK) {
         ++stats->tx_ok;
-        ++stats->ack_ok;
+        if ((stage->ack_payload == 0u) ||
+            (((matrix_check_ack_seq == 0u) &&
+              (nrf24_pair_diag_ack_payload_valid(ack_payload, ack_len, stage->payload_size) != 0u)) ||
+             ((matrix_check_ack_seq != 0u) &&
+              (nrf24_pair_diag_ack_payload_valid_for_seq(ack_payload, ack_len, stage->payload_size, matrix_expected_ack_seq) != 0u)))) {
+            ++stats->ack_ok;
+        } else {
+            ++stats->ack_bad;
+        }
     } else if (result == DRV_NRF24L01_TX_ACK_EMPTY) {
         ++stats->tx_ok;
         if (stage->ack_payload != 0u) {
@@ -682,7 +694,6 @@ static void matrix_count_ptx_result(nrf24_pair_diag_ptx_stage_stats_t *stats,
     } else {
         ++stats->ack_bad;
     }
-    (void)ack_len;
 }
 
 static void matrix_print_ptx_summary(const STC8H_CODE char *tag, stc8h_u8 stage_index,
@@ -701,9 +712,33 @@ static void matrix_print_ptx_summary(const STC8H_CODE char *tag, stc8h_u8 stage_
     print_hex_field("FIFO_STATUS", drv_nrf24l01_read_fifo_status());
     uart_crlf();
 }
+
+static void matrix_print_ptx_warmup(stc8h_u8 stage_index,
+                                    const nrf24_pair_diag_ptx_stage_stats_t *stats)
+{
+    stc8h_uart_write_code(STC8H_UART1, "MATRIX_WARMUP role=PTX");
+    print_u16_field("stage", (stc8h_u16)(stage_index + 1u));
+    print_u16_field("warmup_tx", stats->tx_count);
+    print_u16_field("max_rt", stats->max_rt);
+    print_u16_field("ack_empty", stats->ack_empty);
+    print_u16_field("ack_bad", stats->ack_bad);
+    uart_crlf();
+}
 #endif
 
 #if NRF24_PAIR_DIAG_PRX
+static void matrix_print_prx_warmup(stc8h_u8 stage_index,
+                                    const nrf24_pair_diag_prx_stage_stats_t *stage_stats)
+{
+    stc8h_uart_write_code(STC8H_UART1, "MATRIX_WARMUP role=PRX");
+    print_u16_field("stage", (stc8h_u16)(stage_index + 1u));
+    print_u16_field("warmup_rx", stage_stats->warmup_rx);
+    print_u16_field("bad_width", stage_stats->bad_width);
+    print_u16_field("ack_busy", stage_stats->ack_busy);
+    print_u16_field("ack_fail", stage_stats->ack_fail);
+    uart_crlf();
+}
+
 static void matrix_print_prx_summary(const STC8H_CODE char *tag, stc8h_u8 stage_index,
                                      const nrf24_pair_diag_prx_stage_stats_t *stage_stats)
 {
@@ -726,6 +761,7 @@ static void matrix_print_prx_summary(const STC8H_CODE char *tag, stc8h_u8 stage_
 static void matrix_prx_stats_init(nrf24_pair_diag_prx_stage_stats_t *stage_stats)
 {
     stage_stats->rx_count = 0u;
+    stage_stats->warmup_rx = 0u;
     stage_stats->bad_width = 0u;
     stage_stats->ack_load = 0u;
     stage_stats->ack_busy = 0u;
@@ -769,15 +805,28 @@ static void run_matrix_ptx(void)
 
         for (warmup = 0u; warmup < nrf24_pair_diag_matrix_warmup_packets(); ++warmup) {
             ++seq;
-            (void)matrix_send_packet(&stage, 0u, seq, 0u, 0u, &stats.status, &ack_len);
+            ++stats.tx_count;
+            result = matrix_send_packet(&stage, 0u, seq, 0u, 0u, &stats.status, &ack_len);
+            matrix_check_ack_seq = 0u;
+            matrix_count_ptx_result(&stats, &stage, result, ack_len);
             stc8h_delay_ms(NRF24_PAIR_SEND_PERIOD_MS);
         }
+        matrix_print_ptx_warmup(stage_index, &stats);
         seq = 0u;
+        stats.tx_count = 0u;
+        stats.tx_ok = 0u;
+        stats.max_rt = 0u;
+        stats.ack_ok = 0u;
+        stats.ack_empty = 0u;
+        stats.ack_bad = 0u;
+        stats.status = 0u;
 
         while (stats.tx_count < stage.packet_count) {
             ++seq;
             ++stats.tx_count;
             result = matrix_send_packet(&stage, 0u, seq, stats.tx_count, 0u, &stats.status, &ack_len);
+            matrix_expected_ack_seq = (stc8h_u8)(seq - 1u);
+            matrix_check_ack_seq = 1u;
             matrix_count_ptx_result(&stats, &stage, result, ack_len);
             if ((stats.tx_count % NRF24_PAIR_SUMMARY_INTERVAL) == 0u) {
                 matrix_print_ptx_summary("MATRIX_PTX_SUM", stage_index, &stats);
@@ -837,6 +886,7 @@ static void run_matrix_prx(void)
     stc8h_u8 status;
     stc8h_u8 len;
     stc8h_u8 next_stage;
+    stc8h_u8 warmup_printed;
     stc8h_u16 tx_count;
     nrf24_pair_diag_matrix_stage_t stage;
     nrf24_pair_diag_prx_stage_stats_t stage_stats;
@@ -853,6 +903,7 @@ static void run_matrix_prx(void)
             }
         }
         matrix_prx_stats_init(&stage_stats);
+        warmup_printed = 0u;
         drv_nrf24l01_enter_rx();
         if (stage.ack_payload != 0u) {
             ack_status = matrix_load_ack_payload(&stage, stage_stats.stats.last_seq,
@@ -904,7 +955,8 @@ static void run_matrix_prx(void)
                     }
                 } else {
                     tx_count = matrix_payload_tx_count();
-                    if (tx_count == 0u) {
+                    if (nrf24_pair_diag_matrix_is_warmup_tx_count(tx_count) != 0u) {
+                        ++stage_stats.warmup_rx;
                         if (stage.ack_payload != 0u) {
                             ack_status = matrix_load_ack_payload(&stage, stage_stats.stats.last_seq,
                                                                  stage_stats.rx_count,
@@ -912,6 +964,10 @@ static void run_matrix_prx(void)
                             matrix_record_ack_load(&stage_stats, ack_status);
                         }
                     } else {
+                        if (warmup_printed == 0u) {
+                            matrix_print_prx_warmup(stage_index, &stage_stats);
+                            warmup_printed = 1u;
+                        }
                         ++stage_stats.rx_count;
                         nrf24_pair_diag_rx_stats_update(&stage_stats.stats, payload[2], tx_count);
                         if (stage.ack_payload != 0u) {
@@ -960,13 +1016,7 @@ static void print_ptx_summary(stc8h_u16 tx_count, stc8h_u16 tx_ok, stc8h_u16 max
 #if NRF24_PAIR_ACK_PAYLOAD
 static stc8h_u8 ack_payload_valid(stc8h_u8 len)
 {
-    if (len != NRF24_PAIR_PAYLOAD_SIZE) {
-        return 0u;
-    }
-    if ((ack_payload[0] != 'A') || (ack_payload[1] != 'C') || (ack_payload[2] != 'K')) {
-        return 0u;
-    }
-    return 1u;
+    return nrf24_pair_diag_ack_payload_valid(ack_payload, len, NRF24_PAIR_PAYLOAD_SIZE);
 }
 #endif
 

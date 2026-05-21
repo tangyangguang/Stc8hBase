@@ -13,6 +13,7 @@ check_early_init_order() {
     fi
 
     nrf_line=$(awk '/lcall[[:space:]]+_drv_nrf24l01_init_pins/{ print NR; exit }' "$rst_file")
+    uart_line=$(awk '/lcall[[:space:]]+_stc8h_uart_init/{ print NR; exit }' "$rst_file")
     spi_line=$(awk '/lcall[[:space:]]+_stc8h_spi_init/{ print NR; exit }' "$rst_file")
 
     if [ -z "$nrf_line" ]; then
@@ -21,6 +22,10 @@ check_early_init_order() {
     fi
     if [ -z "$spi_line" ]; then
         echo "$label does not call stc8h_spi_init()" >&2
+        exit 1
+    fi
+    if [ -n "$uart_line" ] && [ "$nrf_line" -gt "$uart_line" ]; then
+        echo "$label initializes UART before forcing nRF24 CE/CSN idle levels" >&2
         exit 1
     fi
     if [ "$nrf_line" -gt "$spi_line" ]; then
