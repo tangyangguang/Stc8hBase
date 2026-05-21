@@ -30,7 +30,7 @@ Existing raw register and FIFO APIs stay available for diagnostics. No applicati
 
 PTX prints per-summary totals: `tx_count`, `tx_ok`, `max_rt`, `ack_ok`, `ack_empty`, `ack_bad`, last `OBSERVE_TX`, `STATUS`, and `FIFO_STATUS`. PRX prints `rx_count`, last sequence, lost/duplicate counters, PTX reset counter, `STATUS`, `FIFO_STATUS`, and ACK preload counters. Optional per-packet logging can be enabled by macro when needed.
 
-`ptx_matrix_fast` / `prx_matrix_fast` are the one-burn automatic matrix. They run the same required matrix stages in order, with 5ms send period and 1000-packet summaries. PTX sends an in-band switch packet at the end of each stage using the current stage's radio settings; PRX switches only after receiving that packet, so both sides do not race across data-rate or ACK-payload changes.
+`ptx_matrix_fast` / `prx_matrix_fast` are the one-burn automatic matrix. They run the same required matrix stages in order, with 5ms send period and 1000-packet summaries. PTX sends an in-band switch packet at the end of each stage using the current stage's radio settings; PRX switches only after receiving that packet, so both sides do not race across data-rate or ACK-payload changes. Each stage sends 16 warmup packets with `tx_count=0` before counted statistics; PRX ignores those packets for `rx_count/lost/dup` so stage-transition synchronization does not look like real packet loss.
 
 ## Verification Matrix
 
@@ -48,7 +48,7 @@ Recommended starting points:
 
 Case D is expected to be the most sensitive to power and RF margin because 250kbps keeps the ACK packet on air much longer; the Nordic table requires 1500us ARD for all ACK payload sizes at 250kbps with 5-byte addresses. RF24 and CircuitPython nRF24L01 also use 1500us as a reliability-oriented default, so 1500us stays the normative baseline. D2/D3 are margin tests for a specific PCB, power supply, and RF environment; they are not driver defaults. Cases with ACK payload off still use auto-ack unless explicitly disabled, so they isolate ACK-payload FIFO/timing problems from basic auto-ack link quality.
 
-The automatic matrix runs A/B/C/D/E for 2000 packets each and D2/D3 for 5000 packets each. This keeps normal coverage quick while spending more packets on the 250kbps 32-byte ACK payload margin cases that exposed power/ARD sensitivity in hardware tests.
+The automatic matrix runs A/B/C/D/E for 2000 counted packets each and D2/D3 for 5000 counted packets each, after the per-stage warmup packets. This keeps normal coverage quick while spending more packets on the 250kbps 32-byte ACK payload margin cases that exposed power/ARD sensitivity in hardware tests.
 
 ## PASS/FAIL Rules
 

@@ -169,7 +169,7 @@ pio device monitor -p /dev/cu.usbserial-120 -b 115200
 pio device monitor -p /dev/cu.usbserial-110 -b 115200
 ```
 
-`matrix_fast` 默认每 5ms 发一包、每 1000 包汇总一次，阶段为：1Mbps+15-byte ACK、1Mbps+no ACK、250kbps+15-byte ACK、250kbps+32-byte ACK/1500us、250kbps+32-byte ACK/2000us、250kbps+32-byte ACK/2500us、2Mbps+no ACK。普通阶段 2000 包，250kbps 32-byte 的 2000us/2500us margin 阶段各 5000 包。
+`matrix_fast` 默认每 5ms 发一包、每 1000 包汇总一次，阶段为：1Mbps+15-byte ACK、1Mbps+no ACK、250kbps+15-byte ACK、250kbps+32-byte ACK/1500us、250kbps+32-byte ACK/2000us、250kbps+32-byte ACK/2500us、2Mbps+no ACK。普通阶段 2000 包，250kbps 32-byte 的 2000us/2500us margin 阶段各 5000 包。每个阶段正式计数前会先发送 16 个 `tx_count=0` 预热包；PRX 不把这些包计入 `rx_count/lost/dup`，用于避开阶段切换后首包同步瞬态。ACK payload 阶段的 `ack_load` 会包含预热包触发的 ACK 预装次数，因此可能比 `rx_count+1` 多 16 左右。
 
 每个环境烧录时先烧 PRX，再烧 PTX。上传命令在环境名后加 `-t upload`。
 

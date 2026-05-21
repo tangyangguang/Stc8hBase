@@ -739,6 +739,7 @@ static void run_matrix_ptx(void)
     stc8h_u8 switch_ok;
     stc8h_u8 attempt;
     stc8h_u8 next_stage;
+    stc8h_u8 warmup;
     nrf24_pair_diag_matrix_stage_t stage;
     nrf24_pair_diag_ptx_stage_stats_t stats;
     drv_nrf24l01_tx_result_t result;
@@ -761,6 +762,13 @@ static void run_matrix_ptx(void)
         stats.ack_empty = 0u;
         stats.ack_bad = 0u;
         stats.status = 0u;
+
+        for (warmup = 0u; warmup < nrf24_pair_diag_matrix_warmup_packets(); ++warmup) {
+            ++seq;
+            (void)matrix_send_packet(&stage, 0u, seq, 0u, 0u, &stats.status, &ack_len);
+            stc8h_delay_ms(NRF24_PAIR_SEND_PERIOD_MS);
+        }
+        seq = 0u;
 
         while (stats.tx_count < stage.packet_count) {
             ++seq;
@@ -791,9 +799,6 @@ static void run_matrix_ptx(void)
             stc8h_delay_ms(20u);
         }
 
-        if (switch_ok == 0u) {
-            attempt = (stc8h_u8)(NRF24_PAIR_MATRIX_SWITCH_RETRIES - 1u);
-        }
         stc8h_uart_write_code(STC8H_UART1, "MATRIX_SWITCH role=PTX");
         print_u16_field("from", (stc8h_u16)(stage_index + 1u));
         if (next_stage == NRF24_PAIR_MATRIX_DONE_STAGE) {
@@ -802,7 +807,6 @@ static void run_matrix_ptx(void)
             print_u16_field("to", (stc8h_u16)(next_stage + 1u));
         }
         print_u16_field("ok", switch_ok);
-        print_u16_field("attempts", (stc8h_u16)(attempt + 1u));
         uart_crlf();
 
         if (switch_ok == 0u) {
@@ -829,6 +833,7 @@ static void run_matrix_prx(void)
     stc8h_u8 status;
     stc8h_u8 len;
     stc8h_u8 next_stage;
+    stc8h_u16 tx_count;
     nrf24_pair_diag_matrix_stage_t stage;
     nrf24_pair_diag_prx_stage_stats_t stage_stats;
     stc8h_status_t rx_status;
@@ -894,17 +899,26 @@ static void run_matrix_prx(void)
                         break;
                     }
                 } else {
-                    ++stage_stats.rx_count;
-                    nrf24_pair_diag_rx_stats_update(&stage_stats.stats, payload[2],
-                                                    matrix_payload_tx_count());
-                    if (stage.ack_payload != 0u) {
-                        ack_status = matrix_load_ack_payload(&stage, stage_stats.stats.last_seq,
-                                                             stage_stats.rx_count,
-                                                             nrf24_pair_diag_ack_replace_after_rx());
-                        matrix_record_ack_load(&stage_stats, ack_status);
-                    }
-                    if ((stage_stats.rx_count % NRF24_PAIR_SUMMARY_INTERVAL) == 0u) {
-                        matrix_print_prx_summary("MATRIX_PRX_SUM", stage_index, &stage_stats);
+                    tx_count = matrix_payload_tx_count();
+                    if (tx_count == 0u) {
+                        if (stage.ack_payload != 0u) {
+                            ack_status = matrix_load_ack_payload(&stage, stage_stats.stats.last_seq,
+                                                                 stage_stats.rx_count,
+                                                                 nrf24_pair_diag_ack_replace_after_rx());
+                            matrix_record_ack_load(&stage_stats, ack_status);
+                        }
+                    } else {
+                        ++stage_stats.rx_count;
+                        nrf24_pair_diag_rx_stats_update(&stage_stats.stats, payload[2], tx_count);
+                        if (stage.ack_payload != 0u) {
+                            ack_status = matrix_load_ack_payload(&stage, stage_stats.stats.last_seq,
+                                                                 stage_stats.rx_count,
+                                                                 nrf24_pair_diag_ack_replace_after_rx());
+                            matrix_record_ack_load(&stage_stats, ack_status);
+                        }
+                        if ((stage_stats.rx_count % NRF24_PAIR_SUMMARY_INTERVAL) == 0u) {
+                            matrix_print_prx_summary("MATRIX_PRX_SUM", stage_index, &stage_stats);
+                        }
                     }
                 }
             } else if (rx_status == STC8H_ERROR) {

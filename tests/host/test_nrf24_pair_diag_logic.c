@@ -129,6 +129,16 @@ static int test_fast_matrix_covers_required_conditions(void)
     return failures;
 }
 
+static int test_fast_matrix_uses_warmup_packets_outside_statistics(void)
+{
+    int failures;
+
+    failures = 0;
+    failures += require(nrf24_pair_diag_matrix_warmup_packets() == 16u,
+                        "fast matrix must use 16 warmup packets before counted statistics");
+    return failures;
+}
+
 int main(void)
 {
     int failures;
@@ -139,6 +149,7 @@ int main(void)
     failures += test_duplicate_packet_counts_duplicate();
     failures += test_ack_payload_loaded_after_rx_does_not_replace_pending_fifo();
     failures += test_fast_matrix_covers_required_conditions();
+    failures += test_fast_matrix_uses_warmup_packets_outside_statistics();
 
     return failures == 0 ? 0 : 1;
 }
