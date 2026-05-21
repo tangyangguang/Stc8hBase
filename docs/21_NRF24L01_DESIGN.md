@@ -171,7 +171,7 @@ pio device monitor -p /dev/cu.usbserial-120 -b 115200
 pio device monitor -p /dev/cu.usbserial-110 -b 115200
 ```
 
-`matrix_fast` 默认每 5ms 发一包、每 1000 包汇总一次，阶段为：1Mbps+15-byte ACK、1Mbps+no ACK、250kbps+15-byte ACK、250kbps+32-byte ACK/1500us、250kbps+32-byte ACK/2000us、250kbps+32-byte ACK/2500us、2Mbps+no ACK。普通阶段 2000 包，250kbps 32-byte 的 2000us/2500us margin 阶段各 5000 包。每个阶段正式计数前会先发送 16 个 `tx_count=0` 预热包；PRX 不把这些包计入 `rx_count/lost/dup`，用于避开阶段切换后首包同步瞬态。ACK payload 阶段的 `ack_load` 会包含预热包触发的 ACK 预装次数，因此可能比 `rx_count+1` 多 16 左右。matrix 会额外输出 `MATRIX_WARMUP`，暴露预热阶段 PTX 的 `warmup_tx/max_rt/ack_empty/ack_bad` 和 PRX 的 `warmup_rx/bad_width/ack_busy/ack_fail`。为给 STC8H1K08 8KB flash 留出余量，matrix 环境关闭逐阶段 write/read presence check；单板 `nrf24_uart_diag` 和普通 `ptx`/`prx` 环境仍执行 presence check。
+`matrix_fast` 默认每 5ms 发一包、每 1000 包汇总一次，阶段为：1Mbps+15-byte ACK payload、1Mbps+no ACK payload、250kbps+15-byte ACK payload、250kbps+32-byte ACK payload/1500us、250kbps+32-byte ACK payload/2000us、250kbps+32-byte ACK payload/2500us、2Mbps+no ACK payload。所有阶段都启用 auto-ack；`no ACK payload` 只表示关闭 ACK payload，不表示关闭 auto-ack。普通阶段 2000 包，250kbps 32-byte 的 2000us/2500us margin 阶段各 5000 包。每个阶段正式计数前会先发送 16 个 `tx_count=0` 预热包；PRX 不把这些包计入 `rx_count/lost/dup`，用于避开阶段切换后首包同步瞬态。ACK payload 阶段的 `ack_load` 会包含预热包触发的 ACK 预装次数，因此可能比 `rx_count+1` 多 16 左右。matrix 会额外输出 `MATRIX_WARMUP`，暴露预热阶段 PTX 的 `warmup_tx/max_rt/ack_empty/ack_bad` 和 PRX 的 `warmup_rx/bad_width/ack_busy/ack_fail`。为给 STC8H1K08 8KB flash 留出余量，matrix 环境关闭逐阶段 write/read presence check；单板 `nrf24_uart_diag` 和普通 `ptx`/`prx` 环境仍执行 presence check。
 
 每个环境烧录时先烧 PRX，再烧 PTX。上传命令在环境名后加 `-t upload`。
 
@@ -187,7 +187,7 @@ PASS 判断：
 - ACK payload 开启时，PTX `ack_ok` 应持续增长；matrix 模式下 `ack_ok` 还要求 ACK payload 长度匹配、前三字节为 `ACK`，正式计数包还要求 ACK 中的 `last_seq` 对应上一包序号；`ack_empty` 若持续增长，说明 PRX 没有及时预装 ACK 或 ACK FIFO/时序异常。
 - ACK payload 关闭时，PTX `tx_ok` 应持续增长，`ack_ok`、`ack_empty` 和 PRX `ack_load` 维持 0 是正常的。
 - PRX `lost/dup` 应为 0 或极低；PTX 重新烧录/复位会计入 `ptx_reset`，不再混入 `lost`；`bad_width` 必须为 0。
-- `matrix_fast` 每个阶段看对应的 `MATRIX_WARMUP` 和 `MATRIX_STAGE_END`：预热阶段 `max_rt/ack_empty/ack_bad/ack_busy/ack_fail` 应为 0 或极低；ACK payload 阶段要求 `ack_ok` 接近 `tx_ok`、`ack_empty=0` 或极低、`ack_bad=0`；no-ACK 阶段要求 `tx_ok` 持续增长且 `ack_ok=0`；PRX 侧要求 `lost=0`、`dup=0`、`bad_width=0`。
+- `matrix_fast` 每个阶段看对应的 `MATRIX_WARMUP` 和 `MATRIX_STAGE_END`：预热阶段 `max_rt/ack_empty/ack_bad/ack_busy/ack_fail` 应为 0 或极低；ACK payload 阶段要求 `ack_ok` 接近 `tx_ok`、`ack_empty=0` 或极低、`ack_bad=0`；no ACK payload 阶段要求 `tx_ok` 持续增长且 `ack_ok=0`；PRX 侧要求 `lost=0`、`dup=0`、`bad_width=0`。
 
 FAIL 方向：
 

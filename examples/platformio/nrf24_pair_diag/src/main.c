@@ -931,6 +931,10 @@ static void run_matrix_prx(void)
 
             if (rx_status == STC8H_OK) {
                 if (matrix_is_switch_payload(len) != 0u) {
+                    if (warmup_printed == 0u) {
+                        matrix_print_prx_warmup(stage_index, &stage_stats);
+                        warmup_printed = 1u;
+                    }
                     matrix_print_prx_summary("MATRIX_STAGE_END role=PRX", stage_index, &stage_stats);
                     next_stage = payload[2];
                     stc8h_uart_write_code(STC8H_UART1, "MATRIX_SWITCH role=PRX");

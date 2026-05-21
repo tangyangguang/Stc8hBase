@@ -21,7 +21,7 @@ tools/check_examples.sh
 
 2026-05-21：nRF24 驱动修复 presence check 地址恢复和 PRX RX FIFO fallback 后，`nrf24_uart_diag` flash 占用 4117 bytes；`nrf24_fixed_ping` / `nrf24_ack_payload` 改为 wait + `complete_tx()` 流程后分别为 2564 / 2577 bytes；`ptx_matrix_fast` / `prx_matrix_fast` 关闭逐阶段 presence check 并加入 ROM guard 后分别为 7671 / 7351 bytes。
 
-2026-05-21：`nrf24_pair_diag` matrix 增加 ACK payload 内容校验和 warmup 可见统计，matrix 环境按角色裁剪未使用 nRF24 API 后，`ptx_matrix_fast` / `prx_matrix_fast` flash 占用分别为 7821 / 7362 bytes。
+2026-05-22：`nrf24_pair_diag` matrix 增加 ACK payload 内容校验、warmup 可见统计，并在 PRX 收到 switch 包前补打未输出的 warmup 统计；matrix 环境按角色裁剪未使用 nRF24 API 后，`ptx_matrix_fast` / `prx_matrix_fast` flash 占用分别为 7821 / 7383 bytes。
 ```
 
 2026-05-12 小容量应用裁剪验证：
