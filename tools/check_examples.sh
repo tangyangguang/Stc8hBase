@@ -180,10 +180,43 @@ EOF
     done
 }
 
+check_pwm_xfr_codegen() {
+    tmp_dir=$(mktemp -d)
+    trap 'rm -rf "${tmp_dir}"' EXIT
+
+    cat > "${tmp_dir}/pwm_xfr.c" <<EOF
+#include "${ROOT_DIR}/hal/stc8h_pwm.c"
+EOF
+    sdcc -mmcs51 --std-sdcc11 -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" \
+        -c -o "${tmp_dir}/pwm_xfr.rel" "${tmp_dir}/pwm_xfr.c"
+
+    awk '/^_stc8h_pwm_set_duty:/{in_func=1; next} /^_stc8h_pwm_enable:/{in_func=0} in_func {print}' \
+        "${tmp_dir}/pwm_xfr.asm" > "${tmp_dir}/pwm_set_duty.asm"
+    if ! grep -Eq 'orl[[:space:]]+_P_SW2,#0x80' "${tmp_dir}/pwm_set_duty.asm"; then
+        echo "PWM set_duty does not enable XFR access before CCR writes" >&2
+        exit 1
+    fi
+
+    awk '/^_stc8h_pwm_enable:/{in_func=1; next} /^_stc8h_pwm_disable:/{in_func=0} in_func {print}' \
+        "${tmp_dir}/pwm_xfr.asm" > "${tmp_dir}/pwm_enable.asm"
+    if ! grep -Eq 'orl[[:space:]]+_P_SW2,#0x80' "${tmp_dir}/pwm_enable.asm"; then
+        echo "PWM enable does not enable XFR access before ENO/CCER/CR1 writes" >&2
+        exit 1
+    fi
+
+    awk '/^_stc8h_pwm_disable:/{in_func=1; next} in_func {print}' \
+        "${tmp_dir}/pwm_xfr.asm" > "${tmp_dir}/pwm_disable.asm"
+    if ! grep -Eq 'orl[[:space:]]+_P_SW2,#0x80' "${tmp_dir}/pwm_disable.asm"; then
+        echo "PWM disable does not enable XFR access before ENO/CCER/CR1 writes" >&2
+        exit 1
+    fi
+}
+
 check_sdcc_interrupt_using
 check_eeprom_api_trim
 check_ec11_small_isr_api
 check_spi_miso_input_codegen
+check_pwm_xfr_codegen
 sh "${ROOT_DIR}/tools/check_host_tests.sh"
 
 for ini in "${ROOT_DIR}"/examples/platformio/*/platformio.ini; do

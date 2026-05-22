@@ -59,6 +59,8 @@
 #define STC8H_PWM_BKR_MOE       0x80u
 #define STC8H_PWM_EGR_UG        0x01u
 #define STC8H_PWM_OUTPUT_MASK   0x55u
+#define STC8H_PWM_EAXFR         0x80u
+#define STC8H_PWM_OPEN_XFR()    (P_SW2 |= STC8H_PWM_EAXFR)
 
 #ifndef STC8H_PWM_GROUP_MASK
 #define STC8H_PWM_GROUP_MASK 0x03u
@@ -279,13 +281,13 @@ stc8h_status_t stc8h_pwm_set_prescaler(stc8h_u8 group, stc8h_u16 prescaler)
     if (stc8h_pwm_group_valid(group) == 0u) {
         return STC8H_ERROR;
     }
+    STC8H_PWM_OPEN_XFR();
 #if STC8H_PWM_TRACK_PERIOD_PRESCALER
     if (stc8h_pwm_group_running(group) != 0u) {
         return (prescaler == stc8h_pwm_get_prescaler(group)) ? STC8H_OK : STC8H_ERROR;
     }
 #endif
 
-    P_SW2 |= 0x80u;
     if (group == STC8H_PWM_GROUP_A) {
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_A)
 #if STC8H_PWM_TRACK_PERIOD_PRESCALER
@@ -318,13 +320,13 @@ stc8h_status_t stc8h_pwm_set_period(stc8h_u8 group, stc8h_u16 period)
     if (stc8h_pwm_group_valid(group) == 0u) {
         return STC8H_ERROR;
     }
+    STC8H_PWM_OPEN_XFR();
 #if STC8H_PWM_TRACK_PERIOD_PRESCALER
     if (stc8h_pwm_group_running(group) != 0u) {
         return (period == stc8h_pwm_get_period(group)) ? STC8H_OK : STC8H_ERROR;
     }
 #endif
 
-    P_SW2 |= 0x80u;
     if (group == STC8H_PWM_GROUP_A) {
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_A)
         PWMA_CR1 &= (stc8h_u8)~STC8H_PWM_CR1_CEN;
@@ -369,7 +371,7 @@ stc8h_status_t stc8h_pwm_init_channel(stc8h_u8 group, stc8h_u8 channel, stc8h_u8
         return STC8H_ERROR;
     }
 
-    P_SW2 |= 0x80u;
+    STC8H_PWM_OPEN_XFR();
     shift = stc8h_pwm_ps_shift(group, channel);
     mask = (stc8h_u8)(0x03u << shift);
 
@@ -405,6 +407,7 @@ stc8h_status_t stc8h_pwm_set_duty(stc8h_u8 group, stc8h_u8 channel, stc8h_u16 du
     }
 #endif
 
+    STC8H_PWM_OPEN_XFR();
     if (group == STC8H_PWM_GROUP_A) {
         if (channel == STC8H_PWM_CHANNEL_1) {
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_A) && STC8H_PWM_A_CHANNEL_ENABLED(1)
@@ -469,6 +472,7 @@ stc8h_status_t stc8h_pwm_enable(stc8h_u8 group, stc8h_u8 channel)
         return STC8H_ERROR;
     }
 
+    STC8H_PWM_OPEN_XFR();
     if (group == STC8H_PWM_GROUP_A) {
         PWMA_ENO |= output_mask;
         if ((channel == STC8H_PWM_CHANNEL_1) || (channel == STC8H_PWM_CHANNEL_3)) {
@@ -504,6 +508,7 @@ stc8h_status_t stc8h_pwm_disable(stc8h_u8 group, stc8h_u8 channel)
         return STC8H_ERROR;
     }
 
+    STC8H_PWM_OPEN_XFR();
     if (group == STC8H_PWM_GROUP_A) {
         PWMA_ENO &= (stc8h_u8)~output_mask;
         if (channel == STC8H_PWM_CHANNEL_1) { PWMA_CCER1 &= (stc8h_u8)~0x01u; }
