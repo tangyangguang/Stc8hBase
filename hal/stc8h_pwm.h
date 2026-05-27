@@ -56,6 +56,14 @@
 #define STC8H_PWM_ENABLE_DISABLE 1
 #endif
 
+#ifndef STC8H_PWM_ENABLE_GENERIC_API
+#define STC8H_PWM_ENABLE_GENERIC_API 1
+#endif
+
+#ifndef STC8H_PWM_ENABLE_FIXED_CHANNEL_API
+#define STC8H_PWM_ENABLE_FIXED_CHANNEL_API 0
+#endif
+
 /* Hot-path trimming switches. Default keeps the existing safe behaviour;
  * fixed-channel apps can set these to 0 once they have validated that
  * the duty value is already bounded and the (group, channel) pair is
@@ -83,6 +91,7 @@
 #error "STC8H_PWM_ENABLE_SET_DUTY_CLAMP requires STC8H_PWM_TRACK_PERIOD_PRESCALER."
 #endif
 
+#if STC8H_PWM_ENABLE_GENERIC_API
 stc8h_status_t stc8h_pwm_set_prescaler(stc8h_u8 group, stc8h_u16 prescaler);
 stc8h_status_t stc8h_pwm_set_period(stc8h_u8 group, stc8h_u16 period);
 stc8h_status_t stc8h_pwm_init_channel(stc8h_u8 group, stc8h_u8 channel, stc8h_u8 pin_select);
@@ -90,6 +99,27 @@ stc8h_status_t stc8h_pwm_set_duty(stc8h_u8 group, stc8h_u8 channel, stc8h_u16 du
 stc8h_status_t stc8h_pwm_enable(stc8h_u8 group, stc8h_u8 channel);
 #if STC8H_PWM_ENABLE_DISABLE
 stc8h_status_t stc8h_pwm_disable(stc8h_u8 group, stc8h_u8 channel);
+#endif
+#endif
+
+#if STC8H_PWM_ENABLE_FIXED_CHANNEL_API
+void stc8h_pwm_set_prescaler_a(stc8h_u16 prescaler);
+void stc8h_pwm_set_period_a(stc8h_u16 period);
+void stc8h_pwm_init_a1(stc8h_u8 pin_select);
+void stc8h_pwm_set_duty_a1(stc8h_u16 duty);
+void stc8h_pwm_enable_a1(void);
+
+void stc8h_pwm_set_prescaler_b(stc8h_u16 prescaler);
+void stc8h_pwm_set_period_b(stc8h_u16 period);
+void stc8h_pwm_init_b6(stc8h_u8 pin_select);
+void stc8h_pwm_init_b7(stc8h_u8 pin_select);
+void stc8h_pwm_init_b8(stc8h_u8 pin_select);
+void stc8h_pwm_set_duty_b6(stc8h_u16 duty);
+void stc8h_pwm_set_duty_b7(stc8h_u16 duty);
+void stc8h_pwm_set_duty_b8(stc8h_u16 duty);
+void stc8h_pwm_enable_b6(void);
+void stc8h_pwm_enable_b7(void);
+void stc8h_pwm_enable_b8(void);
 #endif
 
 #endif

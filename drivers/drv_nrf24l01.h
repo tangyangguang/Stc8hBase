@@ -83,6 +83,14 @@
 #define DRV_NRF24L01_ENABLE_READ_PAYLOAD 1
 #endif
 
+#ifndef DRV_NRF24L01_ENABLE_WRITE_PAYLOAD
+#define DRV_NRF24L01_ENABLE_WRITE_PAYLOAD 1
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_FIXED_PAYLOAD_API
+#define DRV_NRF24L01_ENABLE_FIXED_PAYLOAD_API 0
+#endif
+
 #ifndef DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD
 #define DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD 1
 #endif
@@ -136,6 +144,13 @@
  * path. */
 #ifndef DRV_NRF24L01_REQUIRES_ACTIVATE
 #define DRV_NRF24L01_REQUIRES_ACTIVATE 1
+#endif
+
+/* Optional nRF24L01+ fast path: write FEATURE directly and skip the
+ * FEATURE readback plus ACTIVATE fallback. Default 0 preserves the
+ * safer startup detection and original nRF24L01 compatibility path. */
+#ifndef DRV_NRF24L01_FEATURE_ENABLE_DIRECT_WRITE
+#define DRV_NRF24L01_FEATURE_ENABLE_DIRECT_WRITE 0
 #endif
 
 /* Timing defaults follow nRF24L01+ Product Specification v1.0.
@@ -235,9 +250,15 @@ void drv_nrf24l01_set_auto_ack(stc8h_u8 pipe_mask);
 void drv_nrf24l01_set_rx_pipes(stc8h_u8 pipe_mask);
 #endif
 
+#if DRV_NRF24L01_ENABLE_WRITE_PAYLOAD
 stc8h_u8 drv_nrf24l01_write_payload(const stc8h_u8 *data, stc8h_u8 len);
+#endif
 #if DRV_NRF24L01_ENABLE_READ_PAYLOAD
 stc8h_u8 drv_nrf24l01_read_payload(stc8h_u8 *data, stc8h_u8 len);
+#endif
+#if DRV_NRF24L01_ENABLE_FIXED_PAYLOAD_API
+stc8h_u8 drv_nrf24l01_write_payload_fixed(const stc8h_u8 *data);
+stc8h_u8 drv_nrf24l01_read_payload_fixed(stc8h_u8 *data);
 #endif
 void drv_nrf24l01_pulse_ce(void);
 

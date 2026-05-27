@@ -78,7 +78,7 @@
 #define STC8H_PWM_A_CHANNEL_ENABLED(channel) ((STC8H_PWM_A_CHANNEL_MASK & (1u << ((channel) - 1u))) != 0u)
 #define STC8H_PWM_B_CHANNEL_ENABLED(channel) ((STC8H_PWM_B_CHANNEL_MASK & (1u << ((channel) - 5u))) != 0u)
 
-#if STC8H_PWM_TRACK_PERIOD_PRESCALER
+#if STC8H_PWM_ENABLE_GENERIC_API && STC8H_PWM_TRACK_PERIOD_PRESCALER
 #if STC8H_PWM_GROUP_ENABLED(STC8H_PWM_GROUP_A)
 static stc8h_u16 stc8h_pwm_period_a;
 static stc8h_u16 stc8h_pwm_prescaler_a;
@@ -89,6 +89,7 @@ static stc8h_u16 stc8h_pwm_prescaler_b;
 #endif
 #endif
 
+#if STC8H_PWM_ENABLE_GENERIC_API
 static stc8h_u8 stc8h_pwm_group_valid(stc8h_u8 group)
 {
     if (group == STC8H_PWM_GROUP_A) {
@@ -103,6 +104,7 @@ static stc8h_u8 stc8h_pwm_group_valid(stc8h_u8 group)
     }
     return 0u;
 }
+#endif
 
 static void stc8h_pwm_write16(volatile stc8h_u8 *high, volatile stc8h_u8 *low, stc8h_u16 value)
 {
@@ -110,6 +112,7 @@ static void stc8h_pwm_write16(volatile stc8h_u8 *high, volatile stc8h_u8 *low, s
     *low = (stc8h_u8)value;
 }
 
+#if STC8H_PWM_ENABLE_GENERIC_API
 static stc8h_u8 stc8h_pwm_channel_output_mask(stc8h_u8 group, stc8h_u8 channel)
 {
     if (group == STC8H_PWM_GROUP_A) {
@@ -530,5 +533,138 @@ stc8h_status_t stc8h_pwm_disable(stc8h_u8 group, stc8h_u8 channel)
     }
 
     return STC8H_OK;
+}
+#endif
+#endif
+
+#if STC8H_PWM_ENABLE_FIXED_CHANNEL_API
+void stc8h_pwm_set_prescaler_a(stc8h_u16 prescaler)
+{
+    STC8H_PWM_OPEN_XFR();
+    stc8h_pwm_write16(&PWMA_PSCRH, &PWMA_PSCRL, prescaler);
+    PWMA_EGR = STC8H_PWM_EGR_UG;
+}
+
+void stc8h_pwm_set_period_a(stc8h_u16 period)
+{
+    STC8H_PWM_OPEN_XFR();
+    PWMA_CR1 &= (stc8h_u8)~STC8H_PWM_CR1_CEN;
+    stc8h_pwm_write16(&PWMA_ARRH, &PWMA_ARRL, period);
+    PWMA_RCR = 0u;
+    PWMA_DTR = 0u;
+    PWMA_BKR |= STC8H_PWM_BKR_MOE;
+    PWMA_CR1 = (stc8h_u8)(PWMA_CR1 | STC8H_PWM_CR1_ARPE);
+    PWMA_EGR = STC8H_PWM_EGR_UG;
+}
+
+void stc8h_pwm_init_a1(stc8h_u8 pin_select)
+{
+    STC8H_PWM_OPEN_XFR();
+    PWMA_PS = (stc8h_u8)((PWMA_PS & (stc8h_u8)~0x03u) | pin_select);
+    PWMA_CCMR1 = (stc8h_u8)((PWMA_CCMR1 & (stc8h_u8)~0x7Bu) | STC8H_PWM_MODE1_PRELOAD);
+    PWMA_CCER1 &= (stc8h_u8)~0x03u;
+    stc8h_pwm_set_duty_a1(0u);
+}
+
+void stc8h_pwm_set_duty_a1(stc8h_u16 duty)
+{
+    STC8H_PWM_OPEN_XFR();
+    stc8h_pwm_write16(&PWMA_CCR1H, &PWMA_CCR1L, duty);
+}
+
+void stc8h_pwm_enable_a1(void)
+{
+    STC8H_PWM_OPEN_XFR();
+    PWMA_ENO |= 0x01u;
+    PWMA_CCER1 |= 0x01u;
+    PWMA_CR1 |= STC8H_PWM_CR1_CEN;
+}
+
+void stc8h_pwm_set_prescaler_b(stc8h_u16 prescaler)
+{
+    STC8H_PWM_OPEN_XFR();
+    stc8h_pwm_write16(&PWMB_PSCRH, &PWMB_PSCRL, prescaler);
+    PWMB_EGR = STC8H_PWM_EGR_UG;
+}
+
+void stc8h_pwm_set_period_b(stc8h_u16 period)
+{
+    STC8H_PWM_OPEN_XFR();
+    PWMB_CR1 &= (stc8h_u8)~STC8H_PWM_CR1_CEN;
+    stc8h_pwm_write16(&PWMB_ARRH, &PWMB_ARRL, period);
+    PWMB_RCR = 0u;
+    PWMB_DTR = 0u;
+    PWMB_BKR |= STC8H_PWM_BKR_MOE;
+    PWMB_CR1 = (stc8h_u8)(PWMB_CR1 | STC8H_PWM_CR1_ARPE);
+    PWMB_EGR = STC8H_PWM_EGR_UG;
+}
+
+void stc8h_pwm_init_b6(stc8h_u8 pin_select)
+{
+    STC8H_PWM_OPEN_XFR();
+    PWMB_PS = (stc8h_u8)((PWMB_PS & (stc8h_u8)~0x0Cu) | (stc8h_u8)(pin_select << 2));
+    PWMB_CCMR2 = (stc8h_u8)((PWMB_CCMR2 & (stc8h_u8)~0x7Bu) | STC8H_PWM_MODE1_PRELOAD);
+    PWMB_CCER1 &= (stc8h_u8)~0x30u;
+    stc8h_pwm_set_duty_b6(0u);
+}
+
+void stc8h_pwm_init_b7(stc8h_u8 pin_select)
+{
+    STC8H_PWM_OPEN_XFR();
+    PWMB_PS = (stc8h_u8)((PWMB_PS & (stc8h_u8)~0x30u) | (stc8h_u8)(pin_select << 4));
+    PWMB_CCMR3 = (stc8h_u8)((PWMB_CCMR3 & (stc8h_u8)~0x7Bu) | STC8H_PWM_MODE1_PRELOAD);
+    PWMB_CCER2 &= (stc8h_u8)~0x03u;
+    stc8h_pwm_set_duty_b7(0u);
+}
+
+void stc8h_pwm_init_b8(stc8h_u8 pin_select)
+{
+    STC8H_PWM_OPEN_XFR();
+    PWMB_PS = (stc8h_u8)((PWMB_PS & (stc8h_u8)~0xC0u) | (stc8h_u8)(pin_select << 6));
+    PWMB_CCMR4 = (stc8h_u8)((PWMB_CCMR4 & (stc8h_u8)~0x7Bu) | STC8H_PWM_MODE1_PRELOAD);
+    PWMB_CCER2 &= (stc8h_u8)~0x30u;
+    stc8h_pwm_set_duty_b8(0u);
+}
+
+void stc8h_pwm_set_duty_b6(stc8h_u16 duty)
+{
+    STC8H_PWM_OPEN_XFR();
+    stc8h_pwm_write16(&PWMB_CCR6H, &PWMB_CCR6L, duty);
+}
+
+void stc8h_pwm_set_duty_b7(stc8h_u16 duty)
+{
+    STC8H_PWM_OPEN_XFR();
+    stc8h_pwm_write16(&PWMB_CCR7H, &PWMB_CCR7L, duty);
+}
+
+void stc8h_pwm_set_duty_b8(stc8h_u16 duty)
+{
+    STC8H_PWM_OPEN_XFR();
+    stc8h_pwm_write16(&PWMB_CCR8H, &PWMB_CCR8L, duty);
+}
+
+void stc8h_pwm_enable_b6(void)
+{
+    STC8H_PWM_OPEN_XFR();
+    PWMB_ENO |= 0x04u;
+    PWMB_CCER1 |= 0x10u;
+    PWMB_CR1 |= STC8H_PWM_CR1_CEN;
+}
+
+void stc8h_pwm_enable_b7(void)
+{
+    STC8H_PWM_OPEN_XFR();
+    PWMB_ENO |= 0x10u;
+    PWMB_CCER2 |= 0x01u;
+    PWMB_CR1 |= STC8H_PWM_CR1_CEN;
+}
+
+void stc8h_pwm_enable_b8(void)
+{
+    STC8H_PWM_OPEN_XFR();
+    PWMB_ENO |= 0x40u;
+    PWMB_CCER2 |= 0x10u;
+    PWMB_CR1 |= STC8H_PWM_CR1_CEN;
 }
 #endif

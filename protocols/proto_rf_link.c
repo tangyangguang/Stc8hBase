@@ -4,7 +4,7 @@
 #define PROTO_RF_LINK_LOST_TIMEOUT_MS 1000u
 #endif
 
-#if PROTO_RF_LINK_ENABLE_CONNECT || PROTO_RF_LINK_ENABLE_SEND_DATA || PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED || PROTO_RF_LINK_ENABLE_SEND_STATUS || PROTO_RF_LINK_ENABLE_SEND_HEARTBEAT
+#if PROTO_RF_LINK_ENABLE_CONNECT || PROTO_RF_LINK_ENABLE_SEND_DATA || (PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED && !PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_FAST_PATH) || PROTO_RF_LINK_ENABLE_SEND_STATUS || PROTO_RF_LINK_ENABLE_SEND_HEARTBEAT
 static void proto_rf_link_clear_packet(stc8h_u8 *packet)
 {
     stc8h_u8 i;
@@ -172,6 +172,39 @@ stc8h_status_t proto_rf_link_send_data(proto_rf_link_t *link, stc8h_u8 *packet, 
 #if PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED
 stc8h_status_t proto_rf_link_send_data_fixed(proto_rf_link_t *link, stc8h_u8 *packet, const stc8h_u8 *data)
 {
+#if PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_FAST_PATH
+    stc8h_u8 i;
+
+#if PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK
+    if ((link == 0) || (packet == 0) || (data == 0)) {
+        return STC8H_ERROR;
+    }
+#endif
+
+    packet[0] = PROTO_RF_LINK_MAGIC;
+    packet[1] = PROTO_RF_LINK_VERSION;
+    packet[2] = PROTO_RF_LINK_PACKET_DATA;
+    packet[3] = link->seq_tx;
+#if PROTO_RF_LINK_TRACK_SEQ_RX
+    packet[4] = link->seq_rx;
+#else
+    packet[4] = 0u;
+#endif
+    packet[5] = PROTO_RF_LINK_FLAG_ACK_REQUIRED;
+    packet[6] = link->local_id;
+    packet[7] = link->peer_id;
+    packet[8] = PROTO_RF_LINK_FIXED_PAYLOAD_LEN;
+
+    for (i = 0u; i < PROTO_RF_LINK_FIXED_PAYLOAD_LEN; ++i) {
+        packet[PROTO_RF_LINK_HEADER_SIZE + i] = data[i];
+    }
+    for (i = PROTO_RF_LINK_FIXED_PAYLOAD_LEN; i < PROTO_RF_LINK_PAYLOAD_MAX; ++i) {
+        packet[PROTO_RF_LINK_HEADER_SIZE + i] = 0u;
+    }
+
+    ++link->seq_tx;
+    return STC8H_OK;
+#else
     stc8h_status_t status;
 
     status = proto_rf_link_make_packet(link, packet, PROTO_RF_LINK_PACKET_DATA, PROTO_RF_LINK_FLAG_ACK_REQUIRED, data, PROTO_RF_LINK_FIXED_PAYLOAD_LEN);
@@ -181,6 +214,7 @@ stc8h_status_t proto_rf_link_send_data_fixed(proto_rf_link_t *link, stc8h_u8 *pa
     }
 #endif
     return status;
+#endif
 }
 #endif
 

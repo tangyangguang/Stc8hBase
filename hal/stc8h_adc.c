@@ -26,10 +26,12 @@
 #define STC8H_ADC_TIMEOUT_LOOPS 60000u
 #endif
 
+#if STC8H_ADC_ENABLE_CHANNEL_CHECK
 static stc8h_u8 stc8h_adc_channel_valid(stc8h_u8 channel)
 {
     return ((channel <= 1u) || ((channel >= 8u) && (channel <= 14u)) || (channel == 15u)) ? 1u : 0u;
 }
+#endif
 
 void stc8h_adc_init(void)
 {
@@ -46,9 +48,11 @@ stc8h_u16 stc8h_adc_read(stc8h_u8 channel)
 {
     stc8h_u16 timeout;
 
+#if STC8H_ADC_ENABLE_CHANNEL_CHECK
     if (stc8h_adc_channel_valid(channel) == 0u) {
         return STC8H_ADC_INVALID_VALUE;
     }
+#endif
 
     ADC_CONTR = (stc8h_u8)(STC8H_ADC_POWER | (channel & 0x0Fu));
     ADC_CONTR |= STC8H_ADC_START;
