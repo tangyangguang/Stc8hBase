@@ -5,7 +5,7 @@
 #define RF_LINK_CHANNEL 40u
 #define RF_LINK_ADDR_LEN 5u
 
-static STC8H_CODE stc8h_u8 rf_link_addr[RF_LINK_ADDR_LEN] = {'T', 'O', 'Y', 'R', '1'};
+static const STC8H_CODE stc8h_u8 rf_link_addr[RF_LINK_ADDR_LEN] = {'T', 'O', 'Y', 'R', '1'};
 static STC8H_XDATA proto_rf_link_t link;
 static STC8H_XDATA stc8h_u8 packet[PROTO_RF_LINK_PACKET_SIZE];
 static STC8H_XDATA stc8h_u8 payload[PROTO_RF_LINK_FIXED_PAYLOAD_LEN] = {

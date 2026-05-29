@@ -143,6 +143,12 @@
 #define DRV_NRF24L01_ENABLE_RECOVER (DRV_NRF24L01_ENABLE_ENTER_STANDBY && DRV_NRF24L01_ENABLE_ENTER_RX)
 #endif
 
+#if defined(STC8H_HOSTED)
+#define DRV_NRF24L01_CODE_CONST STC8H_CODE
+#else
+#define DRV_NRF24L01_CODE_CONST const STC8H_CODE
+#endif
+
 /* The original nRF24L01 (non +) requires sending the ACTIVATE 0x73
  * command before FEATURE bits become writable. nRF24L01+ accepts
  * FEATURE writes directly. Apps that have positively identified the
@@ -252,7 +258,7 @@ stc8h_status_t drv_nrf24l01_set_payload_size(stc8h_u8 pipe, stc8h_u8 len);
 stc8h_status_t drv_nrf24l01_config_pipe0_fixed(const stc8h_u8 *addr);
 #endif
 #if DRV_NRF24L01_ENABLE_CODE_ADDRESS_API
-stc8h_status_t drv_nrf24l01_config_pipe0_fixed_code(STC8H_CODE stc8h_u8 *addr);
+stc8h_status_t drv_nrf24l01_config_pipe0_fixed_code(DRV_NRF24L01_CODE_CONST stc8h_u8 *addr);
 #endif
 stc8h_status_t drv_nrf24l01_set_rate_power(drv_nrf24l01_rate_t rate, drv_nrf24l01_power_t power);
 stc8h_status_t drv_nrf24l01_set_auto_retransmit(stc8h_u8 delay_code, stc8h_u8 count);

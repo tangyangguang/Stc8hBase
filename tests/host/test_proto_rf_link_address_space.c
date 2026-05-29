@@ -75,8 +75,10 @@ static int test_xdata_fixed_send_matches_generic_fixed_send(void)
                         "xdata fixed send must produce the same packet bytes as generic fixed send");
     failures += require(generic_link.seq_tx == xdata_link.seq_tx,
                         "xdata fixed send must advance seq_tx like generic fixed send");
-    failures += require(xdata_link.ack_pending == 1u,
-                        "xdata fixed send must preserve fixed ACK tracking behavior");
+    failures += require(generic_link.ack_pending == 1u,
+                        "generic fixed fast send must preserve fixed ACK tracking behavior");
+    failures += require(xdata_link.ack_pending == generic_link.ack_pending,
+                        "xdata fixed send must match generic fixed ACK tracking behavior");
 
     return failures;
 }

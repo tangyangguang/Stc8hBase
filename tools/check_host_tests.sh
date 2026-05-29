@@ -336,8 +336,13 @@ EOF
 #define DRV_NRF24L01_POWER_UP_DELAY() do { } while (0)
 #define DRV_NRF24L01_CE_PULSE_DELAY() do { } while (0)
 #include "${ROOT_DIR}/drivers/drv_nrf24l01.c"
+static const STC8H_CODE stc8h_u8 code_addr[5] = { 1u, 2u, 3u, 4u, 5u };
+void main(void)
+{
+    (void)drv_nrf24l01_config_pipe0_fixed_code(code_addr);
+}
 EOF
-    sdcc -mmcs51 --std-sdcc11 -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/drivers" -I"${ROOT_DIR}/hal" \
+    sdcc -mmcs51 --std-sdcc11 --Werror -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/drivers" -I"${ROOT_DIR}/hal" \
         -c -o "${tmp_dir}/nrf24_xdata_code.rel" "${tmp_dir}/nrf24_xdata_code.c"
     check_no_gptr_in_body "${tmp_dir}/nrf24_xdata_code.asm" \
         "drv_nrf24l01_write_payload_fixed_xdata" "${tmp_dir}/nrf24_write_payload_xdata.body"

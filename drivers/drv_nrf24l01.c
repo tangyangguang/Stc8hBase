@@ -257,7 +257,7 @@ static stc8h_u8 drv_nrf24l01_write_buf_data(stc8h_u8 cmd, const STC8H_DATA stc8h
 #endif
 
 #if DRV_NRF24L01_ENABLE_CODE_ADDRESS_API || DRV_NRF24L01_ENABLE_CHECK_PRESENT
-static stc8h_u8 drv_nrf24l01_write_buf_code(stc8h_u8 cmd, STC8H_CODE stc8h_u8 *buf, stc8h_u8 len)
+static stc8h_u8 drv_nrf24l01_write_buf_code(stc8h_u8 cmd, DRV_NRF24L01_CODE_CONST stc8h_u8 *buf, stc8h_u8 len)
 {
     stc8h_u8 status;
     stc8h_u8 i;
@@ -430,7 +430,7 @@ stc8h_status_t drv_nrf24l01_config_pipe0_fixed(const stc8h_u8 *addr)
 #endif
 
 #if DRV_NRF24L01_ENABLE_CODE_ADDRESS_API
-stc8h_status_t drv_nrf24l01_config_pipe0_fixed_code(STC8H_CODE stc8h_u8 *addr)
+stc8h_status_t drv_nrf24l01_config_pipe0_fixed_code(DRV_NRF24L01_CODE_CONST stc8h_u8 *addr)
 {
 #if DRV_NRF24L01_ENABLE_ARG_CHECK
     if (addr == 0) {

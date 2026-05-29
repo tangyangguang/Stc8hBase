@@ -57,6 +57,14 @@ check_global_sym_absent() {
     done
 }
 
+check_no_gptr_in_tree() {
+    tree_path=$1
+    if grep -R -Eq '__gptr(get|put)' "${ROOT_DIR}/${tree_path}"; then
+        echo "generic pointer helper found in ${tree_path}" >&2
+        exit 1
+    fi
+}
+
 # Asserts the .mem ROM line reports at most $2 bytes used.
 # Catches accidental regressions when trim macros stop working.
 check_mem_rom_at_most() {
@@ -310,11 +318,15 @@ check_global_sym_absent \
 check_map_absent \
     "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.map" \
     "_stc8h_spi_write"
+check_no_gptr_in_tree \
+    "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/src"
 
 check_map_absent \
     "examples/platformio/tm1637_number/.pio/build/STC8H1K08/firmware.map" \
-    "_drv_tm1637_set_display" "_drv_tm1637_display_raw " "_drv_tm1637_display_digits" \
+    "_stc8h_uart_write " "_drv_tm1637_set_display" "_drv_tm1637_display_raw " "_drv_tm1637_display_digits" \
     "_drv_tm1637_display_number" "_drv_tm1637_clear"
+check_no_gptr_in_tree \
+    "examples/platformio/tm1637_number/.pio/build/STC8H1K08/src"
 
 check_map_absent \
     "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.map" \

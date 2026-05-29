@@ -248,6 +248,9 @@ stc8h_status_t proto_rf_link_send_data_fixed(proto_rf_link_t *link, stc8h_u8 *pa
     }
 
     ++link->seq_tx;
+#if PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_TRACK_ACK && PROTO_RF_LINK_TRACK_ACK_PENDING
+    link->ack_pending = 1u;
+#endif
     return STC8H_OK;
 #else
     stc8h_status_t status;
