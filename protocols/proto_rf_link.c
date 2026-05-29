@@ -48,6 +48,7 @@ static stc8h_status_t proto_rf_link_make_packet(proto_rf_link_t *link, stc8h_u8 
 }
 #endif
 
+#if PROTO_RF_LINK_ENABLE_INIT
 void proto_rf_link_init(proto_rf_link_t *link)
 {
 #if PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK
@@ -73,9 +74,53 @@ void proto_rf_link_init(proto_rf_link_t *link)
     link->heartbeat_ms = 0u;
 #endif
 }
+#endif
+
+#if PROTO_RF_LINK_ENABLE_XDATA_FIXED_API
+void proto_rf_link_init_xdata(STC8H_XDATA proto_rf_link_t *link)
+{
+#if PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK
+    if (link == 0) {
+        return;
+    }
+#endif
+
+#if PROTO_RF_LINK_TRACK_STATE
+    link->state = PROTO_RF_LINK_STATE_IDLE;
+#endif
+    link->local_id = 0u;
+    link->peer_id = 0u;
+    link->seq_tx = 0u;
+#if PROTO_RF_LINK_TRACK_SEQ_RX
+    link->seq_rx = 0u;
+#endif
+#if PROTO_RF_LINK_TRACK_ACK_PENDING
+    link->ack_pending = 0u;
+#endif
+#if PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS
+    link->timeout_ms = 0u;
+    link->heartbeat_ms = 0u;
+#endif
+}
+#endif
 
 #if PROTO_RF_LINK_ENABLE_SET_IDS
 void proto_rf_link_set_ids(proto_rf_link_t *link, stc8h_u8 local_id, stc8h_u8 peer_id)
+{
+#if PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK
+    if (link == 0) {
+        return;
+    }
+#endif
+
+    link->local_id = local_id;
+    link->peer_id = peer_id;
+}
+
+#endif
+
+#if PROTO_RF_LINK_ENABLE_XDATA_FIXED_API
+void proto_rf_link_set_ids_xdata(STC8H_XDATA proto_rf_link_t *link, stc8h_u8 local_id, stc8h_u8 peer_id)
 {
 #if PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK
     if (link == 0) {
@@ -311,6 +356,86 @@ proto_rf_link_event_t proto_rf_link_poll(proto_rf_link_t *link, const stc8h_u8 *
 
 #if PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED
 stc8h_status_t proto_rf_link_poll_data_fixed(proto_rf_link_t *link, const stc8h_u8 *packet, stc8h_u8 *data)
+{
+    stc8h_u8 i;
+
+#if PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK
+    if ((link == 0) || (packet == 0) || (data == 0)) {
+        return STC8H_ERROR;
+    }
+#endif
+    if ((packet[0] != PROTO_RF_LINK_MAGIC) || (packet[1] != PROTO_RF_LINK_VERSION)) {
+        return STC8H_ERROR;
+    }
+    if ((packet[7] != link->local_id) || (packet[6] != link->peer_id)) {
+        return STC8H_ERROR;
+    }
+    if ((packet[2] != PROTO_RF_LINK_PACKET_DATA) || (packet[8] != PROTO_RF_LINK_FIXED_PAYLOAD_LEN)) {
+        return STC8H_ERROR;
+    }
+
+    for (i = 0u; i < PROTO_RF_LINK_FIXED_PAYLOAD_LEN; ++i) {
+        data[i] = packet[PROTO_RF_LINK_HEADER_SIZE + i];
+    }
+
+#if PROTO_RF_LINK_TRACK_SEQ_RX
+    link->seq_rx = packet[3];
+#endif
+#if PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED_TRACK_LINK
+#if PROTO_RF_LINK_TRACK_ACK_PENDING
+    link->ack_pending = 0u;
+#endif
+#if PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
+    link->timeout_ms = 0u;
+#endif
+#if PROTO_RF_LINK_TRACK_STATE
+    link->state = PROTO_RF_LINK_STATE_CONNECTED;
+#endif
+#endif
+    return STC8H_OK;
+}
+#endif
+
+#if PROTO_RF_LINK_ENABLE_XDATA_FIXED_API
+stc8h_status_t proto_rf_link_send_data_fixed_xdata(STC8H_XDATA proto_rf_link_t *link, STC8H_XDATA stc8h_u8 *packet, const STC8H_XDATA stc8h_u8 *data)
+{
+    stc8h_u8 i;
+
+#if PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK
+    if ((link == 0) || (packet == 0) || (data == 0)) {
+        return STC8H_ERROR;
+    }
+#endif
+
+    packet[0] = PROTO_RF_LINK_MAGIC;
+    packet[1] = PROTO_RF_LINK_VERSION;
+    packet[2] = PROTO_RF_LINK_PACKET_DATA;
+    packet[3] = link->seq_tx;
+#if PROTO_RF_LINK_TRACK_SEQ_RX
+    packet[4] = link->seq_rx;
+#else
+    packet[4] = 0u;
+#endif
+    packet[5] = PROTO_RF_LINK_FLAG_ACK_REQUIRED;
+    packet[6] = link->local_id;
+    packet[7] = link->peer_id;
+    packet[8] = PROTO_RF_LINK_FIXED_PAYLOAD_LEN;
+
+    for (i = 0u; i < PROTO_RF_LINK_FIXED_PAYLOAD_LEN; ++i) {
+        packet[PROTO_RF_LINK_HEADER_SIZE + i] = data[i];
+    }
+    for (i = PROTO_RF_LINK_FIXED_PAYLOAD_LEN; i < PROTO_RF_LINK_PAYLOAD_MAX; ++i) {
+        packet[PROTO_RF_LINK_HEADER_SIZE + i] = 0u;
+    }
+
+    ++link->seq_tx;
+#if PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_TRACK_ACK && PROTO_RF_LINK_TRACK_ACK_PENDING
+    link->ack_pending = 1u;
+#endif
+    return STC8H_OK;
+}
+
+stc8h_status_t proto_rf_link_poll_data_fixed_xdata(STC8H_XDATA proto_rf_link_t *link, const STC8H_XDATA stc8h_u8 *packet, STC8H_XDATA stc8h_u8 *data)
 {
     stc8h_u8 i;
 

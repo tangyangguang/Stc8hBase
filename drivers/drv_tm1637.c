@@ -27,6 +27,12 @@
 #define DRV_TM1637_MAX_DIGITS    6u
 #define DRV_TM1637_MINUS         0x40u
 
+#if DRV_TM1637_ENABLE_DISPLAY_RAW || DRV_TM1637_ENABLE_DISPLAY_RAW4 || DRV_TM1637_ENABLE_DISPLAY_DIGITS || DRV_TM1637_ENABLE_DISPLAY_NUMBER || DRV_TM1637_ENABLE_CLEAR
+#define DRV_TM1637_NEED_GENERIC_RAW_LEN 1
+#else
+#define DRV_TM1637_NEED_GENERIC_RAW_LEN 0
+#endif
+
 #if DRV_TM1637_ENABLE_BRIGHTNESS_STATE
 static stc8h_u8 drv_tm1637_brightness = 7u;
 #endif
@@ -167,14 +173,15 @@ void drv_tm1637_set_display(stc8h_u8 on)
 }
 #endif
 
-#if DRV_TM1637_ENABLE_DISPLAY_RAW4 || !DRV_TM1637_ENABLE_DISPLAY_RAW
+#if DRV_TM1637_NEED_GENERIC_RAW_LEN && (DRV_TM1637_ENABLE_DISPLAY_RAW4 || !DRV_TM1637_ENABLE_DISPLAY_RAW)
 #define DRV_TM1637_RAW_FN static stc8h_status_t drv_tm1637_display_raw_len
 #define DRV_TM1637_DISPLAY_RAW_INTERNAL drv_tm1637_display_raw_len
-#else
+#elif DRV_TM1637_NEED_GENERIC_RAW_LEN
 #define DRV_TM1637_RAW_FN stc8h_status_t drv_tm1637_display_raw
 #define DRV_TM1637_DISPLAY_RAW_INTERNAL drv_tm1637_display_raw
 #endif
 
+#if DRV_TM1637_NEED_GENERIC_RAW_LEN
 DRV_TM1637_RAW_FN(const stc8h_u8 *segments, stc8h_u8 len)
 {
     stc8h_u8 i;
@@ -203,6 +210,7 @@ DRV_TM1637_RAW_FN(const stc8h_u8 *segments, stc8h_u8 len)
 
     return drv_tm1637_write_control();
 }
+#endif
 
 #if DRV_TM1637_ENABLE_DISPLAY_RAW && DRV_TM1637_ENABLE_DISPLAY_RAW4
 stc8h_status_t drv_tm1637_display_raw(const stc8h_u8 *segments, stc8h_u8 len)
@@ -215,6 +223,37 @@ stc8h_status_t drv_tm1637_display_raw(const stc8h_u8 *segments, stc8h_u8 len)
 stc8h_status_t drv_tm1637_display_raw4(const stc8h_u8 segments[4])
 {
     return DRV_TM1637_DISPLAY_RAW_INTERNAL(segments, 4u);
+}
+#endif
+
+#if DRV_TM1637_ENABLE_DISPLAY_RAW4_DATA
+stc8h_status_t drv_tm1637_display_raw4_data(const STC8H_DATA stc8h_u8 segments[4])
+{
+    stc8h_u8 i;
+    stc8h_status_t status;
+
+#if DRV_TM1637_ENABLE_RAW_LEN_CHECK
+    if (segments == 0) {
+        return STC8H_ERROR;
+    }
+#endif
+
+    status = drv_tm1637_write_cmd(DRV_TM1637_CMD_DATA_AUTO);
+    if (status != STC8H_OK) {
+        return status;
+    }
+
+    drv_tm1637_start();
+    status = drv_tm1637_write_byte(DRV_TM1637_CMD_ADDR_BASE);
+    for (i = 0u; (i < 4u) && (status == STC8H_OK); ++i) {
+        status = drv_tm1637_write_byte(segments[i]);
+    }
+    drv_tm1637_stop();
+    if (status != STC8H_OK) {
+        return status;
+    }
+
+    return drv_tm1637_write_control();
 }
 #endif
 

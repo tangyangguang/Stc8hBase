@@ -56,6 +56,8 @@ STC8H 等上电默认高阻的芯片应在该 hook 中配置 CE/CSN 端口模式
 - nRF24L01+ 可选能力，包括 dynamic payload 和 ACK payload。
 - 小型稳定性 helper，包括 PTX 结果分类、动态 RX payload 校验读取、PRX ACK payload 预装和统一 FIFO/IRQ 恢复。
 
+STC8H/SDCC 小固件如果把 radio packet buffer 放在 XDATA，应使用 `drv_nrf24l01_write_payload_fixed_xdata()` / `drv_nrf24l01_read_payload_fixed_xdata()`，并关闭未用的 generic payload API。固定 pipe0 地址如果放在 CODE/flash，应使用 `drv_nrf24l01_config_pipe0_fixed_code()`。这些 API 不改变 SPI 命令或 nRF24 寄存器语义，只把 8051 地址空间约束显式写进签名，避免 SDCC generic pointer helper 进入 fixed-path wrapper。
+
 `drv_nrf24l01_set_rx_pipes()` 只写 `EN_RXADDR`；`drv_nrf24l01_set_auto_ack()` 只写 `EN_AA`。这两个寄存器不能再绑在一个 API 里，否则无法诊断“PRX 仍接收，但只关闭 ACK payload 或 auto-ack”的配置。
 
 `drv_nrf24l01_check_present()` 会用 `RX_ADDR_P0` 做 5 字节写读探测，并在返回前恢复原 pipe0 地址。matrix 快速诊断为了 STC8H1K08 的 8KB ROM 余量关闭了每 stage 重复探测；单模块 diag 和普通 pair diag 仍执行该检查。

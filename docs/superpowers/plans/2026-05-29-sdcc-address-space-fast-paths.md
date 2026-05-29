@@ -258,7 +258,7 @@ Extract function bodies from generated `.asm` and fail on:
 grep -Eq '__gptr(get|put)'
 ```
 
-Add a size check that compares generic protocol fixed sender assembly body lines against XDATA fixed sender assembly body lines and requires the XDATA body to be smaller.
+Add a whole-wrapper check with `PROTO_RF_LINK_ENABLE_INIT=0`, `PROTO_RF_LINK_ENABLE_SET_IDS=0`, generic fixed APIs disabled, and `PROTO_RF_LINK_ENABLE_XDATA_FIXED_API=1`; fail if the generated assembly contains any `__gptrget` or `__gptrput`. Add a size check that compares generic protocol fixed sender assembly body lines against XDATA fixed sender assembly body lines and requires the XDATA body to be smaller.
 
 - [ ] **Step 2: Run guard to verify failure before implementation**
 

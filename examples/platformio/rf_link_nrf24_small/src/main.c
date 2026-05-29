@@ -5,10 +5,10 @@
 #define RF_LINK_CHANNEL 40u
 #define RF_LINK_ADDR_LEN 5u
 
-static const stc8h_u8 rf_link_addr[RF_LINK_ADDR_LEN] = {'T', 'O', 'Y', 'R', '1'};
-static proto_rf_link_t link;
-static stc8h_u8 packet[PROTO_RF_LINK_PACKET_SIZE];
-static stc8h_u8 payload[PROTO_RF_LINK_FIXED_PAYLOAD_LEN] = {
+static STC8H_CODE stc8h_u8 rf_link_addr[RF_LINK_ADDR_LEN] = {'T', 'O', 'Y', 'R', '1'};
+static STC8H_XDATA proto_rf_link_t link;
+static STC8H_XDATA stc8h_u8 packet[PROTO_RF_LINK_PACKET_SIZE];
+static STC8H_XDATA stc8h_u8 payload[PROTO_RF_LINK_FIXED_PAYLOAD_LEN] = {
     1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u
 };
 
@@ -26,7 +26,7 @@ static stc8h_status_t radio_init(void)
     if (drv_nrf24l01_set_channel(RF_LINK_CHANNEL) != STC8H_OK) {
         return STC8H_ERROR;
     }
-    if (drv_nrf24l01_config_pipe0_fixed(rf_link_addr) != STC8H_OK) {
+    if (drv_nrf24l01_config_pipe0_fixed_code(rf_link_addr) != STC8H_OK) {
         return STC8H_ERROR;
     }
 
@@ -47,15 +47,15 @@ void main(void)
 {
     drv_nrf24l01_init_pins();
     stc8h_spi_init();
-    proto_rf_link_init(&link);
-    proto_rf_link_set_ids(&link, 1u, 2u);
+    proto_rf_link_init_xdata(&link);
+    proto_rf_link_set_ids_xdata(&link, 1u, 2u);
     (void)radio_init();
 
     while (1) {
-        if (proto_rf_link_send_data_fixed(&link, packet, payload) == STC8H_OK) {
-            (void)drv_nrf24l01_write_payload(packet, PROTO_RF_LINK_PACKET_SIZE);
+        if (proto_rf_link_send_data_fixed_xdata(&link, packet, payload) == STC8H_OK) {
+            (void)drv_nrf24l01_write_payload_fixed_xdata(packet);
             drv_nrf24l01_pulse_ce();
         }
-        (void)proto_rf_link_poll_data_fixed(&link, packet, payload);
+        (void)proto_rf_link_poll_data_fixed_xdata(&link, packet, payload);
     }
 }

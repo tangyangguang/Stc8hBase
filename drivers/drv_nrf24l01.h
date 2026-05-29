@@ -91,6 +91,14 @@
 #define DRV_NRF24L01_ENABLE_FIXED_PAYLOAD_API 0
 #endif
 
+#ifndef DRV_NRF24L01_ENABLE_XDATA_PAYLOAD_API
+#define DRV_NRF24L01_ENABLE_XDATA_PAYLOAD_API 0
+#endif
+
+#ifndef DRV_NRF24L01_ENABLE_CODE_ADDRESS_API
+#define DRV_NRF24L01_ENABLE_CODE_ADDRESS_API 0
+#endif
+
 #ifndef DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD
 #define DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD 1
 #endif
@@ -243,6 +251,9 @@ stc8h_status_t drv_nrf24l01_set_payload_size(stc8h_u8 pipe, stc8h_u8 len);
 #if DRV_NRF24L01_ENABLE_PIPE0_FIXED_API
 stc8h_status_t drv_nrf24l01_config_pipe0_fixed(const stc8h_u8 *addr);
 #endif
+#if DRV_NRF24L01_ENABLE_CODE_ADDRESS_API
+stc8h_status_t drv_nrf24l01_config_pipe0_fixed_code(STC8H_CODE stc8h_u8 *addr);
+#endif
 stc8h_status_t drv_nrf24l01_set_rate_power(drv_nrf24l01_rate_t rate, drv_nrf24l01_power_t power);
 stc8h_status_t drv_nrf24l01_set_auto_retransmit(stc8h_u8 delay_code, stc8h_u8 count);
 void drv_nrf24l01_set_auto_ack(stc8h_u8 pipe_mask);
@@ -259,6 +270,10 @@ stc8h_u8 drv_nrf24l01_read_payload(stc8h_u8 *data, stc8h_u8 len);
 #if DRV_NRF24L01_ENABLE_FIXED_PAYLOAD_API
 stc8h_u8 drv_nrf24l01_write_payload_fixed(const stc8h_u8 *data);
 stc8h_u8 drv_nrf24l01_read_payload_fixed(stc8h_u8 *data);
+#endif
+#if DRV_NRF24L01_ENABLE_XDATA_PAYLOAD_API
+stc8h_u8 drv_nrf24l01_write_payload_fixed_xdata(const STC8H_XDATA stc8h_u8 *data);
+stc8h_u8 drv_nrf24l01_read_payload_fixed_xdata(STC8H_XDATA stc8h_u8 *data);
 #endif
 void drv_nrf24l01_pulse_ce(void);
 

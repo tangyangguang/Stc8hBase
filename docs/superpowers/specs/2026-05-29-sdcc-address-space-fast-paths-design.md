@@ -41,11 +41,9 @@ Add disabled-by-default fixed-path APIs:
 ```c
 void proto_rf_link_init_xdata(STC8H_XDATA proto_rf_link_t *link);
 
-#if PROTO_RF_LINK_ENABLE_SET_IDS
 void proto_rf_link_set_ids_xdata(STC8H_XDATA proto_rf_link_t *link,
                                  stc8h_u8 local_id,
                                  stc8h_u8 peer_id);
-#endif
 
 stc8h_status_t proto_rf_link_send_data_fixed_xdata(
     STC8H_XDATA proto_rf_link_t *link,
@@ -60,7 +58,7 @@ stc8h_status_t proto_rf_link_poll_data_fixed_xdata(
 
 The new APIs preserve the fixed packet format and the same optional tracking macros as the generic fixed APIs. They do not call the generic packet builder and must compile without `__gptrget` or `__gptrput` in a minimal SDCC fixed-path build.
 
-Add `PROTO_RF_LINK_ENABLE_INIT`, defaulting to `1`, around the existing generic `proto_rf_link_init()`. Small XDATA-only wrappers can set it to `0` and use `proto_rf_link_init_xdata()` instead.
+Add `PROTO_RF_LINK_ENABLE_INIT`, defaulting to `1`, around the existing generic `proto_rf_link_init()`. Small XDATA-only wrappers can set it to `0` and use `proto_rf_link_init_xdata()` instead. `proto_rf_link_set_ids_xdata()` is controlled only by `PROTO_RF_LINK_ENABLE_XDATA_FIXED_API`, so XDATA-only wrappers can also set `PROTO_RF_LINK_ENABLE_SET_IDS=0` and avoid the generic `set_ids()` helper.
 
 ### `drv_nrf24l01`
 

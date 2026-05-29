@@ -2,6 +2,9 @@
 #include <string.h>
 
 #define STC8H_SYSCLK_HZ 11059200UL
+#define DRV_NRF24L01_ENABLE_FIXED_PAYLOAD_API 1
+#define DRV_NRF24L01_ENABLE_XDATA_PAYLOAD_API 1
+#define DRV_NRF24L01_ENABLE_CODE_ADDRESS_API 1
 
 static void test_ce_high(void);
 static void test_ce_low(void);
@@ -24,6 +27,7 @@ static void test_ce_pulse_delay(void);
 #define TEST_CMD_R_REGISTER 0x00u
 #define TEST_CMD_W_REGISTER 0x20u
 #define TEST_CMD_R_RX_PAYLOAD 0x61u
+#define TEST_CMD_W_TX_PAYLOAD 0xA0u
 #define TEST_CMD_FLUSH_TX 0xE1u
 #define TEST_CMD_FLUSH_RX 0xE2u
 #define TEST_CMD_R_RX_PL_WID 0x60u
@@ -34,6 +38,9 @@ static void test_ce_pulse_delay(void);
 #define TEST_REG_EN_RXADDR 0x02u
 #define TEST_REG_STATUS 0x07u
 #define TEST_REG_RX_ADDR_P0 0x0Au
+#define TEST_REG_TX_ADDR 0x10u
+#define TEST_REG_RX_PW_P0 0x11u
+#define TEST_REG_SETUP_AW 0x03u
 #define TEST_REG_FIFO_STATUS 0x17u
 #define TEST_REG_DYNPD 0x1Cu
 #define TEST_REG_FEATURE 0x1Du
@@ -42,7 +49,10 @@ static void test_ce_pulse_delay(void);
 
 static stc8h_u8 regs[0x20];
 static stc8h_u8 rx_addr_p0[5];
+static stc8h_u8 tx_addr[5];
 static stc8h_u8 rx_payload[32];
+static stc8h_u8 tx_payload_written[32];
+static stc8h_u8 tx_payload_len;
 static stc8h_u8 ack_payload_written[32];
 static stc8h_u8 ack_payload_len;
 static stc8h_u8 ack_payload_pipe;
@@ -60,10 +70,13 @@ static void fake_reset(void)
 {
     memset(regs, 0, sizeof(regs));
     memset(rx_addr_p0, 0, sizeof(rx_addr_p0));
+    memset(tx_addr, 0, sizeof(tx_addr));
     memset(rx_payload, 0, sizeof(rx_payload));
+    memset(tx_payload_written, 0, sizeof(tx_payload_written));
     memset(ack_payload_written, 0, sizeof(ack_payload_written));
     regs[TEST_REG_STATUS] = 0x0Eu;
     regs[TEST_REG_FIFO_STATUS] = DRV_NRF24L01_FIFO_TX_EMPTY | DRV_NRF24L01_FIFO_RX_EMPTY;
+    tx_payload_len = 0u;
     ack_payload_len = 0u;
     ack_payload_pipe = 0xFFu;
     rx_payload_width = 0u;
@@ -137,6 +150,8 @@ stc8h_u8 stc8h_spi_transfer(stc8h_u8 value)
             regs[TEST_REG_STATUS] &= (stc8h_u8)~(value & 0x70u);
         } else if ((reg == TEST_REG_RX_ADDR_P0) && (data_index < sizeof(rx_addr_p0))) {
             rx_addr_p0[data_index] = value;
+        } else if ((reg == TEST_REG_TX_ADDR) && (data_index < sizeof(tx_addr))) {
+            tx_addr[data_index] = value;
         } else {
             regs[reg] = value;
         }
@@ -159,6 +174,15 @@ stc8h_u8 stc8h_spi_transfer(stc8h_u8 value)
             return rx_payload[data_index];
         }
         return 0u;
+    }
+
+    if (spi_cmd == TEST_CMD_W_TX_PAYLOAD) {
+        if (data_index < sizeof(tx_payload_written)) {
+            tx_payload_written[data_index] = value;
+            tx_payload_len = (stc8h_u8)(data_index + 1u);
+        }
+        regs[TEST_REG_FIFO_STATUS] &= (stc8h_u8)~DRV_NRF24L01_FIFO_TX_EMPTY;
+        return regs[TEST_REG_STATUS];
     }
 
     if ((spi_cmd & 0xF8u) == TEST_CMD_W_ACK_PAYLOAD) {
@@ -400,6 +424,63 @@ static int test_disable_dynamic_payload_clears_ack_payload_feature(void)
     return failures;
 }
 
+static int test_xdata_fixed_payload_write_and_read_use_fixed_width(void)
+{
+    int failures;
+    stc8h_u8 payload[DRV_NRF24L01_FIXED_PAYLOAD_SIZE];
+    stc8h_u8 out[DRV_NRF24L01_FIXED_PAYLOAD_SIZE];
+    stc8h_u8 i;
+
+    failures = 0;
+    fake_reset();
+    for (i = 0u; i < DRV_NRF24L01_FIXED_PAYLOAD_SIZE; ++i) {
+        payload[i] = (stc8h_u8)(0x80u + i);
+        rx_payload[i] = (stc8h_u8)(0x40u + i);
+        out[i] = 0u;
+    }
+
+    (void)drv_nrf24l01_write_payload_fixed_xdata(payload);
+    failures += require(spi_cmd == TEST_CMD_W_TX_PAYLOAD,
+                        "xdata fixed payload write must use W_TX_PAYLOAD");
+    failures += require(tx_payload_len == DRV_NRF24L01_FIXED_PAYLOAD_SIZE,
+                        "xdata fixed payload write must send fixed payload size");
+    failures += require(memcmp(tx_payload_written, payload, sizeof(payload)) == 0,
+                        "xdata fixed payload write must preserve payload bytes");
+
+    (void)drv_nrf24l01_read_payload_fixed_xdata(out);
+    failures += require(spi_cmd == TEST_CMD_R_RX_PAYLOAD,
+                        "xdata fixed payload read must use R_RX_PAYLOAD");
+    failures += require(memcmp(out, rx_payload, sizeof(out)) == 0,
+                        "xdata fixed payload read must copy fixed payload bytes");
+
+    return failures;
+}
+
+static int test_code_pipe0_fixed_config_writes_address_from_code_space(void)
+{
+    int failures;
+    static STC8H_CODE stc8h_u8 addr[5] = { 'T', 'O', 'Y', 'R', '1' };
+    stc8h_status_t status;
+
+    failures = 0;
+    fake_reset();
+
+    status = drv_nrf24l01_config_pipe0_fixed_code(addr);
+
+    failures += require(status == STC8H_OK,
+                        "code pipe0 fixed config must succeed");
+    failures += require(regs[TEST_REG_SETUP_AW] == (DRV_NRF24L01_FIXED_ADDRESS_WIDTH - 2u),
+                        "code pipe0 fixed config must set address width");
+    failures += require(memcmp(tx_addr, addr, sizeof(addr)) == 0,
+                        "code pipe0 fixed config must write TX_ADDR from code address");
+    failures += require(memcmp(rx_addr_p0, addr, sizeof(addr)) == 0,
+                        "code pipe0 fixed config must write RX_ADDR_P0 from code address");
+    failures += require(regs[TEST_REG_RX_PW_P0] == DRV_NRF24L01_FIXED_PAYLOAD_SIZE,
+                        "code pipe0 fixed config must set pipe0 payload size");
+
+    return failures;
+}
+
 int main(void)
 {
     int failures;
@@ -414,6 +495,8 @@ int main(void)
     failures += test_read_rx_packet_reads_when_status_rx_ready_lags_fifo();
     failures += test_preload_ack_payload_replace_policy();
     failures += test_disable_dynamic_payload_clears_ack_payload_feature();
+    failures += test_xdata_fixed_payload_write_and_read_use_fixed_width();
+    failures += test_code_pipe0_fixed_config_writes_address_from_code_space();
 
     return failures == 0 ? 0 : 1;
 }

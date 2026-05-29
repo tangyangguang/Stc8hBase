@@ -46,6 +46,7 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | nRF24L01 | `DRV_NRF24L01_ENABLE_ARG_CHECK` | `1` | 是否编译 public API 参数检查；关闭后调用方必须保证参数合法 |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_ADDRESS_API` | `1` | 是否编译 address width / TX address / RX address / payload size 通用配置 API |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_PIPE0_FIXED_API` | `0` | 是否编译 `drv_nrf24l01_config_pipe0_fixed()` 固定 pipe0 配置 helper |
+| nRF24L01 | `DRV_NRF24L01_ENABLE_CODE_ADDRESS_API` | `0` | 是否编译 `drv_nrf24l01_config_pipe0_fixed_code()`；固定 pipe0 地址放在 CODE/flash 时用它避免 generic pointer |
 | nRF24L01 | `DRV_NRF24L01_FIXED_ADDRESS_WIDTH` | `5` | fixed pipe0 helper 使用的地址宽度 |
 | nRF24L01 | `DRV_NRF24L01_FIXED_PAYLOAD_SIZE` | `32` | fixed pipe0 helper 使用的 pipe0 payload 长度 |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_RAW_API` | `1` | 是否公开原始 register/buffer/command API；关闭后仅作为内部 static helper |
@@ -56,6 +57,7 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | nRF24L01 | `DRV_NRF24L01_ENABLE_ENTER_STANDBY` | `1` | 是否编译 `enter_standby()` 模式 API |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_ENTER_RX` | `1` | 是否编译 `enter_rx()` 模式 API；固定 TX-only 应用可关闭 |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_READ_PAYLOAD` | `1` | 是否编译 RX payload 读取 API；固定 TX-only 或只做写 FIFO 的应用可关闭 |
+| nRF24L01 | `DRV_NRF24L01_ENABLE_XDATA_PAYLOAD_API` | `0` | 是否编译 `read/write_payload_fixed_xdata()`；packet/payload buffer 放在 XDATA 的 SDCC/8051 小固件优先使用 |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD` | `1` | 是否编译独立 dynamic payload API |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_ACK_PAYLOAD` | `1` | 是否编译 ACK payload 启用 API |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_WRITE_ACK_PAYLOAD` | `ACK payload` | 是否编译写 ACK payload API |
@@ -67,6 +69,7 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | nRF24L01 | `DRV_NRF24L01_ENABLE_ACK_PRELOAD_API` | `WRITE_ACK_PAYLOAD && READ_FIFO_STATUS` | 是否编译 PRX ACK payload 预装 helper |
 | nRF24L01 | `DRV_NRF24L01_ENABLE_RECOVER` | `ENTER_STANDBY && ENTER_RX` | 是否编译统一 CE/FIFO/IRQ 恢复 helper |
 | nRF24L01 | `DRV_NRF24L01_REQUIRES_ACTIVATE` | `1` | 老 nRF24L01（非 +）才需要 `0x50 0x73 ACTIVATE` 后才能写 FEATURE；硬件确认是 nRF24L01+ 后可关 |
+| proto_rf_link | `PROTO_RF_LINK_ENABLE_INIT` | `1` | 是否编译 generic `proto_rf_link_init()`；XDATA-only fixed 构建可关闭并使用 `proto_rf_link_init_xdata()` |
 | proto_rf_link | `PROTO_RF_LINK_ENABLE_SET_IDS` | `1` | 是否编译运行期设置 local/peer id API |
 | proto_rf_link | `PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK` | `1` | 是否编译 packet 构造和 fixed poll 的空指针/长度参数检查 |
 | proto_rf_link | `PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS` | `1` | `init()` 是否初始化 timeout/heartbeat 字段；关闭仅适合不使用 tick/lost/heartbeat 的固定链路 |
@@ -79,8 +82,10 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | proto_rf_link | `PROTO_RF_LINK_FIXED_PAYLOAD_LEN` | `11` | fixed DATA helper 使用的业务 payload 长度 |
 | proto_rf_link | `PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED` | `0` | 是否编译固定 DATA + ACK_REQUIRED + 固定 payload 长度发送 helper |
 | proto_rf_link | `PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED` | `0` | 是否编译只接受 DATA + 固定 payload 长度的 poll helper |
+| proto_rf_link | `PROTO_RF_LINK_ENABLE_XDATA_FIXED_API` | `0` | 是否编译 XDATA link/packet/payload 专用 fixed API；STC8H/SDCC 小固件把 link 和 packet buffer 放 XDATA 时优先使用 |
 | TM1637 | `DRV_TM1637_ENABLE_DISPLAY_RAW` | `1` | 是否编译通用 `display_raw(segments, len)` API |
 | TM1637 | `DRV_TM1637_ENABLE_DISPLAY_RAW4` | `0` | 是否编译固定 4 位 raw 显示 API |
+| TM1637 | `DRV_TM1637_ENABLE_DISPLAY_RAW4_DATA` | `0` | 是否编译 `display_raw4_data()`；4 位段码 buffer 明确在 internal DATA 时用它避免 generic pointer |
 | TM1637 | `DRV_TM1637_ENABLE_SET_DISPLAY` | `1` | 是否编译动态显示开关 API 和 display_on 状态 |
 | TM1637 | `DRV_TM1637_ENABLE_BRIGHTNESS_STATE` | `1` | 是否保存运行期亮度状态；关闭后使用 `DRV_TM1637_FIXED_BRIGHTNESS` |
 | TM1637 | `DRV_TM1637_FIXED_BRIGHTNESS` | `7` | 关闭亮度状态后写显示控制命令使用的固定亮度 |

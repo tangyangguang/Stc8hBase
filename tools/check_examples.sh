@@ -33,6 +33,30 @@ check_map_absent() {
     done
 }
 
+check_sym_absent() {
+    sym_file=$1
+    shift
+    for symbol in "$@"; do
+        if awk -v symbol="${symbol}" '$2 == symbol { found = 1 } END { exit found ? 0 : 1 }' \
+            "${ROOT_DIR}/${sym_file}"; then
+            echo "forbidden symbol '${symbol}' found in ${sym_file}" >&2
+            exit 1
+        fi
+    done
+}
+
+check_global_sym_absent() {
+    sym_file=$1
+    shift
+    for symbol in "$@"; do
+        if awk -v symbol="${symbol}" '$2 == symbol && $4 ~ /G/ { found = 1 } END { exit found ? 0 : 1 }' \
+            "${ROOT_DIR}/${sym_file}"; then
+            echo "forbidden global symbol '${symbol}' found in ${sym_file}" >&2
+            exit 1
+        fi
+    done
+}
+
 # Asserts the .mem ROM line reports at most $2 bytes used.
 # Catches accidental regressions when trim macros stop working.
 check_mem_rom_at_most() {
@@ -258,24 +282,34 @@ check_map_absent \
     "_drv_ec11_init " "_drv_ec11_scan " "_drv_ec11_get_delta " \
     "_drv_ec11_set_fast" "_drv_ec11_set_reverse" "_drv_ec11_set_steps_per_detent"
 
-check_map_absent \
-    "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.map" \
+check_global_sym_absent \
+    "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/src/drv_nrf24l01_wrap.sym" \
     "_drv_nrf24l01_read_fifo_status" "_drv_nrf24l01_read_observe_tx" \
     "_drv_nrf24l01_read_status" "_drv_nrf24l01_enter_rx" \
     "_drv_nrf24l01_enter_standby" "_drv_nrf24l01_read_payload" \
-    "_drv_nrf24l01_read_reg" "_drv_nrf24l01_write_reg" "_drv_nrf24l01_read_buf" \
-    "_drv_nrf24l01_write_buf" "_drv_nrf24l01_command" \
+    "_drv_nrf24l01_write_payload" "_drv_nrf24l01_read_payload_fixed" \
+    "_drv_nrf24l01_write_payload_fixed" \
+    "_drv_nrf24l01_read_reg" "_drv_nrf24l01_write_reg" "_drv_nrf24l01_command" \
     "_drv_nrf24l01_set_address_width" "_drv_nrf24l01_set_tx_address" \
     "_drv_nrf24l01_set_rx_address" "_drv_nrf24l01_set_payload_size" \
     "_drv_nrf24l01_enable_dynamic_payload" "_drv_nrf24l01_disable_dynamic_payload" \
     "_drv_nrf24l01_enable_ack_payload" "_drv_nrf24l01_disable_ack_payload" \
     "_drv_nrf24l01_read_dynamic_payload_size" "_drv_nrf24l01_write_ack_payload"
 
+check_sym_absent \
+    "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/src/drv_nrf24l01_wrap.sym" \
+    "_drv_nrf24l01_read_buf" "_drv_nrf24l01_write_buf"
+
+check_global_sym_absent \
+    "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/src/proto_rf_link_wrap.sym" \
+    "_proto_rf_link_init" "_proto_rf_link_set_ids" "_proto_rf_link_connect" \
+    "_proto_rf_link_send_data" "_proto_rf_link_send_data_fixed" \
+    "_proto_rf_link_poll" "_proto_rf_link_poll_data_fixed" \
+    "_proto_rf_link_reset" "_proto_rf_link_tick" "_proto_rf_link_get_state"
+
 check_map_absent \
     "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.map" \
-    "_stc8h_spi_write" \
-    "_proto_rf_link_connect " "_proto_rf_link_send_data " "_proto_rf_link_poll " \
-    "_proto_rf_link_reset " "_proto_rf_link_tick " "_proto_rf_link_get_state "
+    "_stc8h_spi_write"
 
 check_map_absent \
     "examples/platformio/tm1637_number/.pio/build/STC8H1K08/firmware.map" \

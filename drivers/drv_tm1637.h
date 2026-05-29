@@ -19,6 +19,10 @@
 #define DRV_TM1637_ENABLE_DISPLAY_RAW4 0
 #endif
 
+#ifndef DRV_TM1637_ENABLE_DISPLAY_RAW4_DATA
+#define DRV_TM1637_ENABLE_DISPLAY_RAW4_DATA 0
+#endif
+
 #ifndef DRV_TM1637_ENABLE_DISPLAY_RAW
 #define DRV_TM1637_ENABLE_DISPLAY_RAW 1
 #endif
@@ -73,6 +77,9 @@ stc8h_status_t drv_tm1637_display_raw(const stc8h_u8 *segments, stc8h_u8 len);
 #endif
 #if DRV_TM1637_ENABLE_DISPLAY_RAW4
 stc8h_status_t drv_tm1637_display_raw4(const stc8h_u8 segments[4]);
+#endif
+#if DRV_TM1637_ENABLE_DISPLAY_RAW4_DATA
+stc8h_status_t drv_tm1637_display_raw4_data(const STC8H_DATA stc8h_u8 segments[4]);
 #endif
 #if DRV_TM1637_ENABLE_DISPLAY_DIGITS
 stc8h_status_t drv_tm1637_display_digits(const stc8h_u8 *digits, stc8h_u8 len);

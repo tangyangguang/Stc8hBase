@@ -16,6 +16,10 @@
 #define PROTO_RF_LINK_ENABLE_RESET 1
 #endif
 
+#ifndef PROTO_RF_LINK_ENABLE_INIT
+#define PROTO_RF_LINK_ENABLE_INIT 1
+#endif
+
 #ifndef PROTO_RF_LINK_ENABLE_SET_IDS
 #define PROTO_RF_LINK_ENABLE_SET_IDS 1
 #endif
@@ -64,6 +68,10 @@
 
 #ifndef PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED
 #define PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED 0
+#endif
+
+#ifndef PROTO_RF_LINK_ENABLE_XDATA_FIXED_API
+#define PROTO_RF_LINK_ENABLE_XDATA_FIXED_API 0
 #endif
 
 #ifndef PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_TRACK_ACK
@@ -169,7 +177,9 @@ typedef struct {
 #endif
 } proto_rf_link_t;
 
+#if PROTO_RF_LINK_ENABLE_INIT
 void proto_rf_link_init(proto_rf_link_t *link);
+#endif
 #if PROTO_RF_LINK_ENABLE_SET_IDS
 void proto_rf_link_set_ids(proto_rf_link_t *link, stc8h_u8 local_id, stc8h_u8 peer_id);
 #endif
@@ -201,6 +211,12 @@ proto_rf_link_event_t proto_rf_link_poll(proto_rf_link_t *link, const stc8h_u8 *
 #endif
 #if PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED
 stc8h_status_t proto_rf_link_poll_data_fixed(proto_rf_link_t *link, const stc8h_u8 *packet, stc8h_u8 *data);
+#endif
+#if PROTO_RF_LINK_ENABLE_XDATA_FIXED_API
+void proto_rf_link_init_xdata(STC8H_XDATA proto_rf_link_t *link);
+void proto_rf_link_set_ids_xdata(STC8H_XDATA proto_rf_link_t *link, stc8h_u8 local_id, stc8h_u8 peer_id);
+stc8h_status_t proto_rf_link_send_data_fixed_xdata(STC8H_XDATA proto_rf_link_t *link, STC8H_XDATA stc8h_u8 *packet, const STC8H_XDATA stc8h_u8 *data);
+stc8h_status_t proto_rf_link_poll_data_fixed_xdata(STC8H_XDATA proto_rf_link_t *link, const STC8H_XDATA stc8h_u8 *packet, STC8H_XDATA stc8h_u8 *data);
 #endif
 #if PROTO_RF_LINK_ENABLE_GET_STATE
 proto_rf_link_state_t proto_rf_link_get_state(const proto_rf_link_t *link);

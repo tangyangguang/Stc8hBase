@@ -106,7 +106,7 @@ static stc8h_u8 stc8h_pwm_group_valid(stc8h_u8 group)
 }
 #endif
 
-static void stc8h_pwm_write16(volatile stc8h_u8 *high, volatile stc8h_u8 *low, stc8h_u16 value)
+static void stc8h_pwm_write16(volatile STC8H_XDATA stc8h_u8 *high, volatile STC8H_XDATA stc8h_u8 *low, stc8h_u16 value)
 {
     *high = (stc8h_u8)(value >> 8);
     *low = (stc8h_u8)value;

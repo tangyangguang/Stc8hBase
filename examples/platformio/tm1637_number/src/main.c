@@ -27,60 +27,53 @@ static void print_result(stc8h_u8 ok)
     }
 }
 
-static stc8h_u8 divmod10(stc8h_u16 *value)
-{
-    stc8h_u16 quotient;
-    stc8h_u16 remainder;
-
-    quotient = 0u;
-    remainder = *value;
-    while (remainder >= 10u) {
-        remainder = (stc8h_u16)(remainder - 10u);
-        ++quotient;
-    }
-    *value = quotient;
-
-    return (stc8h_u8)remainder;
-}
-
 static stc8h_status_t display_u16_4(stc8h_u16 value)
 {
-    stc8h_u8 digits[4];
+    STC8H_DATA stc8h_u8 digits[4];
     stc8h_u8 pos;
+    stc8h_u16 quotient;
+    stc8h_u16 remainder;
 
     pos = 4u;
     do {
         --pos;
-        digits[pos] = divmod10(&value);
+        quotient = 0u;
+        remainder = value;
+        while (remainder >= 10u) {
+            remainder = (stc8h_u16)(remainder - 10u);
+            ++quotient;
+        }
+        value = quotient;
+        digits[pos] = (stc8h_u8)remainder;
     } while (pos != 0u);
 
     for (pos = 0u; pos < 4u; ++pos) {
         digits[pos] = drv_tm1637_encode_digit(digits[pos]);
     }
 
-    return drv_tm1637_display_raw4(digits);
+    return drv_tm1637_display_raw4_data(digits);
 }
 
 void main(void)
 {
     stc8h_u16 value;
     stc8h_u8 ok;
-    const stc8h_u8 all_on[4] = {0x7Fu, 0x7Fu, 0x7Fu, 0x7Fu};
-    const stc8h_u8 order_a[4] = {0x3Fu, 0x06u, 0x5Bu, 0x4Fu};
-    const stc8h_u8 order_b[4] = {0x66u, 0x6Du, 0x7Du, 0x07u};
+    static STC8H_DATA stc8h_u8 all_on[4] = {0x7Fu, 0x7Fu, 0x7Fu, 0x7Fu};
+    static STC8H_DATA stc8h_u8 order_a[4] = {0x3Fu, 0x06u, 0x5Bu, 0x4Fu};
+    static STC8H_DATA stc8h_u8 order_b[4] = {0x66u, 0x6Du, 0x7Du, 0x07u};
 
     (void)stc8h_uart_init(STC8H_UART1);
     tm1637_board_init();
     drv_tm1637_init();
     drv_tm1637_set_brightness(7u);
 
-    ok = (drv_tm1637_display_raw4(all_on) == STC8H_OK) ? 1u : 0u;
+    ok = (drv_tm1637_display_raw4_data(all_on) == STC8H_OK) ? 1u : 0u;
     print_result(ok);
     stc8h_delay_ms(1500u);
-    ok = (drv_tm1637_display_raw4(order_a) == STC8H_OK) ? 1u : 0u;
+    ok = (drv_tm1637_display_raw4_data(order_a) == STC8H_OK) ? 1u : 0u;
     print_result(ok);
     stc8h_delay_ms(1500u);
-    ok = (drv_tm1637_display_raw4(order_b) == STC8H_OK) ? 1u : 0u;
+    ok = (drv_tm1637_display_raw4_data(order_b) == STC8H_OK) ? 1u : 0u;
     print_result(ok);
     stc8h_delay_ms(1500u);
 

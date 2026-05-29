@@ -83,21 +83,26 @@ SDCC/mcs51 会为编译单元中的外部函数参数分配内部 RAM。Platform
 ```ini
 build_flags =
     -DPROTO_RF_LINK_ENABLE_RESET=0
+    -DPROTO_RF_LINK_ENABLE_INIT=0
+    -DPROTO_RF_LINK_ENABLE_SET_IDS=0
     -DPROTO_RF_LINK_ENABLE_TICK=0
     -DPROTO_RF_LINK_ENABLE_CONNECT=0
     -DPROTO_RF_LINK_ENABLE_SEND_DATA=0
-    -DPROTO_RF_LINK_ENABLE_SEND_DATA_FIXED=1
+    -DPROTO_RF_LINK_ENABLE_SEND_DATA_FIXED=0
     -DPROTO_RF_LINK_FIXED_PAYLOAD_LEN=11
     -DPROTO_RF_LINK_ENABLE_SEND_STATUS=0
     -DPROTO_RF_LINK_ENABLE_SEND_HEARTBEAT=0
     -DPROTO_RF_LINK_ENABLE_POLL=0
-    -DPROTO_RF_LINK_ENABLE_POLL_DATA_FIXED=1
+    -DPROTO_RF_LINK_ENABLE_POLL_DATA_FIXED=0
+    -DPROTO_RF_LINK_ENABLE_XDATA_FIXED_API=1
     -DPROTO_RF_LINK_ENABLE_GET_STATE=0
     -DPROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK=0
     -DPROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS=0
 ```
 
 阶段 2 只验证 `drv_nrf24l01`、`stc8h_spi` 和应用侧 `app_radio` 时，可以关闭全部链路 API，只保留模块可编译接入。进入真实链路收发阶段后，再按实际调用打开对应宏。固定 32-byte nRF24 packet、固定 DATA、固定 11-byte payload 的控制器可用 `proto_rf_link_send_data_fixed()` 替代通用 `send_data()`；只接收 DATA 的接收端可用 `proto_rf_link_poll_data_fixed()` 替代通用 `poll()`。
+
+如果 STC8H/SDCC 小固件把 `proto_rf_link_t`、32-byte packet 和业务 payload 都放在 XDATA，应优先使用 `PROTO_RF_LINK_ENABLE_XDATA_FIXED_API=1`，并调用 `proto_rf_link_init_xdata()`、`proto_rf_link_set_ids_xdata()`、`proto_rf_link_send_data_fixed_xdata()` 和 `proto_rf_link_poll_data_fixed_xdata()`。这条路径显式限定地址空间，可避免 SDCC 生成 `__gptrget/__gptrput`。默认 generic fixed API 仍保留给未固定 buffer 地址空间的构建。
 
 关闭 `PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK` 后，协议层不再防御空指针或非法固定长度调用，只适合固定 packet buffer 和固定 payload buffer 的小容量构建。关闭 `PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS` 只跳过 `init()` 中 timeout/heartbeat 字段初始化，适合未启用 `tick/lost/heartbeat` 的 fixed path。
 
