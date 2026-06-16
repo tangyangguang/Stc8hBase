@@ -30,6 +30,7 @@
 - Create: `examples/platformio/boards/STC8H8K64U.json` if PlatformIO does not already provide a suitable board definition in the installed platform.
 - Create: `docs/24_EXPLICIT_CHIP_PROFILE_MIGRATION.md`
 - Modify `tools/check_examples.sh`: make existing temporary compile checks use explicit chip profiles, then add compile-only H8K64U checks and symbol absence checks.
+- Create `docs/vendor/stc/STC8H8K64U_Features.pdf`: archived official feature and package summary used for repeated pin/resource checks.
 - Modify `docs/03_CHIP_SUPPORT.md`, `docs/10_REFERENCES.md`, `docs/vendor/stc/README.md`, and `docs/13_RESOURCE_POLICY.md`: document support level, source, and resource rules.
 
 ### Task 1: Document Source And Support Level
@@ -39,6 +40,7 @@
 - Modify: `docs/10_REFERENCES.md`
 - Modify: `docs/vendor/stc/README.md`
 - Modify: `docs/13_RESOURCE_POLICY.md`
+- Create: `docs/vendor/stc/STC8H8K64U_Features.pdf`
 - Create: `docs/24_EXPLICIT_CHIP_PROFILE_MIGRATION.md`
 
 - [ ] **Step 1: Add support level text**
@@ -60,12 +62,40 @@ module drivers are outside the initial support scope.
 
 - [ ] **Step 2: Add official source record**
 
+Download the official H8K64U feature PDF into the local vendor archive:
+
+```sh
+curl -L -o docs/vendor/stc/STC8H8K64U_Features.pdf https://www.stcmicro.com/datasheet/STC8H8K64U_Features.pdf
+shasum -a 256 docs/vendor/stc/STC8H8K64U_Features.pdf
+```
+
+Expected SHA-256:
+
+```text
+7b5e88e8b0fbb248cd839c4aeeae7b3c3078900055a222e2ff75df76b0ea8088
+```
+
 Add to `docs/10_REFERENCES.md` under STC official sources:
 
 ```markdown
 - `https://www.stcmicro.com/datasheet/STC8H8K64U_Features.pdf`
   - Used to verify `STC8H8K64U-45I-LQFP48` resources, package pins, UART2/UART3 pin groups, ADC width, and reset/download notes.
   - Local SHA-256 when downloaded for review: `7b5e88e8b0fbb248cd839c4aeeae7b3c3078900055a222e2ff75df76b0ea8088`.
+```
+
+Add a row to `docs/vendor/stc/README.md` under `已归档文件`:
+
+```markdown
+| `STC8H8K64U_Features.pdf` | `https://www.stcmicro.com/datasheet/STC8H8K64U_Features.pdf` | STC8H8K64U 资源、LQFP48 引脚、UART2/UART3 引脚组、ADC 宽度、复位/下载注意事项快速事实核对 | `7b5e88e8b0fbb248cd839c4aeeae7b3c3078900055a222e2ff75df76b0ea8088` |
+```
+
+Add H8K64U UART trim macros to the table in `docs/13_RESOURCE_POLICY.md`:
+
+```markdown
+| UART | `STC8H_UART_ENABLE_UART2` | `0` | 是否编译 UART2 轮询路径；使用 UART2 时由板级或示例显式开启 |
+| UART | `STC8H_UART_ENABLE_UART3` | `0` | 是否编译 UART3 轮询路径；使用 UART3 时由板级或示例显式开启 |
+| UART | `STC8H_UART2_PIN_GROUP` | `0` | UART2 引脚组选择：0 为 P1.0/P1.1，1 为 P4.6/P4.7 |
+| UART | `STC8H_UART3_PIN_GROUP` | `0` | UART3 引脚组选择：0 为 P0.0/P0.1，1 为 P5.0/P5.1 |
 ```
 
 - [ ] **Step 3: Add migration note**
@@ -131,14 +161,15 @@ Run:
 
 ```sh
 rg -n "STC8H8K64U|UART2|UART3|LQFP48|explicit chip" docs/03_CHIP_SUPPORT.md docs/10_REFERENCES.md docs/13_RESOURCE_POLICY.md docs/vendor/stc/README.md docs/24_EXPLICIT_CHIP_PROFILE_MIGRATION.md
+test -f docs/vendor/stc/STC8H8K64U_Features.pdf
 ```
 
-Expected: the new support level and source notes appear.
+Expected: the new support level, source notes, resource macros, vendor archive row, and migration note appear; the archived PDF exists.
 
 - [ ] **Step 5: Commit docs**
 
 ```sh
-git add docs/03_CHIP_SUPPORT.md docs/10_REFERENCES.md docs/vendor/stc/README.md docs/13_RESOURCE_POLICY.md docs/24_EXPLICIT_CHIP_PROFILE_MIGRATION.md
+git add docs/03_CHIP_SUPPORT.md docs/10_REFERENCES.md docs/vendor/stc/README.md docs/13_RESOURCE_POLICY.md docs/vendor/stc/STC8H8K64U_Features.pdf docs/24_EXPLICIT_CHIP_PROFILE_MIGRATION.md
 git commit -m "docs: plan stc8h8k64u lqfp48 support"
 ```
 
@@ -196,13 +227,24 @@ Create `board/stc8h8k64u_lqfp48_base/board_config.h`:
 #define STC8H_UART3_PIN_GROUP 0u
 
 #define STC8H_ADC_BITS 12u
-#define STC8H_ADC_CHANNEL_MASK 0xFFFFu
+#define STC8H_ADC_CHIP_CHANNEL_MASK 0xFFFFu
+/* Narrow this if LQFP48 pin verification shows fewer ADC pins are bonded out. */
+#define STC8H_ADC_CHANNEL_MASK STC8H_ADC_CHIP_CHANNEL_MASK
 
 #define STC8H_EEPROM_SIZE 0u
 #define STC8H_EEPROM_SECTOR_SIZE 512u
 
 #endif
 ```
+
+Before finalizing the H8K64U LQFP48 board profile, verify the ADC package mask from the archived official PDF:
+
+```sh
+pdftotext docs/vendor/stc/STC8H8K64U_Features.pdf /tmp/STC8H8K64U_Features.txt
+rg -n "ADC|LQFP48|P[0-9]\\.[0-9]" /tmp/STC8H8K64U_Features.txt
+```
+
+Expected: record the confirmed LQFP48 ADC pin availability in the `board_config.h` comment. If any chip ADC channel is not bonded out or conflicts with a non-ADC-only package pin decision, set `STC8H_ADC_CHANNEL_MASK` to the narrower package/board mask.
 
 - [ ] **Step 3: Make STC8H1K08 board config explicit**
 
@@ -490,8 +532,12 @@ In `hal/stc8h_adc.h`, add:
 #define STC8H_ADC_BITS 10u
 #endif
 
+#ifndef STC8H_ADC_CHIP_CHANNEL_MASK
+#define STC8H_ADC_CHIP_CHANNEL_MASK 0xFF03u
+#endif
+
 #ifndef STC8H_ADC_CHANNEL_MASK
-#define STC8H_ADC_CHANNEL_MASK 0xFF03u
+#define STC8H_ADC_CHANNEL_MASK STC8H_ADC_CHIP_CHANNEL_MASK
 #endif
 ```
 
@@ -564,14 +610,14 @@ Run:
 
 ```sh
 sdcc -mmcs51 --std-sdcc11 -Icore -Ihal -c -o /tmp/uart1_only.rel /tmp/uart1_only.c
-grep -E "S2CON|S3CON|_stc8h_uart2|_stc8h_uart3" /tmp/uart1_only.asm /tmp/uart1_only.sym
+! grep -E "S2CON|S3CON|_stc8h_uart2|_stc8h_uart3" /tmp/uart1_only.asm /tmp/uart1_only.sym
 ```
 
-Expected after implementation: grep finds nothing.
+Expected after implementation: command exits 0 because grep finds nothing.
 
-- [ ] **Step 2: Extend UART enum**
+- [ ] **Step 2: Add UART3 to UART enum**
 
-Change `hal/stc8h_uart.h` to:
+Keep the existing `STC8H_UART1` and `STC8H_UART2` enum values and add `STC8H_UART3`:
 
 ```c
 typedef enum {
@@ -602,10 +648,55 @@ In `hal/stc8h_uart.c`, add:
 #define STC8H_UART3_PIN_GROUP 0u
 #endif
 
+#ifndef STC8H_UART_CONFIGURE_PORT_MODE
+#define STC8H_UART_CONFIGURE_PORT_MODE 1
+#endif
+
 #if (STC8H_UART_ENABLE_UART2 || STC8H_UART_ENABLE_UART3) && STC8H_UART_ASSUME_UART1
 #error "STC8H_UART_ASSUME_UART1 cannot be used when UART2 or UART3 is enabled."
 #endif
 ```
+
+Add a shared helper for the selected UART2/UART3 RX/TX pins. It must preserve unrelated port bits and only touch mode/latch bits for the selected pins:
+
+```c
+#if STC8H_UART_ENABLE_UART2 || STC8H_UART_ENABLE_UART3
+static void stc8h_uart_configure_quasi(stc8h_u8 port, stc8h_u8 mask)
+{
+#if STC8H_UART_CONFIGURE_PORT_MODE
+    switch (port) {
+    case 0u:
+        P0M0 &= (stc8h_u8)~mask;
+        P0M1 &= (stc8h_u8)~mask;
+        P0 |= mask;
+        break;
+    case 1u:
+        P1M0 &= (stc8h_u8)~mask;
+        P1M1 &= (stc8h_u8)~mask;
+        P1 |= mask;
+        break;
+    case 4u:
+        P4M0 &= (stc8h_u8)~mask;
+        P4M1 &= (stc8h_u8)~mask;
+        P4 |= mask;
+        break;
+    case 5u:
+        P5M0 &= (stc8h_u8)~mask;
+        P5M1 &= (stc8h_u8)~mask;
+        P5 |= mask;
+        break;
+    default:
+        break;
+    }
+#else
+    (void)port;
+    (void)mask;
+#endif
+}
+#endif
+```
+
+This mirrors the existing UART1/SPI habit of making peripheral pin mode explicit while keeping the opt-out small for boards that centralize all GPIO mode setup.
 
 - [ ] **Step 4: Add UART2 init path**
 
@@ -674,8 +765,10 @@ Use `P_SW2` bit0 to select pin group. Preserve unrelated `P_SW2` bits:
 ```c
 if (STC8H_UART2_PIN_GROUP == 0u) {
     P_SW2 &= (stc8h_u8)~0x01u;
+    stc8h_uart_configure_quasi(1u, 0x03u);  /* P1.0/P1.1 */
 } else {
     P_SW2 |= 0x01u;
+    stc8h_uart_configure_quasi(4u, 0xC0u);  /* P4.6/P4.7 */
 }
 ```
 
@@ -746,8 +839,10 @@ Use `P_SW2` bit1 to select pin group. Preserve unrelated `P_SW2` bits:
 ```c
 if (STC8H_UART3_PIN_GROUP == 0u) {
     P_SW2 &= (stc8h_u8)~0x02u;
+    stc8h_uart_configure_quasi(0u, 0x03u);  /* P0.0/P0.1 */
 } else {
     P_SW2 |= 0x02u;
+    stc8h_uart_configure_quasi(5u, 0x03u);  /* P5.0/P5.1 */
 }
 ```
 
@@ -1170,7 +1265,33 @@ tools/check_examples.sh
 
 Expected: all existing STC8H1K08 examples and new H8K64U compile examples pass.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Record H8K64U resource results**
+
+Add a section to `docs/RESOURCE_REPORT.md` after the existing example measurements:
+
+```markdown
+## STC8H8K64U-LQFP48 compile coverage
+
+Toolchain: PlatformIO `intel_mcs51` / SDCC
+Board manifest: `examples/platformio/boards/STC8H8K64U.json`
+Verification command: `tools/check_examples.sh`
+
+| Example | Purpose | UART2/UART3 setting | Expected unused code | Result source |
+| --- | --- | --- | --- | --- |
+| `examples/platformio/h8k64u_uart2_hello` | UART2 polling smoke build | `STC8H_UART_ENABLE_UART2=1` | UART3 disabled | `.pio/build/.../*.mem` after build |
+| `examples/platformio/h8k64u_uart3_hello` | UART3 polling smoke build | `STC8H_UART_ENABLE_UART3=1` | UART2 disabled | `.pio/build/.../*.mem` after build |
+| `examples/platformio/h8k64u_gpio_blink` | GPIO compile coverage | both disabled | UART2/UART3 disabled | `.pio/build/.../*.mem` after build |
+| `examples/platformio/h8k64u_adc_read` | 12-bit ADC compile coverage | both disabled | UART2/UART3 disabled | `.pio/build/.../*.mem` after build |
+| `examples/platformio/h8k64u_eeprom_safe` | EEPROM API-safe compile coverage | both disabled | UART2/UART3 disabled; no destructive EEPROM path | `.pio/build/.../*.mem` after build |
+| `examples/platformio/h8k64u_wdt_feed` | WDT compile coverage | both disabled | UART2/UART3 disabled | `.pio/build/.../*.mem` after build |
+
+Notes:
+- Fill in actual flash/RAM bytes from the generated `.mem` or map output after the verification build.
+- The UART trim helper in `tools/check_examples.sh` is the source of truth for UART2/UART3 absence in UART1-only builds.
+- Do not compare H8K64U example sizes directly with STC8H1K08 example sizes unless the enabled features are equivalent.
+```
+
+- [ ] **Step 5: Commit**
 
 ```sh
 git add tools/check_examples.sh docs/RESOURCE_REPORT.md
@@ -1191,6 +1312,7 @@ Add to `docs/16_HARDWARE_TEST.md`:
 ## STC8H8K64U-45I-LQFP48
 
 - Confirm `ADC_VRef+` is tied to a valid reference or VCC.
+- Confirm the final `STC8H_ADC_CHANNEL_MASK` matches the LQFP48 package pins and board routing.
 - Confirm normal default serial/USB download path before testing examples.
 - Confirm P3.0/P3.1/P3.2 are not all low during reset if USB download is not used.
 - Build and flash UART2 example on selected UART2 pin group.
@@ -1207,6 +1329,7 @@ Add to `docs/15_REMAINING_WORK.md`:
 ## STC8H8K64U-LQFP48 follow-up
 
 - Hardware validation is required on the actual `STC8H8K64U-45I-LQFP48` board before marking support as hardware-tested.
+- Confirm and document the final LQFP48 ADC package/board mask before relying on every chip-level ADC channel.
 - Confirm final EEPROM/IAP size from ISP/project configuration before enabling destructive EEPROM examples.
 - Decide per board whether UART2 or UART3 is wired to RS485 or 433 MHz modules; the base library must remain role-neutral.
 ```
@@ -1231,8 +1354,9 @@ Spec coverage:
 Placeholder scan:
 
 - Timer2/Timer3 SFR addresses and UART2/UART3 control bits are now specified from the official manual sections used by the implementation.
-- UART2/UART3 baud reload macros, range checks, and `STC8H_UART_ASSUME_UART1` conflict checks are specified before implementation.
+- UART2/UART3 baud reload macros, range checks, port-mode setup, and `STC8H_UART_ASSUME_UART1` conflict checks are specified before implementation.
 - EEPROM size protection now runs after EEPROM feature macros are defined, so `STC8H_EEPROM_SIZE=0` cannot silently bypass disabled-default assumptions.
+- Documentation tasks now include concrete content for the vendor archive, resource policy, migration note, and resource report instead of placeholder filenames.
 - No task says to handle errors or tests without concrete commands.
 
 Type consistency:
@@ -1248,4 +1372,6 @@ Risk review:
 - Existing temporary SDCC compile checks are migrated in Task 2 before later `tools/check_examples.sh` runs.
 - H8K64U board defaults keep UART2/UART3 disabled; each example enables only the port it uses to protect ROM size.
 - UART2/UART3 register setup is now grounded in official examples, but hardware timing still must be verified on the target board.
+- UART2/UART3 selected pins are explicitly put in quasi-bidirectional mode with latch high, while unrelated port bits are preserved.
+- ADC support separates chip-level channel capability from the package/board mask; the LQFP48 mask remains a required verification item before implementation is marked complete.
 - EEPROM size must be supplied by board/application config before enabling EEPROM APIs or destructive tests.

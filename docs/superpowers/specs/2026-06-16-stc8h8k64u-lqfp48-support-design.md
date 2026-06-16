@@ -95,6 +95,8 @@ UART3 is enabled only when `STC8H_UART_ENABLE_UART3` is non-zero. It uses Timer3
 #define STC8H_UART3_PIN_GROUP_1 1u /* RXD3_2=P5.0, TXD3_2=P5.1 */
 ```
 
+UART2 and UART3 init must also configure the selected RX/TX pins to quasi-bidirectional mode and set the port latch bits high, matching the existing UART1/SPI style. This should be controlled by `STC8H_UART_CONFIGURE_PORT_MODE` with a default of `1`, so board code can opt out only when it intentionally owns port mode setup.
+
 UART2 and UART3 get independent baud macros:
 
 ```c
@@ -134,12 +136,13 @@ ADC behavior becomes chip-configurable:
 
 ```c
 #define STC8H_ADC_BITS 12u
-#define STC8H_ADC_CHANNEL_MASK 0xFFFFu
+#define STC8H_ADC_CHIP_CHANNEL_MASK 0xFFFFu
+#define STC8H_ADC_CHANNEL_MASK STC8H_ADC_CHIP_CHANNEL_MASK
 ```
 
 For `STC8H1K08`, defaults remain 10-bit and current channel validity. The channel mask for the current STC8H1K08 behavior is `0xFF03u`, covering channels 0, 1, and 8..15.
 
-For `STC8H8K64U`, valid external channels are 0..14 and channel 15 is internal reference. The API still returns `stc8h_u16`, so no public type change is required. Existing 10-bit callers are unaffected when they build for `STC8H1K08`.
+For `STC8H8K64U`, valid chip-level channels are 0..14 plus channel 15 as the internal reference, but the LQFP48 board profile must verify which external ADC pins are bonded out before finalizing `STC8H_ADC_CHANNEL_MASK`. The API still returns `stc8h_u16`, so no public type change is required. Existing 10-bit callers are unaffected when they build for `STC8H1K08`.
 
 ## EEPROM/IAP Design
 
@@ -178,7 +181,8 @@ tools/check_examples.sh
 2. Add compile checks for H8K64U-LQFP48 examples.
 3. Add symbol checks that UART2/UART3 code is absent from existing UART1-only examples.
 4. Verify each new PlatformIO example contains the wrapper source files needed to compile the HAL modules it calls.
-5. On hardware, verify:
+5. Verify the H8K64U LQFP48 ADC package mask from the archived official PDF before treating all chip ADC channels as board-available.
+6. On hardware, verify:
    - UART1 download still works through normal default flow.
    - UART2 group 0 or group 1 transmits and receives.
    - UART3 group 0 or group 1 transmits and receives.
@@ -192,6 +196,8 @@ tools/check_examples.sh
 - UART2 and UART3 are generic ports, so 485/433 roles are not frozen into the base library.
 - UART2 uses Timer2 and UART3 uses Timer3 to avoid a default timer conflict.
 - UART2/UART3 feature code should be enabled per build, not by the H8K64U base board profile, to keep unused examples small.
+- UART2/UART3 pin group selection includes port-mode setup, not only `P_SW2` remapping.
+- ADC support separates chip-level channel capability from the LQFP48 package/board-valid channel mask.
 - The plan intentionally removes the hidden default chip path. This is a controlled breaking change documented in the migration note.
 - Local compile checks and examples must select chip profiles explicitly; PlatformIO examples must include wrapper source files for every compiled module they call.
 - USB/DMA/RTC/LCM are excluded even though H8K64U supports them, because they would materially increase library scope.
