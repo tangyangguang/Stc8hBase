@@ -9,9 +9,10 @@
 | 文件 | 来源 | 用途 | SHA-256 |
 | --- | --- | --- | --- |
 | `STC8H1K08_Features.pdf` | `https://www.stcmicro.com/datasheet/STC8H1K08_Features.pdf` | STC8H1K08 资源、封装、TSSOP20 引脚、GPIO/UART/I2C/ADC 等快速事实核对 | `fe83c09670fe1f87784d9afc4354f3c2f136c214f59f9c5ed6eb43e47120bcc6` |
+| `STC8H8K64U_Features.pdf` | `https://www.stcmicro.com/datasheet/STC8H8K64U_Features.pdf` | STC8H8K64U 资源、LQFP48 引脚、UART2/UART3 引脚组、ADC 宽度、复位/下载注意事项快速事实核对 | `7b5e88e8b0fbb248cd839c4aeeae7b3c3078900055a222e2ff75df76b0ea8088` |
 | `STC8H-en.pdf` | `https://www.stcmicro.com/datasheet/STC8H-en.pdf` | STC8H 系列寄存器、UART/Timer/GPIO/IAP 等实现细节核对 | `489d7c268263fa436605775ab7ebf5245427a49092f90a37a64904a29d60f202` |
 
-下载日期：2026-05-10。
+下载日期：2026-05-10；`STC8H8K64U_Features.pdf` 下载日期：2026-06-16。
 
 ## 收录原则
 

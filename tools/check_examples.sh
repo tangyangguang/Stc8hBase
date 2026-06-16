@@ -107,6 +107,8 @@ check_eeprom_api_trim() {
     trap 'rm -rf "${tmp_dir}"' EXIT
 
     cat > "${tmp_dir}/eeprom_read_only.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define STC8H_EEPROM_ENABLE_READ 1
 #define STC8H_EEPROM_ENABLE_WRITE 0
 #define STC8H_EEPROM_ENABLE_ERASE 0
@@ -119,6 +121,8 @@ EOF
     fi
 
     cat > "${tmp_dir}/eeprom_fixed.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define STC8H_EEPROM_ENABLE_READ 0
 #define STC8H_EEPROM_ENABLE_WRITE 0
 #define STC8H_EEPROM_ENABLE_ERASE 0
@@ -147,6 +151,8 @@ check_ec11_small_isr_api() {
     trap 'rm -rf "${tmp_dir}"' EXIT
 
     cat > "${tmp_dir}/ec11_small_isr.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define DRV_EC11_ENABLE_FULL_API 0
 #define DRV_EC11_ENABLE_SMALL_API 0
 #define DRV_EC11_ENABLE_SMALL_ISR_API 1
@@ -191,6 +197,8 @@ check_spi_miso_input_codegen() {
         esac
 
         cat > "${tmp_dir}/spi_group_${group}.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define STC8H_SPI_PIN_GROUP ${group}u
 #include "${ROOT_DIR}/hal/stc8h_spi.c"
 EOF
@@ -217,6 +225,8 @@ check_pwm_xfr_codegen() {
     trap 'rm -rf "${tmp_dir}"' EXIT
 
     cat > "${tmp_dir}/pwm_xfr.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #include "${ROOT_DIR}/hal/stc8h_pwm.c"
 EOF
     sdcc -mmcs51 --std-sdcc11 -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" \
@@ -244,11 +254,35 @@ EOF
     fi
 }
 
+check_uart2_uart3_trim() {
+    tmp_dir=$(mktemp -d)
+    trap 'rm -rf "${tmp_dir}"' EXIT
+
+    cat > "${tmp_dir}/uart1_only.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#define STC8H_UART_ASSUME_UART1 1
+#include "${ROOT_DIR}/hal/stc8h_uart.c"
+void main(void)
+{
+    (void)stc8h_uart_init(STC8H_UART1);
+}
+EOF
+    sdcc -mmcs51 --std-sdcc11 -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" \
+        -c -o "${tmp_dir}/uart1_only.rel" "${tmp_dir}/uart1_only.c"
+    if grep -E "S2CON|S3CON|_stc8h_uart2|_stc8h_uart3" \
+        "${tmp_dir}/uart1_only.asm" "${tmp_dir}/uart1_only.sym"; then
+        echo "UART2/UART3 symbols leaked into UART1-only build" >&2
+        exit 1
+    fi
+}
+
 check_sdcc_interrupt_using
 check_eeprom_api_trim
 check_ec11_small_isr_api
 check_spi_miso_input_codegen
 check_pwm_xfr_codegen
+check_uart2_uart3_trim
 sh "${ROOT_DIR}/tools/check_host_tests.sh"
 
 for ini in "${ROOT_DIR}"/examples/platformio/*/platformio.ini; do

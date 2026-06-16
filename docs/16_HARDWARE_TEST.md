@@ -972,3 +972,31 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 
 - 本示例会故意反复触发 WDT 复位，仅用于受控硬件测试。
 - 普通项目应使用 `wdt_feed` 的正常喂狗方式。
+
+## 5. STC8H8K64U-45I-LQFP48
+
+目标：
+
+- 验证 H8K64U 基础库支持在真实目标板上可运行。
+- 验证 UART2/UART3、GPIO、ADC、WDT 和默认下载链路。
+
+待确认硬件条件：
+
+- Confirm `ADC_VRef+` is tied to a valid reference or VCC.
+- Confirm the final `STC8H_ADC_CHANNEL_MASK` matches the LQFP48 package pins and board routing.
+- Confirm normal default serial/USB download path before testing examples.
+- Confirm P3.0/P3.1/P3.2 are not all low during reset if USB download is not used.
+- Confirm actual EEPROM/IAP allocation before enabling EEPROM APIs or any destructive EEPROM example.
+
+建议测试顺序：
+
+1. Build and flash `examples/platformio/h8k64u_uart2_hello` on the selected UART2 pin group.
+2. Build and flash `examples/platformio/h8k64u_uart3_hello` on the selected UART3 pin group.
+3. Build and flash `examples/platformio/h8k64u_gpio_blink` after confirming `BOARD_TEST_GPIO_*` is safe for the target board.
+4. Build and flash `examples/platformio/h8k64u_adc_read` with `ADC_VRef+` connected.
+5. Build and flash `examples/platformio/h8k64u_wdt_feed`.
+
+当前状态：
+
+- SDCC/PlatformIO compile validation has passed.
+- Hardware validation has not been run yet.

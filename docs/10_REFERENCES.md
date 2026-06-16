@@ -53,6 +53,7 @@ https://github.com/IOsetting/FwLib_STC8
 ```text
 https://www.stcmicro.com/cn/stc/stc8h1k08.html
 docs/vendor/stc/STC8H1K08_Features.pdf
+docs/vendor/stc/STC8H8K64U_Features.pdf
 docs/vendor/stc/STC8H-en.pdf
 docs/vendor/stc/stc8g-stc8h-lib-demo-code.rar
 docs/vendor/ti/PCF8574_TI.pdf
@@ -66,6 +67,7 @@ docs/vendor/titan/TM1637_TitanMicro.pdf
 - 确认 `STC8H1K08` 寄存器和外设行为。
 - 确认 Flash、RAM、I/O、定时器、UART、SPI、I2C、PWM、ADC 等资源。
 - 确认 IAP/EEPROM 写入规则。
+- `STC8H8K64U_Features.pdf` 用于核对 `STC8H8K64U-45I-LQFP48` 资源、LQFP48 引脚、UART2/UART3 引脚组、ADC 宽度和下载/复位注意事项；本地 SHA-256 为 `7b5e88e8b0fbb248cd839c4aeeae7b3c3078900055a222e2ff75df76b0ea8088`。
 - 校准官方示例中的初始化顺序和寄存器配置。
 - UART1 默认实现按官方 STC8H 串口示例校准：Timer1 作为波特率发生器，`AUXR.S1ST2=0`，Timer1 1T，Timer1 mode0 16 位自动重装，`BRT = 65536 - FOSC / baud / 4`。
 - UART1 6MHz 调试波特率按同一公式补表：9600 reload `0xFF64`、19200 `0xFFB2`、38400 `0xFFD9`、57600 `0xFFE6`、115200 `0xFFF3`，理论误差均约 +0.1603%。

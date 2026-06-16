@@ -15,6 +15,7 @@
 | 文件 | 来源级别 | 来源 | 用途 | SHA-256 |
 | --- | --- | --- | --- | --- |
 | `stc/STC8H1K08_Features.pdf` | STC 官方 | `https://www.stcmicro.com/datasheet/STC8H1K08_Features.pdf` | STC8H1K08 资源、封装、TSSOP20 引脚和外设快速核对 | `fe83c09670fe1f87784d9afc4354f3c2f136c214f59f9c5ed6eb43e47120bcc6` |
+| `stc/STC8H8K64U_Features.pdf` | STC 官方 | `https://www.stcmicro.com/datasheet/STC8H8K64U_Features.pdf` | STC8H8K64U 资源、LQFP48 引脚、UART2/UART3 引脚组、ADC 宽度和下载/复位注意事项快速核对 | `7b5e88e8b0fbb248cd839c4aeeae7b3c3078900055a222e2ff75df76b0ea8088` |
 | `stc/STC8H-en.pdf` | STC 官方 | `https://www.stcmicro.com/datasheet/STC8H-en.pdf` | STC8H 系列寄存器、UART/Timer/GPIO/IAP 等实现细节核对 | `489d7c268263fa436605775ab7ebf5245427a49092f90a37a64904a29d60f202` |
 | `stc/stc8g-stc8h-lib-demo-code.rar` | STC 官方 | `https://www.stcmicro.com/rar/demo/stc8g-stc8h-lib-demo-code.rar` | STC8G/STC8H 官方库函数和独立示例，用于核对外设初始化顺序、寄存器位和示例资源用法；不直接照搬架构 | `95a759ea0cd5ec9e2e4d8183256da4ad7c7e863687c0bb1cfc0d36cfe926b703` |
 | `ti/PCF8574_TI.pdf` | TI 官方 | `https://www.ti.com/lit/ds/symlink/pcf8574.pdf` | LCD1602 I2C 背包常用 PCF8574 I/O 扩展器，核对 I2C 地址、准双向 I/O、上电状态和 ACK 行为 | `f0ee68a2517d84256fc3d32084f6d35fd9fc442ff64fd9f4c90460781ef30ee4` |
@@ -23,4 +24,4 @@
 | `titan/TM1637_TitanMicro.pdf` | Titan Micro datasheet 权威镜像 | `https://www.makerguides.com/wp-content/uploads/2019/08/TM1637-Datasheet.pdf` | TM1637 二线接口、命令字、显示寄存器地址、亮度控制和 ACK 时序核对 | `5f0e107b0398111395d660baa421ca3826278eb2838f14f1742758667106b128` |
 | `infineon/Infineon_AN2023_03_IR_Remote_Control.pdf` | Infineon 官方应用笔记 | `https://www.infineon.com/dgdl/Infineon-AN2023-03_Infrared_Remote_Control_and_Saving_Last_Speed_Setting-ApplicationNotes-v01_00-EN.pdf?fileId=8ac78c8c8d1b852e018d21ff0aa71feb` | 红外遥控 NEC 帧结构、引导码、重复码、脉宽和载波事实核对 | `f07b3b420e2b65b6c34795d97d66f04b99521d1c83d501b00e261026e965aa9b` |
 
-下载日期：2026-05-10。
+下载日期：2026-05-10；`stc/STC8H8K64U_Features.pdf` 下载日期：2026-06-16。

@@ -1,0 +1,60 @@
+#ifndef BOARD_CONFIG_H
+#define BOARD_CONFIG_H
+
+#define STC8H_CHIP_STC8H1K08 0
+#define STC8H_CHIP_STC8H8K64U 1
+
+#ifndef STC8H_SYSCLK_HZ
+#define STC8H_SYSCLK_HZ 11059200UL
+#endif
+
+#ifndef STC8H_UART1_BAUD
+#define STC8H_UART1_BAUD 115200UL
+#endif
+
+#ifndef STC8H_UART2_BAUD
+#define STC8H_UART2_BAUD 9600UL
+#endif
+
+#ifndef STC8H_UART3_BAUD
+#define STC8H_UART3_BAUD 9600UL
+#endif
+
+#ifndef STC8H_UART_ENABLE_UART2
+#define STC8H_UART_ENABLE_UART2 0
+#endif
+
+#ifndef STC8H_UART_ENABLE_UART3
+#define STC8H_UART_ENABLE_UART3 0
+#endif
+
+#ifndef STC8H_UART2_PIN_GROUP
+#define STC8H_UART2_PIN_GROUP 0u
+#endif
+
+#ifndef STC8H_UART3_PIN_GROUP
+#define STC8H_UART3_PIN_GROUP 0u
+#endif
+
+#ifndef STC8H_ADC_BITS
+#define STC8H_ADC_BITS 12u
+#endif
+
+#ifndef STC8H_ADC_CHIP_CHANNEL_MASK
+#define STC8H_ADC_CHIP_CHANNEL_MASK 0xFFFFu
+#endif
+
+#ifndef STC8H_ADC_CHANNEL_MASK
+/* LQFP48 feature PDF lists ADC0..ADC14 plus ADC15 internal reference. */
+#define STC8H_ADC_CHANNEL_MASK STC8H_ADC_CHIP_CHANNEL_MASK
+#endif
+
+#ifndef STC8H_EEPROM_SIZE
+#define STC8H_EEPROM_SIZE 0u
+#endif
+
+#ifndef STC8H_EEPROM_SECTOR_SIZE
+#define STC8H_EEPROM_SECTOR_SIZE 512u
+#endif
+
+#endif

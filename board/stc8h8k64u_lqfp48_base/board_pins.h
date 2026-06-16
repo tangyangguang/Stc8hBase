@@ -1,0 +1,22 @@
+#ifndef BOARD_PINS_H
+#define BOARD_PINS_H
+
+#include "stc8h_sfr.h"
+
+#define BOARD_RS485_UART STC8H_UART2
+#define BOARD_RF433_UART STC8H_UART3
+
+#define BOARD_UART2_RX_PORT 1u
+#define BOARD_UART2_RX_PIN 0u
+#define BOARD_UART2_TX_PORT 1u
+#define BOARD_UART2_TX_PIN 1u
+
+#define BOARD_UART3_RX_PORT 0u
+#define BOARD_UART3_RX_PIN 0u
+#define BOARD_UART3_TX_PORT 0u
+#define BOARD_UART3_TX_PIN 1u
+
+#define BOARD_TEST_GPIO_PORT 1u
+#define BOARD_TEST_GPIO_PIN 2u
+
+#endif

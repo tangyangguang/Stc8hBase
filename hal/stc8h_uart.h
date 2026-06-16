@@ -5,7 +5,8 @@
 
 typedef enum {
     STC8H_UART1 = 0,
-    STC8H_UART2
+    STC8H_UART2,
+    STC8H_UART3
 } stc8h_uart_id_t;
 
 stc8h_status_t stc8h_uart_init(stc8h_uart_id_t uart);

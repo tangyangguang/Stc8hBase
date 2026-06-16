@@ -111,3 +111,11 @@
 
 - LCD1602 写入暂不返回 I2C ACK 错误；硬件调试优先使用 `i2c_scan` 确认地址。
 - Keil C51 仍需在 Windows + Keil C51 环境完成真实编译验证。
+
+## 3. STC8H8K64U-LQFP48 follow-up
+
+- Hardware validation is required on the actual `STC8H8K64U-45I-LQFP48` board before marking support as hardware-tested.
+- Confirm normal default serial download flow on the target board.
+- Confirm and document the final LQFP48 ADC package/board mask before relying on every chip-level ADC channel in an application.
+- Confirm final EEPROM/IAP size from ISP/project configuration before enabling EEPROM APIs or destructive EEPROM examples.
+- Decide per board whether UART2 or UART3 is wired to RS485 or 433 MHz modules; the base library remains role-neutral.

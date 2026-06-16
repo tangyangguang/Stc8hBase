@@ -8,8 +8,21 @@
 #include STC8H_CONFIG_INCLUDE
 #endif
 
+#ifndef STC8H_CHIP_STC8H8K64U
+#define STC8H_CHIP_STC8H8K64U 0
+#endif
+
 #ifndef STC8H_CHIP_STC8H1K08
-#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H1K08 0
+#endif
+
+#if ((STC8H_CHIP_STC8H1K08 != 0) && (STC8H_CHIP_STC8H1K08 != 1)) || \
+    ((STC8H_CHIP_STC8H8K64U != 0) && (STC8H_CHIP_STC8H8K64U != 1))
+#error "STC8H chip profile macros must be 0 or 1."
+#endif
+
+#if (STC8H_CHIP_STC8H1K08 + STC8H_CHIP_STC8H8K64U) != 1
+#error "Select exactly one STC8H chip profile."
 #endif
 
 #ifndef STC8H_SYSCLK_HZ

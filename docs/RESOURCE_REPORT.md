@@ -2106,3 +2106,39 @@ _stc8h_uart_write_code
 - 已完成 SDCC 编译和资源检查。
 - 已确认 `core/stc8h_delay_timer0.c` 可在 `STC8H_SYSCLK_HZ=6000000UL` 和 `12000000UL` 下单独编译通过。
 - 尚未烧录到 STC8H1K08 用逻辑分析仪实测。
+
+## 29. STC8H8K64U-LQFP48 compile coverage
+
+Toolchain:
+
+```text
+PlatformIO intel_mcs51 / SDCC 4.4.0
+```
+
+Board:
+
+```text
+PlatformIO built-in STC8H8K64U board, with example-level board_upload.maximum_size = 65535
+```
+
+Notes:
+
+- PlatformIO's built-in `STC8H8K64U` board reports 65536 bytes of flash. With SDCC 4.4.0 this emits linker `-C 0x10000`, and `sdld` can hang. The H8K64U examples set `board_upload.maximum_size = 65535` to keep the linker bound representable while sacrificing one byte of code space.
+- These are compile results only. Hardware validation on `STC8H8K64U-45I-LQFP48` is still required.
+
+| Example | Purpose | UART2/UART3 setting | ROM/EPROM/FLASH | Expected unused code |
+| --- | --- | --- | ---: | --- |
+| `examples/platformio/h8k64u_uart2_hello` | UART2 polling smoke build | `STC8H_UART_ENABLE_UART2=1` | 569 bytes | UART3 disabled |
+| `examples/platformio/h8k64u_uart3_hello` | UART3 polling smoke build | `STC8H_UART_ENABLE_UART3=1` | 564 bytes | UART2 disabled |
+| `examples/platformio/h8k64u_gpio_blink` | GPIO compile coverage | both disabled | 949 bytes | UART2/UART3 disabled |
+| `examples/platformio/h8k64u_adc_read` | 12-bit ADC compile coverage | both disabled | 804 bytes | UART2/UART3 disabled |
+| `examples/platformio/h8k64u_eeprom_safe` | EEPROM-safe compile coverage | both disabled | 397 bytes | UART2/UART3 disabled; no EEPROM HAL compiled |
+| `examples/platformio/h8k64u_wdt_feed` | WDT compile coverage | both disabled | 518 bytes | UART2/UART3 disabled |
+
+Verification command:
+
+```sh
+tools/check_examples.sh
+```
+
+The UART trim helper in `tools/check_examples.sh` checks that UART2/UART3 symbols are absent from a UART1-only STC8H1K08 build.

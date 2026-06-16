@@ -11,7 +11,9 @@ run_c_test() {
     output_file="${BUILD_DIR}/$(basename "${source_file}" .c)"
 
     echo "== host: ${source_file}"
-    cc -std=c89 -Wall -Wextra -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/drivers" -I"${ROOT_DIR}/hal" \
+    cc -std=c89 -Wall -Wextra \
+        -DSTC8H_CHIP_STC8H1K08=1 -DSTC8H_CHIP_STC8H8K64U=0 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/drivers" -I"${ROOT_DIR}/hal" \
         "${ROOT_DIR}/${source_file}" -o "${output_file}"
     "${output_file}"
 }
@@ -59,6 +61,8 @@ run_trim_compile_checks() {
 
     echo "== trim: proto fixed fast path"
     cat > "${tmp_dir}/proto_fixed_fast.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define PROTO_RF_LINK_ENABLE_RESET 0
 #define PROTO_RF_LINK_ENABLE_TICK 0
 #define PROTO_RF_LINK_ENABLE_CONNECT 0
@@ -86,6 +90,8 @@ EOF
 
     echo "== trim: ADC channel check off"
     cat > "${tmp_dir}/adc_no_channel_check.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define STC8H_ADC_ENABLE_CHANNEL_CHECK 0
 #include "${ROOT_DIR}/hal/stc8h_adc.c"
 EOF
@@ -98,6 +104,8 @@ EOF
 
     echo "== trim: PWM fixed-only API"
     cat > "${tmp_dir}/pwm_fixed_only.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define STC8H_PWM_ENABLE_GENERIC_API 0
 #define STC8H_PWM_ENABLE_FIXED_CHANNEL_API 1
 #define STC8H_PWM_GROUP_MASK 0x03u
@@ -141,6 +149,8 @@ EOF
     cat > "${tmp_dir}/nrf24_fixed_direct.c" <<'EOF'
 #include <stdio.h>
 
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define STC8H_SYSCLK_HZ 11059200UL
 #define DRV_NRF24L01_ENABLE_ARG_CHECK 0
 #define DRV_NRF24L01_ENABLE_READ_STATUS 0
@@ -228,6 +238,8 @@ EOF
 
     echo "== codegen: proto XDATA fixed APIs"
     cat > "${tmp_dir}/proto_xdata_only.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define PROTO_RF_LINK_ENABLE_INIT 0
 #define PROTO_RF_LINK_ENABLE_SET_IDS 0
 #define PROTO_RF_LINK_ENABLE_RESET 0
@@ -258,6 +270,8 @@ EOF
     fi
 
     cat > "${tmp_dir}/proto_xdata_compare.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define PROTO_RF_LINK_ENABLE_INIT 0
 #define PROTO_RF_LINK_ENABLE_SET_IDS 0
 #define PROTO_RF_LINK_ENABLE_RESET 0
@@ -301,6 +315,8 @@ EOF
 
     echo "== codegen: nRF24 XDATA/CODE APIs"
     cat > "${tmp_dir}/nrf24_xdata_code.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define STC8H_SYSCLK_HZ 11059200UL
 #define DRV_NRF24L01_ENABLE_CHECK_PRESENT 0
 #define DRV_NRF24L01_ENABLE_ARG_CHECK 0
@@ -359,6 +375,8 @@ EOF
 
     echo "== codegen: nRF24 check_present DATA/CODE path"
     cat > "${tmp_dir}/nrf24_check_present_spaces.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define STC8H_SYSCLK_HZ 11059200UL
 #define DRV_NRF24L01_ENABLE_CHECK_PRESENT 1
 #define DRV_NRF24L01_ENABLE_ARG_CHECK 0
@@ -403,6 +421,8 @@ EOF
 
     echo "== codegen: TM1637 DATA raw4 API"
     cat > "${tmp_dir}/tm1637_data_raw4.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
 #define DRV_TM1637_ENABLE_DISPLAY_DIGITS 0
 #define DRV_TM1637_ENABLE_DISPLAY_RAW4 0
 #define DRV_TM1637_ENABLE_DISPLAY_RAW4_DATA 1

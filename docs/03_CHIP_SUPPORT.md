@@ -34,7 +34,18 @@
 
 这类芯片后续可以通过新增芯片配置头文件支持，但第一版不列入支持承诺。需要某个具体型号时，必须以官方资料、实际编译和硬件验证为准。
 
-### 2.3 暂不承诺支持的芯片
+### 2.3 STC8H8K64U-45I-LQFP48 opt-in support
+
+`STC8H8K64U-45I-LQFP48` is supported as an explicit chip profile.
+The library requires every build to select exactly one supported chip profile.
+This removes the old implicit `STC8H1K08` fallback.
+
+Initial support covers core configuration, GPIO, UART1, UART2, UART3,
+Timer resources needed by those UARTs, ADC, EEPROM/IAP, WDT, and small examples.
+USB, DMA, RTC, LCM, UART4, full I/O interrupt support, RS485 protocol, and 433 MHz
+module drivers are outside the initial support scope.
+
+### 2.4 暂不承诺支持的芯片
 
 以下情况暂不承诺支持：
 
@@ -67,6 +78,7 @@
 
 ```text
 STC8H1K08
+STC8H8K64U-45I-LQFP48
 ```
 
 第一版不承诺其他型号兼容。以后遇到真实项目需要时，再根据寄存器和外设差异决定是否加入。

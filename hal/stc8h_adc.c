@@ -29,7 +29,10 @@
 #if STC8H_ADC_ENABLE_CHANNEL_CHECK
 static stc8h_u8 stc8h_adc_channel_valid(stc8h_u8 channel)
 {
-    return ((channel <= 1u) || ((channel >= 8u) && (channel <= 14u)) || (channel == 15u)) ? 1u : 0u;
+    if (channel > 15u) {
+        return 0u;
+    }
+    return ((STC8H_ADC_CHANNEL_MASK & ((stc8h_u16)1u << channel)) != 0u) ? 1u : 0u;
 }
 #endif
 
@@ -68,5 +71,9 @@ stc8h_u16 stc8h_adc_read(stc8h_u8 channel)
     }
 
     ADC_CONTR &= (stc8h_u8)~STC8H_ADC_FLAG;
+#if STC8H_ADC_BITS == 12u
+    return (stc8h_u16)(((stc8h_u16)(ADC_RES & 0x0Fu) << 8) | ADC_RESL);
+#else
     return (stc8h_u16)(((stc8h_u16)(ADC_RES & 0x03u) << 8) | ADC_RESL);
+#endif
 }

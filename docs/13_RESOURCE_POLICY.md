@@ -117,6 +117,11 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | UART | `STC8H_UART_ASSUME_UART1` | `0` | 只使用 UART1 时省去 id 检查 |
 | UART | `STC8H_UART_ENABLE_WRITE_RAM` | `1` | 是否编译 RAM 字符串输出 |
 | UART | `STC8H_UART_ENABLE_RX` | `1` | 是否编译轮询接收 |
+| UART | `STC8H_UART_ENABLE_UART2` | `0` | 是否编译 UART2 轮询路径；使用 UART2 时由板级或示例显式开启 |
+| UART | `STC8H_UART_ENABLE_UART3` | `0` | 是否编译 UART3 轮询路径；使用 UART3 时由板级或示例显式开启 |
+| UART | `STC8H_UART2_PIN_GROUP` | `0` | UART2 引脚组选择：0 为 P1.0/P1.1，1 为 P4.6/P4.7 |
+| UART | `STC8H_UART3_PIN_GROUP` | `0` | UART3 引脚组选择：0 为 P0.0/P0.1，1 为 P5.0/P5.1 |
+| UART | `STC8H_UART_CONFIGURE_PORT_MODE` | `1` | UART2/UART3 初始化时是否配置所选 RX/TX 引脚为准双向并释放锁存 |
 | IR RX | `DRV_IR_RX_ENABLE_PULSE` | `1` | 是否编译 NEC mark/space pulse 解码 |
 | IR RX | `DRV_IR_RX_ENABLE_FALLING` | `1` | 是否编译 falling interval 解码 |
 
