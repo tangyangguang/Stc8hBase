@@ -102,6 +102,8 @@ UART2 and UART3 get independent baud macros:
 #define STC8H_UART3_BAUD 9600UL
 ```
 
+The H8K64U board profile may define baud defaults and pin groups, but UART2 and UART3 feature code should stay disabled unless a build explicitly enables the port it uses. This keeps GPIO, ADC, WDT, and UART1-only examples from carrying unused UART2/UART3 code.
+
 The first implementation supports polling transmit and polling receive. Interrupt-driven receive is excluded from the first implementation and needs a separate design when a real project requires it.
 
 RS485 is not part of UART HAL. Applications should bind communication roles in board/application config:
@@ -157,9 +159,11 @@ The H8K64U board/application config must set the actual EEPROM size chosen in IS
 - Existing STC8H1K08 board files and examples must not be renamed.
 - H8K64U-only branches must be guarded by chip or feature macros.
 - Disabled UART2/UART3 code must not emit UART2/UART3 symbols.
+- Builds that enable UART2 or UART3 must reject `STC8H_UART_ASSUME_UART1=1`.
 - STC8H1K08 ADC must keep 10-bit result behavior.
 - STC8H1K08 EEPROM must keep 4KB default size.
 - Projects that relied on implicit `STC8H1K08` selection must migrate to an explicit board config or compile flag.
+- All local compile checks that include HAL, driver, protocol, or utility sources directly must select an explicit chip profile.
 
 ## Verification
 
@@ -173,7 +177,8 @@ tools/check_examples.sh
 
 2. Add compile checks for H8K64U-LQFP48 examples.
 3. Add symbol checks that UART2/UART3 code is absent from existing UART1-only examples.
-4. On hardware, verify:
+4. Verify each new PlatformIO example contains the wrapper source files needed to compile the HAL modules it calls.
+5. On hardware, verify:
    - UART1 download still works through normal default flow.
    - UART2 group 0 or group 1 transmits and receives.
    - UART3 group 0 or group 1 transmits and receives.
@@ -186,6 +191,8 @@ tools/check_examples.sh
 - Scope is intentionally MCU-level and avoids business logic.
 - UART2 and UART3 are generic ports, so 485/433 roles are not frozen into the base library.
 - UART2 uses Timer2 and UART3 uses Timer3 to avoid a default timer conflict.
+- UART2/UART3 feature code should be enabled per build, not by the H8K64U base board profile, to keep unused examples small.
 - The plan intentionally removes the hidden default chip path. This is a controlled breaking change documented in the migration note.
+- Local compile checks and examples must select chip profiles explicitly; PlatformIO examples must include wrapper source files for every compiled module they call.
 - USB/DMA/RTC/LCM are excluded even though H8K64U supports them, because they would materially increase library scope.
 - The main uncertainty is the exact H8K64U EEPROM size in the final ISP configuration; destructive EEPROM examples must remain opt-in until that is confirmed.

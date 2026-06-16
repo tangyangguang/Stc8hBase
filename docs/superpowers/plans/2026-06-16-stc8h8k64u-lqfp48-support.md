@@ -26,9 +26,10 @@
   - `h8k64u_adc_read`
   - `h8k64u_eeprom_safe`
   - `h8k64u_wdt_feed`
+  - wrapper source files for every HAL/core module each example calls.
 - Create: `examples/platformio/boards/STC8H8K64U.json` if PlatformIO does not already provide a suitable board definition in the installed platform.
 - Create: `docs/24_EXPLICIT_CHIP_PROFILE_MIGRATION.md`
-- Modify `tools/check_examples.sh`: add compile-only H8K64U checks and symbol absence checks.
+- Modify `tools/check_examples.sh`: make existing temporary compile checks use explicit chip profiles, then add compile-only H8K64U checks and symbol absence checks.
 - Modify `docs/03_CHIP_SUPPORT.md`, `docs/10_REFERENCES.md`, `docs/vendor/stc/README.md`, and `docs/13_RESOURCE_POLICY.md`: document support level, source, and resource rules.
 
 ### Task 1: Document Source And Support Level
@@ -146,6 +147,7 @@ git commit -m "docs: plan stc8h8k64u lqfp48 support"
 **Files:**
 - Modify: `core/stc8h_config.h`
 - Modify: `board/stc8h1k08_tssop20_demo/board_config.h`
+- Modify: `tools/check_examples.sh`
 - Create: `board/stc8h8k64u_lqfp48_base/board_config.h`
 
 - [ ] **Step 1: Add failing compile check**
@@ -188,8 +190,8 @@ Create `board/stc8h8k64u_lqfp48_base/board_config.h`:
 #define STC8H_UART2_BAUD 9600UL
 #define STC8H_UART3_BAUD 9600UL
 
-#define STC8H_UART_ENABLE_UART2 1
-#define STC8H_UART_ENABLE_UART3 1
+#define STC8H_UART_ENABLE_UART2 0
+#define STC8H_UART_ENABLE_UART3 0
 #define STC8H_UART2_PIN_GROUP 0u
 #define STC8H_UART3_PIN_GROUP 0u
 
@@ -253,7 +255,66 @@ sdcc -mmcs51 --std-sdcc11 -Icore -Iboard/stc8h1k08_tssop20_demo -c /tmp/stc8h1k0
 
 Expected: both commands pass.
 
-- [ ] **Step 6: Verify no-config builds fail**
+- [ ] **Step 6: Update existing temporary compile checks**
+
+In `tools/check_examples.sh`, add the explicit STC8H1K08 chip profile to every temporary C file that directly includes a HAL, driver, protocol, or utility source file.
+
+For `eeprom_read_only.c`, the generated file starts with:
+
+```c
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#define STC8H_EEPROM_ENABLE_READ 1
+#define STC8H_EEPROM_ENABLE_WRITE 0
+#define STC8H_EEPROM_ENABLE_ERASE 0
+#include "${ROOT_DIR}/hal/stc8h_eeprom.c"
+```
+
+For `eeprom_fixed.c`, the generated file starts with:
+
+```c
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#define STC8H_EEPROM_ENABLE_READ 0
+#define STC8H_EEPROM_ENABLE_WRITE 0
+#define STC8H_EEPROM_ENABLE_ERASE 0
+#define STC8H_EEPROM_ENABLE_FIXED_BLOCK 1
+#define STC8H_EEPROM_FIXED_ADDR 0x0E00u
+#define STC8H_EEPROM_FIXED_SIZE 8u
+#include "${ROOT_DIR}/hal/stc8h_eeprom.c"
+```
+
+For `ec11_small_isr.c`, add the chip profile before driver feature macros:
+
+```c
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#define DRV_EC11_ENABLE_FULL_API 0
+#define DRV_EC11_ENABLE_SMALL_API 0
+#define DRV_EC11_ENABLE_SMALL_ISR_API 1
+#define DRV_EC11_ENABLE_NULL_CHECK 0
+```
+
+For each generated `spi_group_${group}.c`, add:
+
+```c
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#define STC8H_SPI_PIN_GROUP ${group}u
+#include "${ROOT_DIR}/hal/stc8h_spi.c"
+```
+
+For `pwm_xfr.c`, add:
+
+```c
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#include "${ROOT_DIR}/hal/stc8h_pwm.c"
+```
+
+`test_using.c` only includes `stc8h_compiler.h`, so it does not need a chip profile.
+
+- [ ] **Step 7: Verify no-config builds fail**
 
 Run:
 
@@ -267,10 +328,20 @@ EOF
 
 Expected: compile fails with `Select exactly one STC8H chip profile.`
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Run existing checks after explicit profile migration**
+
+Run:
 
 ```sh
-git add core/stc8h_config.h board/stc8h1k08_tssop20_demo/board_config.h board/stc8h8k64u_lqfp48_base/board_config.h
+tools/check_examples.sh
+```
+
+Expected: all existing STC8H1K08 examples, Make examples, and temporary compile checks pass after their chip selection is explicit.
+
+- [ ] **Step 9: Commit**
+
+```sh
+git add core/stc8h_config.h board/stc8h1k08_tssop20_demo/board_config.h board/stc8h8k64u_lqfp48_base/board_config.h tools/check_examples.sh
 git commit -m "feat: add stc8h8k64u chip config"
 ```
 
@@ -372,9 +443,9 @@ sdcc -mmcs51 --std-sdcc11 -Icore -Ihal -Iboard/stc8h8k64u_lqfp48_base -c /tmp/ad
 
 Expected before implementation: fail if `STC8H_ADC_BITS` is not exposed consistently.
 
-- [ ] **Step 2: Make EEPROM size overridable**
+- [ ] **Step 2: Make EEPROM size and feature gates overridable**
 
-Change `hal/stc8h_eeprom.h` constants to:
+Change the top of `hal/stc8h_eeprom.h` so size, sector size, and feature gates are all overridable before range checks run:
 
 ```c
 #ifndef STC8H_EEPROM_SIZE
@@ -385,12 +456,30 @@ Change `hal/stc8h_eeprom.h` constants to:
 #define STC8H_EEPROM_SECTOR_SIZE 512u
 #endif
 
+#ifndef STC8H_EEPROM_ENABLE_READ
+#define STC8H_EEPROM_ENABLE_READ 1
+#endif
+
+#ifndef STC8H_EEPROM_ENABLE_WRITE
+#define STC8H_EEPROM_ENABLE_WRITE 1
+#endif
+
+#ifndef STC8H_EEPROM_ENABLE_ERASE
+#define STC8H_EEPROM_ENABLE_ERASE 1
+#endif
+
+#ifndef STC8H_EEPROM_ENABLE_FIXED_BLOCK
+#define STC8H_EEPROM_ENABLE_FIXED_BLOCK 0
+#endif
+
 #if (STC8H_EEPROM_SIZE == 0u) && \
     (STC8H_EEPROM_ENABLE_READ || STC8H_EEPROM_ENABLE_WRITE || \
      STC8H_EEPROM_ENABLE_ERASE || STC8H_EEPROM_ENABLE_FIXED_BLOCK)
 #error "STC8H_EEPROM_SIZE must be set before enabling EEPROM APIs."
 #endif
 ```
+
+Remove the old unconditional `#define STC8H_EEPROM_SIZE 4096u` and `#define STC8H_EEPROM_SECTOR_SIZE 512u` lines. Keep the existing API declarations under their current feature macros.
 
 - [ ] **Step 3: Add ADC defaults**
 
@@ -461,6 +550,9 @@ git commit -m "feat: make adc and eeprom chip configurable"
 Create `/tmp/uart1_only.c`:
 
 ```c
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#define STC8H_UART_ASSUME_UART1 1
 #include "stc8h_uart.c"
 void main(void)
 {
@@ -509,6 +601,10 @@ In `hal/stc8h_uart.c`, add:
 #ifndef STC8H_UART3_PIN_GROUP
 #define STC8H_UART3_PIN_GROUP 0u
 #endif
+
+#if (STC8H_UART_ENABLE_UART2 || STC8H_UART_ENABLE_UART3) && STC8H_UART_ASSUME_UART1
+#error "STC8H_UART_ASSUME_UART1 cannot be used when UART2 or UART3 is enabled."
+#endif
 ```
 
 - [ ] **Step 4: Add UART2 init path**
@@ -524,7 +620,19 @@ Implement UART2 only under:
 Use the official 1T baud reload formula:
 
 ```c
-#define STC8H_UART_RELOAD(sysclk, baud) (65536UL - ((sysclk) / (baud) / 4UL))
+#define STC8H_UART_RELOAD_VALUE(sysclk, baud) (65536UL - ((sysclk) / (baud) / 4UL))
+
+#if STC8H_UART_ENABLE_UART2
+#if STC8H_UART2_BAUD == 0UL
+#error "STC8H_UART2_BAUD must be non-zero when UART2 is enabled."
+#endif
+#ifndef STC8H_UART2_RELOAD
+#define STC8H_UART2_RELOAD STC8H_UART_RELOAD_VALUE(STC8H_SYSCLK_HZ, STC8H_UART2_BAUD)
+#endif
+#if (STC8H_UART2_RELOAD == 0UL) || (STC8H_UART2_RELOAD > 65535UL)
+#error "STC8H_UART2_RELOAD is out of 16-bit range."
+#endif
+#endif
 ```
 
 Use these control bits:
@@ -581,7 +689,23 @@ Implement UART3 only under:
 #endif
 ```
 
-Use the same reload formula and these control bits:
+Use the same reload formula. Add UART3 reload validation before the UART3 implementation:
+
+```c
+#if STC8H_UART_ENABLE_UART3
+#if STC8H_UART3_BAUD == 0UL
+#error "STC8H_UART3_BAUD must be non-zero when UART3 is enabled."
+#endif
+#ifndef STC8H_UART3_RELOAD
+#define STC8H_UART3_RELOAD STC8H_UART_RELOAD_VALUE(STC8H_SYSCLK_HZ, STC8H_UART3_BAUD)
+#endif
+#if (STC8H_UART3_RELOAD == 0UL) || (STC8H_UART3_RELOAD > 65535UL)
+#error "STC8H_UART3_RELOAD is out of 16-bit range."
+#endif
+#endif
+```
+
+Use these control bits:
 
 ```c
 #define STC8H_T4T3M_T3R    0x08u
@@ -653,16 +777,28 @@ git commit -m "feat: add optional uart2 uart3 polling support"
 - Create: `examples/platformio/boards/STC8H8K64U.json`
 - Create: `examples/platformio/h8k64u_uart2_hello/platformio.ini`
 - Create: `examples/platformio/h8k64u_uart2_hello/src/main.c`
+- Create: `examples/platformio/h8k64u_uart2_hello/src/stc8h_uart_wrap.c`
 - Create: `examples/platformio/h8k64u_uart3_hello/platformio.ini`
 - Create: `examples/platformio/h8k64u_uart3_hello/src/main.c`
+- Create: `examples/platformio/h8k64u_uart3_hello/src/stc8h_uart_wrap.c`
 - Create: `examples/platformio/h8k64u_gpio_blink/platformio.ini`
 - Create: `examples/platformio/h8k64u_gpio_blink/src/main.c`
+- Create: `examples/platformio/h8k64u_gpio_blink/src/stc8h_gpio_wrap.c`
+- Create: `examples/platformio/h8k64u_gpio_blink/src/stc8h_gpio_toggle_wrap.c`
+- Create: `examples/platformio/h8k64u_gpio_blink/src/stc8h_delay_wrap.c`
 - Create: `examples/platformio/h8k64u_adc_read/platformio.ini`
 - Create: `examples/platformio/h8k64u_adc_read/src/main.c`
+- Create: `examples/platformio/h8k64u_adc_read/src/stc8h_adc_wrap.c`
+- Create: `examples/platformio/h8k64u_adc_read/src/stc8h_delay_wrap.c`
+- Create: `examples/platformio/h8k64u_adc_read/src/stc8h_uart_wrap.c`
 - Create: `examples/platformio/h8k64u_eeprom_safe/platformio.ini`
 - Create: `examples/platformio/h8k64u_eeprom_safe/src/main.c`
+- Create: `examples/platformio/h8k64u_eeprom_safe/src/stc8h_uart_wrap.c`
 - Create: `examples/platformio/h8k64u_wdt_feed/platformio.ini`
 - Create: `examples/platformio/h8k64u_wdt_feed/src/main.c`
+- Create: `examples/platformio/h8k64u_wdt_feed/src/stc8h_delay_wrap.c`
+- Create: `examples/platformio/h8k64u_wdt_feed/src/stc8h_uart_wrap.c`
+- Create: `examples/platformio/h8k64u_wdt_feed/src/stc8h_wdt_wrap.c`
 
 - [ ] **Step 1: Create board pins**
 
@@ -672,7 +808,7 @@ Create `board/stc8h8k64u_lqfp48_base/board_pins.h`:
 #ifndef BOARD_PINS_H
 #define BOARD_PINS_H
 
-#include "stc8h_uart.h"
+#include "stc8h_sfr.h"
 
 #define BOARD_RS485_UART STC8H_UART2
 #define BOARD_RF433_UART STC8H_UART3
@@ -694,6 +830,7 @@ Create `board/stc8h8k64u_lqfp48_base/board_pins.h`:
 ```
 
 `BOARD_TEST_GPIO_*` is only for compile and bench examples. Confirm the real board wiring before driving it on hardware.
+`BOARD_RS485_UART` and `BOARD_RF433_UART` intentionally expand to UART enum tokens without including `stc8h_uart.h` here; the application source that uses them must include `stc8h_uart.h`.
 
 - [ ] **Step 2: Create PlatformIO board manifest**
 
@@ -770,6 +907,18 @@ build_flags =
     -DSTC8H_CONFIG_INCLUDE=\"board_config.h\"
     -DSTC8H_PINS_INCLUDE=\"board_pins.h\"
 ```
+
+Add only the feature flag needed by each example:
+
+```ini
+; h8k64u_uart2_hello only
+    -DSTC8H_UART_ENABLE_UART2=1
+
+; h8k64u_uart3_hello only
+    -DSTC8H_UART_ENABLE_UART3=1
+```
+
+Do not enable UART2 or UART3 in the GPIO, ADC, EEPROM safe, or WDT examples unless that example calls the port. This keeps unused UART code out of those builds.
 
 If the installed PlatformIO platform later provides an official `STC8H8K64U` board, compare it with the local manifest before removing the local one. Upload configuration must still be verified before flashing.
 
@@ -864,7 +1013,83 @@ void main(void)
 }
 ```
 
-- [ ] **Step 10: Build examples**
+- [ ] **Step 10: Create wrapper source files**
+
+Create the wrapper files that compile library modules into each PlatformIO example.
+
+`examples/platformio/h8k64u_uart2_hello/src/stc8h_uart_wrap.c`:
+
+```c
+#include "../../../../hal/stc8h_uart.c"
+```
+
+`examples/platformio/h8k64u_uart3_hello/src/stc8h_uart_wrap.c`:
+
+```c
+#include "../../../../hal/stc8h_uart.c"
+```
+
+`examples/platformio/h8k64u_gpio_blink/src/stc8h_gpio_wrap.c`:
+
+```c
+#include "../../../../hal/stc8h_gpio.c"
+```
+
+`examples/platformio/h8k64u_gpio_blink/src/stc8h_gpio_toggle_wrap.c`:
+
+```c
+#include "../../../../hal/stc8h_gpio_toggle.c"
+```
+
+`examples/platformio/h8k64u_gpio_blink/src/stc8h_delay_wrap.c`:
+
+```c
+#include "../../../../core/stc8h_delay.c"
+```
+
+`examples/platformio/h8k64u_adc_read/src/stc8h_adc_wrap.c`:
+
+```c
+#include "../../../../hal/stc8h_adc.c"
+```
+
+`examples/platformio/h8k64u_adc_read/src/stc8h_delay_wrap.c`:
+
+```c
+#include "../../../../core/stc8h_delay.c"
+```
+
+`examples/platformio/h8k64u_adc_read/src/stc8h_uart_wrap.c`:
+
+```c
+#include "../../../../hal/stc8h_uart.c"
+```
+
+`examples/platformio/h8k64u_eeprom_safe/src/stc8h_uart_wrap.c`:
+
+```c
+#include "../../../../hal/stc8h_uart.c"
+```
+
+`examples/platformio/h8k64u_wdt_feed/src/stc8h_delay_wrap.c`:
+
+```c
+#include "../../../../core/stc8h_delay.c"
+```
+
+`examples/platformio/h8k64u_wdt_feed/src/stc8h_uart_wrap.c`:
+
+```c
+#include "../../../../hal/stc8h_uart.c"
+```
+
+`examples/platformio/h8k64u_wdt_feed/src/stc8h_wdt_wrap.c`:
+
+```c
+#include "../../../../hal/stc8h_wdt.c"
+```
+
+- [ ] **Step 11: Build examples**
 
 Run:
 
@@ -879,7 +1104,7 @@ Run:
 
 Expected: all compile.
 
-- [ ] **Step 11: Commit**
+- [ ] **Step 12: Commit**
 
 ```sh
 git add board/stc8h8k64u_lqfp48_base examples/platformio/boards examples/platformio/h8k64u_uart2_hello examples/platformio/h8k64u_uart3_hello examples/platformio/h8k64u_gpio_blink examples/platformio/h8k64u_adc_read examples/platformio/h8k64u_eeprom_safe examples/platformio/h8k64u_wdt_feed
@@ -914,6 +1139,9 @@ check_uart2_uart3_trim() {
     tmp_dir=$(mktemp -d)
     trap 'rm -rf "${tmp_dir}"' EXIT
     cat > "${tmp_dir}/uart1_only.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#define STC8H_UART_ASSUME_UART1 1
 #include "${ROOT_DIR}/hal/stc8h_uart.c"
 void main(void)
 {
@@ -930,7 +1158,7 @@ EOF
 }
 ```
 
-Call `check_uart2_uart3_trim` before the PlatformIO example list.
+Call `check_uart2_uart3_trim` before the PlatformIO example list. This verifies that the UART1-only fast path still compiles after explicit chip profiles and that UART2/UART3 code is not linked when disabled.
 
 - [ ] **Step 3: Run full verification**
 
@@ -1003,6 +1231,8 @@ Spec coverage:
 Placeholder scan:
 
 - Timer2/Timer3 SFR addresses and UART2/UART3 control bits are now specified from the official manual sections used by the implementation.
+- UART2/UART3 baud reload macros, range checks, and `STC8H_UART_ASSUME_UART1` conflict checks are specified before implementation.
+- EEPROM size protection now runs after EEPROM feature macros are defined, so `STC8H_EEPROM_SIZE=0` cannot silently bypass disabled-default assumptions.
 - No task says to handle errors or tests without concrete commands.
 
 Type consistency:
@@ -1010,9 +1240,12 @@ Type consistency:
 - UART enum names are consistently `STC8H_UART1`, `STC8H_UART2`, `STC8H_UART3`.
 - Board role macros are consistently `BOARD_RS485_UART` and `BOARD_RF433_UART`.
 - Feature macros are consistently `STC8H_UART_ENABLE_UART2` and `STC8H_UART_ENABLE_UART3`.
+- H8K64U examples follow the existing PlatformIO wrapper-source pattern used by current examples.
 
 Risk review:
 
 - The plan adds a local H8K64U PlatformIO board manifest so examples do not silently inherit STC8H1K08 memory limits.
+- Existing temporary SDCC compile checks are migrated in Task 2 before later `tools/check_examples.sh` runs.
+- H8K64U board defaults keep UART2/UART3 disabled; each example enables only the port it uses to protect ROM size.
 - UART2/UART3 register setup is now grounded in official examples, but hardware timing still must be verified on the target board.
 - EEPROM size must be supplied by board/application config before enabling EEPROM APIs or destructive tests.
