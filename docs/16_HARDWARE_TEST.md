@@ -980,6 +980,18 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 验证 H8K64U 基础库支持在真实目标板上可运行。
 - 验证 UART2/UART3、GPIO、ADC、WDT 和默认下载链路。
 
+无硬件前置准备：
+
+```sh
+./tools/prepare_h8k64u_validation.sh
+```
+
+该脚本的设计边界：
+
+- 只构建 H8K64U 验证示例、列出串口设备、输出后续人工上传和监视命令模板。
+- 不自动上传固件，因为 STC 下载通常需要上电/复位配合，且下载串口、UART2/UART3 监视串口可能不是同一个 USB 转串口。
+- 不包含 EEPROM 写擦测试；当前 H8K64U 板级配置默认 `STC8H_EEPROM_SIZE=0`，必须先确认 ISP/IAP 分区后再启用破坏性测试。
+
 待确认硬件条件：
 
 - Confirm `ADC_VRef+` is tied to a valid reference or VCC.
@@ -990,13 +1002,16 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 
 建议测试顺序：
 
-1. Build and flash `examples/platformio/h8k64u_uart2_hello` on the selected UART2 pin group.
-2. Build and flash `examples/platformio/h8k64u_uart3_hello` on the selected UART3 pin group.
-3. Build and flash `examples/platformio/h8k64u_gpio_blink` after confirming `BOARD_TEST_GPIO_*` is safe for the target board.
-4. Build and flash `examples/platformio/h8k64u_adc_read` with `ADC_VRef+` connected.
-5. Build and flash `examples/platformio/h8k64u_wdt_feed`.
+1. Run `./tools/prepare_h8k64u_validation.sh` without hardware and confirm all examples build.
+2. Build and flash `examples/platformio/h8k64u_uart2_hello` on the selected UART2 pin group; monitor UART2 at 9600 baud and expect repeated `UART2 hello`.
+3. Build and flash `examples/platformio/h8k64u_uart3_hello` on the selected UART3 pin group; monitor UART3 at 9600 baud and expect repeated `UART3 hello`.
+4. Build and flash `examples/platformio/h8k64u_gpio_blink` after confirming `BOARD_TEST_GPIO_*` is safe for the target board.
+5. Build and flash `examples/platformio/h8k64u_adc_read` with `ADC_VRef+` connected; monitor UART1 at 115200 baud and expect repeated `ADC0=0x....`.
+6. Build and flash `examples/platformio/h8k64u_eeprom_safe`; monitor UART1 at 115200 baud and expect `H8K64U EEPROM write disabled`.
+7. Build and flash `examples/platformio/h8k64u_wdt_feed`; monitor UART1 at 115200 baud and expect `H8K64U WDT feed`.
 
 当前状态：
 
 - SDCC/PlatformIO compile validation has passed.
+- No-hardware validation preparation is scripted by `tools/prepare_h8k64u_validation.sh`.
 - Hardware validation has not been run yet.

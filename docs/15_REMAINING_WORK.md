@@ -114,6 +114,7 @@
 
 ## 3. STC8H8K64U-LQFP48 follow-up
 
+- No-hardware preparation is complete: `tools/prepare_h8k64u_validation.sh` builds all H8K64U validation examples and prints later manual upload/monitor commands.
 - Hardware validation is required on the actual `STC8H8K64U-45I-LQFP48` board before marking support as hardware-tested.
 - Confirm normal default serial download flow on the target board.
 - Confirm and document the final LQFP48 ADC package/board mask before relying on every chip-level ADC channel in an application.

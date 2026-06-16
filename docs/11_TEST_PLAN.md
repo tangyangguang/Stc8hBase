@@ -105,6 +105,12 @@ Keil C51 验证按模块进行。每个已实现模块至少完成 Keil C51 编�
 | `ir_nec_tx` | NEC 红外发射硬件验证 |
 | `wdt_feed` | WDT 启用和周期喂狗编译验证 |
 | `wdt_reset_test` | WDT 复位标志和受控复位硬件验证 |
+| `h8k64u_uart2_hello` | STC8H8K64U UART2 编译和后续硬件验证 |
+| `h8k64u_uart3_hello` | STC8H8K64U UART3 编译和后续硬件验证 |
+| `h8k64u_gpio_blink` | STC8H8K64U GPIO 编译和后续硬件验证 |
+| `h8k64u_adc_read` | STC8H8K64U 12-bit ADC 编译和后续硬件验证 |
+| `h8k64u_eeprom_safe` | STC8H8K64U EEPROM 安全占位编译验证，不执行写擦 |
+| `h8k64u_wdt_feed` | STC8H8K64U WDT 编译和后续硬件验证 |
 
 ## 5. 资源占用测试
 
@@ -144,6 +150,7 @@ docs/RESOURCE_REPORT.md
 ### 6.2 资源验收
 
 - 自动化入口为 `tools/check_examples.sh`；脚本会构建全部 PlatformIO 示例、显式编译 EEPROM 写擦环境、构建 3 个 Makefile 示例，并检查关键示例中不应出现的符号前缀。
+- STC8H8K64U 无硬件前置验证入口为 `tools/prepare_h8k64u_validation.sh`；脚本只构建 H8K64U 示例并输出后续硬件验证命令模板，不自动上传。
 - 每个示例记录 ROM/code 占用。
 - 每个示例记录 RAM/data/idata/xdata 占用。
 - 每个示例记录 Timer、PWM、UART、I2C、SPI、ADC、中断占用。
