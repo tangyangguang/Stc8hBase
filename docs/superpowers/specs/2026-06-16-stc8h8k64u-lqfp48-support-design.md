@@ -2,7 +2,7 @@
 
 ## Goal
 
-Add explicit, opt-in base-library support for `STC8H8K64U-45I-LQFP48` while keeping existing `STC8H1K08` programs unchanged.
+Add explicit base-library support for `STC8H8K64U-45I-LQFP48` and move the library toward explicit chip profiles for every project.
 
 This support is for reusable MCU-level capabilities only. It is not a product framework and does not bind UART2 or UART3 to RS485, 433 MHz modules, Modbus, or any application protocol.
 
@@ -20,6 +20,8 @@ Facts used in this design:
 - LQFP48 exposes the UART3 pin pairs `RXD3/P0.0, TXD3/P0.1` and `RXD3_2/P5.0, TXD3_2/P5.1`.
 - `P_SW2` selects UART2 and UART3 pin groups: UART2 bit0, UART3 bit1.
 - UART2 can use Timer2 as baud-rate generator. UART3 can use Timer3 as baud-rate generator. This is the preferred concurrent-use split so UART2 and UART3 do not share one baud-rate timer.
+- Official UART2 example uses `S2CON=0x10`, `T2L/T2H=BRT`, and Timer2 1T auto-reload with `AUXR` bits `T2R=1`, `T2_C/T=0`, `T2x12=1`.
+- Official UART3-on-Timer3 example uses `S3CON=0x50`, `T3L/T3H=BRT`, and Timer3 1T auto-reload with `T4T3M` bits `T3R=1`, `T3_C/T=0`, `T3x12=1`, `T3CLKO=0`.
 - `ADC_VRef+` must not float. If USB download is not used, `P3.0/P3.1/P3.2` must not all be low at reset.
 
 ## Scope
@@ -29,8 +31,8 @@ Facts used in this design:
 - Add a chip-selection path for `STC8H_CHIP_STC8H8K64U`.
 - Add a board profile for `STC8H8K64U-45I-LQFP48`.
 - Add only the SFR/XFR definitions required by the first supported modules.
-- Keep `STC8H1K08` as the default chip when no board config is supplied.
-- Extend GPIO support only through compile-time masks.
+- Require exactly one chip profile to be selected. Builds without a chip profile should fail instead of silently defaulting to `STC8H1K08`.
+- Keep GPIO support compile-time masked. H8K64U-LQFP48 first support uses only P0..P5, so P6/P7 should not be added until a package or board needs them.
 - Make ADC width, valid channels, and result assembly chip-configurable.
 - Make EEPROM/IAP size chip-configurable and keep sector size explicit.
 - Extend UART HAL to support UART2 and UART3 as generic serial ports.
@@ -41,7 +43,9 @@ Facts used in this design:
   - UART3 hello/echo
   - ADC read
   - EEPROM safe build
-- Add verification that existing STC8H1K08 examples still build and do not gain H8K64U-only symbols.
+  - WDT feed
+- Add migration notes for existing STC8H1K08 projects that relied on the old implicit default chip.
+- Add verification that existing STC8H1K08 examples still build after their chip profile is explicit and do not gain H8K64U-only symbols.
 
 ### Out of scope
 
@@ -53,12 +57,12 @@ Facts used in this design:
 
 ## Architecture
 
-Chip differences remain compile-time decisions. `core/stc8h_config.h` continues to default to `STC8H_CHIP_STC8H1K08=1`. The H8K64U board profile explicitly disables that default by defining `STC8H_CHIP_STC8H8K64U=1` before common chip defaults are selected.
+Chip differences remain compile-time decisions. `core/stc8h_config.h` should no longer silently select a default chip. It should require exactly one supported chip macro to be true and emit a compile-time error otherwise.
 
 The library keeps its current thin-HAL shape:
 
 - `core/stc8h_sfr.h` owns SFR/XFR names.
-- `core/stc8h_config.h` owns default chip constants.
+- `core/stc8h_config.h` owns chip-profile validation and common chip constants.
 - `board/stc8h8k64u_lqfp48_base/` owns board-visible pin choices.
 - `hal/stc8h_uart.*` owns UART byte-level initialization and polling I/O.
 - Application projects own RS485 DE/RE pins, 433 module wiring, protocol framing, and state machines.
@@ -111,9 +115,9 @@ If a board swaps roles, only these application-level macros change.
 
 ## GPIO Design
 
-The H8K64U-LQFP48 board profile sets a GPIO mask matching only ports actually used by the package and board. P6/P7 support should be added only in a separate scoped change if the selected LQFP48 pins or a future package actually require it.
+The H8K64U-LQFP48 board profile sets a GPIO mask matching only ports actually used by the package and board. LQFP48 first support uses P0..P5 only. P6/P7 support should be added only in a separate scoped change if a future package or board actually requires it.
 
-Existing `STC8H1K08` builds keep their current defaults:
+The explicit `STC8H1K08` chip profile keeps the current GPIO defaults:
 
 ```c
 #define STC8H_GPIO_PORT_COUNT 6u
@@ -131,7 +135,7 @@ ADC behavior becomes chip-configurable:
 #define STC8H_ADC_CHANNEL_MASK 0xFFFFu
 ```
 
-For `STC8H1K08`, defaults remain 10-bit and current channel validity.
+For `STC8H1K08`, defaults remain 10-bit and current channel validity. The channel mask for the current STC8H1K08 behavior is `0xFF03u`, covering channels 0, 1, and 8..15.
 
 For `STC8H8K64U`, valid external channels are 0..14 and channel 15 is internal reference. The API still returns `stc8h_u16`, so no public type change is required. Existing 10-bit callers are unaffected when they build for `STC8H1K08`.
 
@@ -145,16 +149,17 @@ EEPROM size becomes configurable:
 #endif
 ```
 
-The H8K64U board/application config must set the actual EEPROM size chosen in ISP/project configuration before enabling destructive EEPROM tests. Safe examples continue to default to no write/erase.
+The H8K64U board/application config must set the actual EEPROM size chosen in ISP/project configuration before enabling EEPROM APIs or destructive EEPROM tests. If `STC8H_EEPROM_SIZE` is `0`, EEPROM APIs must fail at compile time. Safe examples continue to default to no write/erase and should not compile the EEPROM HAL.
 
 ## Compatibility Requirements
 
-- `core/stc8h_config.h` must continue to default to `STC8H_CHIP_STC8H1K08`.
+- `core/stc8h_config.h` must require exactly one chip profile instead of silently selecting one.
 - Existing STC8H1K08 board files and examples must not be renamed.
 - H8K64U-only branches must be guarded by chip or feature macros.
 - Disabled UART2/UART3 code must not emit UART2/UART3 symbols.
 - STC8H1K08 ADC must keep 10-bit result behavior.
 - STC8H1K08 EEPROM must keep 4KB default size.
+- Projects that relied on implicit `STC8H1K08` selection must migrate to an explicit board config or compile flag.
 
 ## Verification
 
@@ -181,6 +186,6 @@ tools/check_examples.sh
 - Scope is intentionally MCU-level and avoids business logic.
 - UART2 and UART3 are generic ports, so 485/433 roles are not frozen into the base library.
 - UART2 uses Timer2 and UART3 uses Timer3 to avoid a default timer conflict.
-- The plan does not require changing the STC8H1K08 default chip path.
+- The plan intentionally removes the hidden default chip path. This is a controlled breaking change documented in the migration note.
 - USB/DMA/RTC/LCM are excluded even though H8K64U supports them, because they would materially increase library scope.
 - The main uncertainty is the exact H8K64U EEPROM size in the final ISP configuration; destructive EEPROM examples must remain opt-in until that is confirmed.
