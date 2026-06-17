@@ -96,4 +96,4 @@ set PATH=C:\Keil_v5\C51\BIN;%PATH%
 ## 7. 待完成
 
 - 在 Windows + Keil C51 环境运行 `build_c51.bat`。
-- 将实际结果回填到 `docs/RESOURCE_REPORT.md` 和 `docs/15_REMAINING_WORK.md`。
+- 将实际结果回填到 `docs/RESOURCE_REPORT.md`。

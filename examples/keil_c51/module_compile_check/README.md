@@ -42,7 +42,6 @@ set PATH=C:\Keil_v5\C51\BIN;%PATH%
 
 ```text
 docs/RESOURCE_REPORT.md
-docs/15_REMAINING_WORK.md
 ```
 
 当前仓库无法在 macOS 上自动完成 Keil C51 验证，因此此目录是人工验证入口。

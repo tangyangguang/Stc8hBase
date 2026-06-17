@@ -2,25 +2,26 @@
 
 ## 1. 支持原则
 
-第一版以 STC8H1K08 为主目标芯片。
+当前正式目标芯片为 `STC8H1K08` 和 `STC8H8K64U-45I-LQFP48`。
 
 在不增加代码复杂度、不引入运行期适配层、不牺牲未使用模块零占用原则的前提下，尽量兼容同系列、同寄存器模型、同外设行为的 STC8H 芯片。
 
 ## 2. 支持等级
 
-### 2.1 主支持芯片
+### 2.1 正式目标芯片
 
-主支持芯片是：
+正式目标芯片是：
 
 - `STC8H1K08`
+- `STC8H8K64U-45I-LQFP48`
 
-主支持芯片要求：
+正式目标芯片要求：
 
-- 基础库模块以它的资源和寄存器模型为第一设计目标。
-- 示例优先在它上面验证。
-- 默认配置优先满足它的常用用法。
-- 遇到不同芯片差异时，不为了其他芯片破坏它的简单性和效率。
-- 第一版优先面向 `TSSOP20` 封装的常用项目形态。
+- 每个构建显式选择且只选择一个芯片配置。
+- 芯片差异通过编译期宏、板级配置和局部实现分支处理。
+- 不做运行期芯片识别，不引入统一外设对象表。
+- 遇到芯片差异时，不为了少用型号破坏常用型号的简单性和效率。
+- 示例和验证记录必须明确芯片型号、封装和板级约束。
 
 ### 2.2 低成本兼容芯片
 
@@ -32,18 +33,15 @@
 - 不需要函数指针表、设备树或复杂适配层。
 - 不会让主支持芯片生成额外代码。
 
-这类芯片后续可以通过新增芯片配置头文件支持，但第一版不列入支持承诺。需要某个具体型号时，必须以官方资料、实际编译和硬件验证为准。
+这类芯片后续可以通过新增芯片配置头文件支持，但当前不列入正式支持承诺。需要某个具体型号时，必须以官方资料、实际编译和硬件验证为准。
 
-### 2.3 STC8H8K64U-45I-LQFP48 opt-in support
+### 2.3 STC8H8K64U-45I-LQFP48 支持边界
 
-`STC8H8K64U-45I-LQFP48` is supported as an explicit chip profile.
-The library requires every build to select exactly one supported chip profile.
-This removes the old implicit `STC8H1K08` fallback.
+`STC8H8K64U-45I-LQFP48` 作为显式芯片配置支持。基础库要求每个构建只选择一个受支持芯片配置；无芯片选择时编译失败。
 
-Initial support covers core configuration, GPIO, UART1, UART2, UART3,
-Timer resources needed by those UARTs, ADC, EEPROM/IAP, WDT, and small examples.
-USB, DMA, RTC, LCM, UART4, full I/O interrupt support, RS485 protocol, and 433 MHz
-module drivers are outside the initial support scope.
+当前支持覆盖 core 配置、GPIO、UART1、UART2、UART3、这些 UART 所需的 Timer 资源、ADC、EEPROM/IAP、WDT 和最小示例。
+
+USB、DMA、RTC、LCM、UART4、完整 I/O 中断支持、RS485 协议和 433MHz 模块驱动不在当前支持范围内。
 
 ### 2.4 暂不承诺支持的芯片
 
