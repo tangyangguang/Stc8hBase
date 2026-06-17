@@ -990,7 +990,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 
 - 只构建 H8K64U 验证示例、列出串口设备、输出后续人工上传和监视命令模板。
 - 不自动上传固件，因为 STC 下载通常需要上电/复位配合，且下载串口、UART2/UART3 监视串口可能不是同一个 USB 转串口。
-- 不包含 EEPROM 写擦测试；当前 H8K64U 板级配置默认 `STC8H_EEPROM_SIZE=0`，必须先确认 ISP/IAP 分区后再启用破坏性测试。
+- 会构建 EEPROM 写擦测试，但不自动上传；当前芯片 ISP 识别为 `EEPROM flash: 0.5 KB`，破坏性示例只用于已确认可擦的 512 字节 EEPROM 页。
 - H8K64U PlatformIO 示例使用仓库自定义 `stcgal` 上传参数：协议 `stc8g`、下载波特率 `38400`、trim 频率 `11059.2`。
 
 待确认硬件条件：
@@ -1007,9 +1007,10 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 2. Build and flash `examples/platformio/h8k64u_uart2_hello`; monitor UART1 at 115200 baud and expect repeated `UART2 sent`. With a separate adapter on UART2 group 0, monitor UART2 at 9600 baud and expect repeated `UART2 hello`.
 3. Build and flash `examples/platformio/h8k64u_uart3_hello`; monitor UART1 at 115200 baud and expect repeated `UART3 sent`. With a separate adapter on UART3 group 0, monitor UART3 at 9600 baud and expect repeated `UART3 hello`.
 4. Build and flash `examples/platformio/h8k64u_gpio_blink`; monitor UART1 at 115200 baud and expect `GPIO P1.3=0/1` to alternate. P1.3 is used because STC's H8K64U feature PDF states LQFP48 has no P1.2.
-5. Build and flash `examples/platformio/h8k64u_adc_read` with `ADC_VRef+` connected; monitor UART1 at 115200 baud and expect repeated `ADC0=0x....`.
+5. Build and flash `examples/platformio/h8k64u_adc_read` with `ADC_VRef+` connected; monitor UART1 at 115200 baud and expect repeated `ADC0=0x.... ADC15=0x.... VREF+=....mV`.
 6. Build and flash `examples/platformio/h8k64u_eeprom_safe`; monitor UART1 at 115200 baud and expect `H8K64U EEPROM write disabled`.
-7. Build and flash `examples/platformio/h8k64u_wdt_feed`; monitor UART1 at 115200 baud and expect `H8K64U WDT feed`.
+7. After confirming the 512-byte EEPROM page can be erased, build and flash `examples/platformio/h8k64u_eeprom_rw`; monitor UART1 at 115200 baud and expect `H8K64U EEPROM ok`.
+8. Build and flash `examples/platformio/h8k64u_wdt_feed`; monitor UART1 at 115200 baud and expect `H8K64U WDT feed`.
 
 当前状态：
 
@@ -1019,10 +1020,12 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 首次使用 PlatformIO 默认上传参数时失败于 `frequency trimming unsuccessful`，原因是 H8K64U 示例缺少目标频率修调参数；现已统一使用仓库自定义 `upload_stcgal.py`，参数为 `stc8g + 38400 + -t 11059.2`。
 - `h8k64u_eeprom_safe` 已烧录成功，UART1 115200 监视到 `H8K64U EEPROM write disabled`；未执行 EEPROM 写擦。
 - `h8k64u_wdt_feed` 已烧录成功，UART1 115200 监视到 `H8K64U WDT feed`。
-- `h8k64u_adc_read` 已烧录成功，UART1 115200 监视到 `ADC0=0x....`，输出主要为 `0x0FFF`；已验证 ADC 读数链路和 12-bit 输出格式。`ADC_VRef+` 已接 3.3V，数值精度仍需在 ADC0 接入已知电压后复测。
+- `h8k64u_adc_read` 已扩展为同时读取 ADC0 和 ADC15；UART1 115200 监视到 `ADC15=0x05BC/0x05BD/0x05BE`，按芯片出厂内部参考 `1191mV` 反推 `VREF+=3318..3322mV`。`ADC_VRef+` 已接 3.3V，因此内部参考反推供电测试通过。ADC0 未接已知外部电压，外部通道绝对精度仍需另接电压源复测。
 - 用户反馈当前 LQFP48 芯片没有 P1.2 引脚，已按 STC 官方 H8K64U feature PDF 中的 `P1.0~P1.7(no P1.2)` 修正 H8K64U 测试 GPIO 为 P1.3。
 - 当前裸芯片除下载串口外未接外设；`h8k64u_gpio_blink`、`h8k64u_uart2_hello`、`h8k64u_uart3_hello` 增加 UART1 状态输出，用于无额外接线时验证 GPIO 读回和 UART2/UART3 发送完成路径。
 - `h8k64u_gpio_blink` 已按 P1.3 烧录成功，UART1 115200 监视到 `H8K64U GPIO blink P1.3`，随后 `GPIO P1.3=0` / `GPIO P1.3=1` 交替输出；已验证 GPIO 写入、翻转和读回路径。
 - `h8k64u_uart2_hello` 已烧录成功，UART1 115200 监视到 `H8K64U UART2 smoke` 和连续 `UART2 sent`；已验证 UART2 初始化和发送完成路径没有卡死。
 - `h8k64u_uart3_hello` 已烧录成功，UART1 115200 监视到 `H8K64U UART3 smoke` 和连续 `UART3 sent`；已验证 UART3 初始化和发送完成路径没有卡死。
+- `h8k64u_eeprom_rw` 已按当前 ISP 配置的 512 字节 EEPROM split 烧录成功，擦除 `0x0000..0x01FF`，写入并读回 `0x0000..0x0003`，UART1 115200 监视到 `H8K64U EEPROM ok`。
+- 破坏性 EEPROM 测试后已重新烧录 `h8k64u_eeprom_safe`，UART1 115200 监视到 `H8K64U EEPROM write disabled`，当前板上固件不再执行 EEPROM 写擦。
 - UART2/UART3 真实引脚波形或外部接收仍需单独 USB 转串口或示波器确认。

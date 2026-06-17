@@ -14,7 +14,8 @@ Purpose:
 Notes:
   - This script does not upload firmware.
   - UART2/UART3 validation may need separate monitor adapters wired to those pins.
-  - EEPROM destructive write/erase validation is intentionally not included.
+  - EEPROM destructive write/erase validation is built but must be uploaded
+    intentionally after confirming the 512-byte test page can be erased.
 EOF
 }
 
@@ -101,6 +102,12 @@ pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
 (cd examples/platformio/h8k64u_eeprom_safe && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
 pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
 
+# Destructive EEPROM write/erase test for the current 512-byte EEPROM split.
+# This erases EEPROM address 0x0000..0x01FF before writing and reading back
+# a four-byte test vector.
+(cd examples/platformio/h8k64u_eeprom_rw && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
+pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
+
 (cd examples/platformio/h8k64u_wdt_feed && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
 pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
 EOF
@@ -111,6 +118,7 @@ build_example examples/platformio/h8k64u_uart3_hello
 build_example examples/platformio/h8k64u_gpio_blink
 build_example examples/platformio/h8k64u_adc_read
 build_example examples/platformio/h8k64u_eeprom_safe
+build_example examples/platformio/h8k64u_eeprom_rw
 build_example examples/platformio/h8k64u_wdt_feed
 
 list_serial_devices

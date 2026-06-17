@@ -110,6 +110,7 @@ Keil C51 验证按模块进行。每个已实现模块至少完成 Keil C51 编�
 | `h8k64u_gpio_blink` | STC8H8K64U GPIO 编译和后续硬件验证 |
 | `h8k64u_adc_read` | STC8H8K64U 12-bit ADC 编译和后续硬件验证 |
 | `h8k64u_eeprom_safe` | STC8H8K64U EEPROM 安全占位编译验证，不执行写擦 |
+| `h8k64u_eeprom_rw` | STC8H8K64U EEPROM 破坏性擦写读回验证，需确认测试页可擦后手动烧录 |
 | `h8k64u_wdt_feed` | STC8H8K64U WDT 编译和后续硬件验证 |
 
 ## 5. 资源占用测试

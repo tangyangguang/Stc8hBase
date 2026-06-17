@@ -2125,7 +2125,7 @@ Notes:
 
 - PlatformIO's built-in `STC8H8K64U` board reports 65536 bytes of flash. With SDCC 4.4.0 this emits linker `-C 0x10000`, and `sdld` can hang. The H8K64U examples set `board_upload.maximum_size = 65535` to keep the linker bound representable while sacrificing one byte of code space.
 - H8K64U PlatformIO examples use the shared `examples/platformio/upload_stcgal.py` upload helper with `stc8g + 38400 + -t 11059.2`.
-- 2026-06-17 hardware validation on `STC8H8K64U-45I-LQFP48` has confirmed default serial download, `h8k64u_eeprom_safe`, `h8k64u_wdt_feed`, `h8k64u_adc_read` UART1 output, P1.3 GPIO readback toggling, and UART2/UART3 send-completion smoke output via UART1. UART2/UART3 external monitoring, known-voltage ADC accuracy, and destructive EEPROM/IAP remain pending.
+- 2026-06-17 hardware validation on `STC8H8K64U-45I-LQFP48` has confirmed default serial download, `h8k64u_eeprom_safe`, `h8k64u_wdt_feed`, `h8k64u_adc_read` ADC15/VCC inference over UART1, P1.3 GPIO readback toggling, UART2/UART3 send-completion smoke output via UART1, and destructive EEPROM/IAP write-erase-readback on the current 512-byte EEPROM split. UART2/UART3 external monitoring and known-voltage ADC0 external-channel accuracy remain pending.
 - The first H8K64U GPIO bench default incorrectly used P1.2. The STC H8K64U feature PDF states `P1.0~P1.7(no P1.2)`, so the H8K64U test GPIO is now P1.3.
 
 | Example | Purpose | UART2/UART3 setting | ROM/EPROM/FLASH | Expected unused code |
@@ -2133,8 +2133,9 @@ Notes:
 | `examples/platformio/h8k64u_uart2_hello` | UART2 polling smoke build with UART1 status output | `STC8H_UART_ENABLE_UART2=1` | 716 bytes | UART3 disabled |
 | `examples/platformio/h8k64u_uart3_hello` | UART3 polling smoke build with UART1 status output | `STC8H_UART_ENABLE_UART3=1` | 711 bytes | UART2 disabled |
 | `examples/platformio/h8k64u_gpio_blink` | GPIO P1.3 readback smoke build | both disabled | 1307 bytes | UART2/UART3 disabled |
-| `examples/platformio/h8k64u_adc_read` | 12-bit ADC compile coverage | both disabled | 804 bytes | UART2/UART3 disabled |
+| `examples/platformio/h8k64u_adc_read` | 12-bit ADC0 plus ADC15/VCC smoke build | both disabled | 1365 bytes | UART2/UART3 disabled |
 | `examples/platformio/h8k64u_eeprom_safe` | EEPROM-safe compile coverage | both disabled | 397 bytes | UART2/UART3 disabled; no EEPROM HAL compiled |
+| `examples/platformio/h8k64u_eeprom_rw` | EEPROM destructive write/erase/readback smoke build | both disabled | 1055 bytes | UART2/UART3 disabled; erases current 512-byte EEPROM page |
 | `examples/platformio/h8k64u_wdt_feed` | WDT compile coverage | both disabled | 518 bytes | UART2/UART3 disabled |
 
 Verification command:
