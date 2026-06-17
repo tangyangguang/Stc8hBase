@@ -17,6 +17,6 @@
 #define BOARD_UART3_TX_PIN 1u
 
 #define BOARD_TEST_GPIO_PORT 1u
-#define BOARD_TEST_GPIO_PIN 2u
+#define BOARD_TEST_GPIO_PIN 3u
 
 #endif

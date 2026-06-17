@@ -119,9 +119,12 @@
 - Normal default serial download flow is confirmed with `stc8g + 38400 + -t 11059.2`.
 - `h8k64u_eeprom_safe` is confirmed over UART1: `H8K64U EEPROM write disabled`.
 - `h8k64u_wdt_feed` is confirmed over UART1: `H8K64U WDT feed`.
-- `h8k64u_adc_read` is confirmed to run and print 12-bit ADC values over UART1; absolute ADC accuracy still needs a known ADC0 voltage and confirmed reference wiring.
-- Confirm P1.2 is safe to drive before flashing `h8k64u_gpio_blink`.
-- Confirm UART2/UART3 monitor wiring before validating `h8k64u_uart2_hello` and `h8k64u_uart3_hello`.
+- `h8k64u_adc_read` is confirmed to run and print 12-bit ADC values over UART1; `ADC_VRef+` is tied to 3.3V, while absolute ADC accuracy still needs a known ADC0 voltage.
+- User confirmed the LQFP48 chip has no P1.2; H8K64U test GPIO is corrected to P1.3 per STC's `P1.0~P1.7(no P1.2)` note.
+- Updated `h8k64u_gpio_blink` is confirmed over UART1: `GPIO P1.3=0/1` alternates.
+- Updated `h8k64u_uart2_hello` is confirmed over UART1: `UART2 sent` repeats after each UART2 write.
+- Updated `h8k64u_uart3_hello` is confirmed over UART1: `UART3 sent` repeats after each UART3 write.
+- Confirm UART2/UART3 external monitor wiring before validating real TX/RX pin output.
 - Confirm and document the final LQFP48 ADC package/board mask before relying on every chip-level ADC channel in an application.
 - Confirm final EEPROM/IAP size from ISP/project configuration before enabling EEPROM APIs or destructive EEPROM examples.
 - Decide per board whether UART2 or UART3 is wired to RS485 or 433 MHz modules; the base library remains role-neutral.

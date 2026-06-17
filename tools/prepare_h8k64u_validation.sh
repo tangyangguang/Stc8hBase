@@ -82,13 +82,18 @@ UART2_MONITOR_PORT=/dev/cu.usbserial-uart2
 UART3_MONITOR_PORT=/dev/cu.usbserial-uart3
 
 (cd examples/platformio/h8k64u_uart2_hello && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
-pio device monitor --port "${UART2_MONITOR_PORT}" --baud 9600
+pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
+# Optional real UART2 TX monitor if wired:
+# pio device monitor --port "${UART2_MONITOR_PORT}" --baud 9600
 
 (cd examples/platformio/h8k64u_uart3_hello && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
-pio device monitor --port "${UART3_MONITOR_PORT}" --baud 9600
+pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
+# Optional real UART3 TX monitor if wired:
+# pio device monitor --port "${UART3_MONITOR_PORT}" --baud 9600
 
 (cd examples/platformio/h8k64u_gpio_blink && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
-# Confirm BOARD_TEST_GPIO_PORT/BOARD_TEST_GPIO_PIN toggles safely on the target board.
+pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
+# Confirm P1.3 toggles externally only if a probe or LED is wired.
 
 (cd examples/platformio/h8k64u_adc_read && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
 pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
