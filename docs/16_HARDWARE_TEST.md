@@ -991,6 +991,7 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - 只构建 H8K64U 验证示例、列出串口设备、输出后续人工上传和监视命令模板。
 - 不自动上传固件，因为 STC 下载通常需要上电/复位配合，且下载串口、UART2/UART3 监视串口可能不是同一个 USB 转串口。
 - 不包含 EEPROM 写擦测试；当前 H8K64U 板级配置默认 `STC8H_EEPROM_SIZE=0`，必须先确认 ISP/IAP 分区后再启用破坏性测试。
+- H8K64U PlatformIO 示例使用仓库自定义 `stcgal` 上传参数：协议 `stc8g`、下载波特率 `38400`、trim 频率 `11059.2`。
 
 待确认硬件条件：
 
@@ -1014,4 +1015,10 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 
 - SDCC/PlatformIO compile validation has passed.
 - No-hardware validation preparation is scripted by `tools/prepare_h8k64u_validation.sh`.
-- Hardware validation has not been run yet.
+- 2026-06-17 已使用 `/dev/cu.usbserial-110` 完成默认串口下载链路实测；stcgal 识别目标为 `STC8H8K64U`，UID `F784C97501B5EE`，BSL `7.4.6U`，出厂基准电压 `1191mV`，出厂日期 `2024-02-29`。
+- 首次使用 PlatformIO 默认上传参数时失败于 `frequency trimming unsuccessful`，原因是 H8K64U 示例缺少目标频率修调参数；现已统一使用仓库自定义 `upload_stcgal.py`，参数为 `stc8g + 38400 + -t 11059.2`。
+- `h8k64u_eeprom_safe` 已烧录成功，UART1 115200 监视到 `H8K64U EEPROM write disabled`；未执行 EEPROM 写擦。
+- `h8k64u_wdt_feed` 已烧录成功，UART1 115200 监视到 `H8K64U WDT feed`。
+- `h8k64u_adc_read` 已烧录成功，UART1 115200 监视到 `ADC0=0x....`，输出主要为 `0x0FFF`；已验证 ADC 读数链路和 12-bit 输出格式，数值精度仍需在 ADC0 接入已知电压、确认 `ADC_VRef+` 后复测。
+- `h8k64u_gpio_blink` 尚未烧录实测；烧录前需确认 `BOARD_TEST_GPIO_PORT=1`、`BOARD_TEST_GPIO_PIN=2` 对应 P1.2 可安全推挽翻转。
+- `h8k64u_uart2_hello` / `h8k64u_uart3_hello` 尚未完成串口输出实测；需要确认 UART2/UART3 实际引脚和监视用 USB 转串口接线。

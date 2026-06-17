@@ -115,8 +115,13 @@
 ## 3. STC8H8K64U-LQFP48 follow-up
 
 - No-hardware preparation is complete: `tools/prepare_h8k64u_validation.sh` builds all H8K64U validation examples and prints later manual upload/monitor commands.
-- Hardware validation is required on the actual `STC8H8K64U-45I-LQFP48` board before marking support as hardware-tested.
-- Confirm normal default serial download flow on the target board.
+- Hardware validation has started on the actual `STC8H8K64U-45I-LQFP48` board at `/dev/cu.usbserial-110`.
+- Normal default serial download flow is confirmed with `stc8g + 38400 + -t 11059.2`.
+- `h8k64u_eeprom_safe` is confirmed over UART1: `H8K64U EEPROM write disabled`.
+- `h8k64u_wdt_feed` is confirmed over UART1: `H8K64U WDT feed`.
+- `h8k64u_adc_read` is confirmed to run and print 12-bit ADC values over UART1; absolute ADC accuracy still needs a known ADC0 voltage and confirmed reference wiring.
+- Confirm P1.2 is safe to drive before flashing `h8k64u_gpio_blink`.
+- Confirm UART2/UART3 monitor wiring before validating `h8k64u_uart2_hello` and `h8k64u_uart3_hello`.
 - Confirm and document the final LQFP48 ADC package/board mask before relying on every chip-level ADC channel in an application.
 - Confirm final EEPROM/IAP size from ISP/project configuration before enabling EEPROM APIs or destructive EEPROM examples.
 - Decide per board whether UART2 or UART3 is wired to RS485 or 433 MHz modules; the base library remains role-neutral.

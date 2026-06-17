@@ -2124,7 +2124,8 @@ PlatformIO built-in STC8H8K64U board, with example-level board_upload.maximum_si
 Notes:
 
 - PlatformIO's built-in `STC8H8K64U` board reports 65536 bytes of flash. With SDCC 4.4.0 this emits linker `-C 0x10000`, and `sdld` can hang. The H8K64U examples set `board_upload.maximum_size = 65535` to keep the linker bound representable while sacrificing one byte of code space.
-- These are compile results only. Hardware validation on `STC8H8K64U-45I-LQFP48` is still required.
+- H8K64U PlatformIO examples use the shared `examples/platformio/upload_stcgal.py` upload helper with `stc8g + 38400 + -t 11059.2`.
+- 2026-06-17 hardware validation on `STC8H8K64U-45I-LQFP48` has confirmed default serial download, `h8k64u_eeprom_safe`, `h8k64u_wdt_feed`, and `h8k64u_adc_read` UART1 output. GPIO visual confirmation, UART2/UART3 external monitoring, known-voltage ADC accuracy, and destructive EEPROM/IAP remain pending.
 
 | Example | Purpose | UART2/UART3 setting | ROM/EPROM/FLASH | Expected unused code |
 | --- | --- | --- | ---: | --- |
