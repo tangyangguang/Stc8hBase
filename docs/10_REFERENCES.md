@@ -205,6 +205,44 @@ docs/vendor/stc/stc8g-stc8h-lib-demo-code.rar
 - 官方库包含大量全局缓冲区和中断模式示例；本库只有在应用确实需要时才引入 ring buffer 或中断驱动。
 - 官方独立示例面向 Keil 工程组织；本库保留 SDCC/PlatformIO/Makefile 透明构建入口，同时保持 Keil C51 源码兼容目标。
 
+### 3.7 STC8H8K64U OTA/IAP Bootloader
+
+参考来源：
+
+```text
+https://www.stcmicro.com/stc/stc8h8k64u.html
+docs/vendor/stc/STC8H-en.pdf
+https://atta.szlcsc.com/upload/public/pdf/source/20240125/6CB5C14AEF9193B67FDE9EFA83D2792B.pdf
+https://www.stcmicro.com/pdf/stc8h8k64ubox-v9.3.pdf
+https://github.com/grigorig/stcgal
+https://github.com/IOsetting/stc8prog
+https://www.nxp.com/docs/en/application-note/AN10764.pdf
+https://docs.mcuboot.com/design.html
+https://interrupt.memfault.com/blog/device-firmware-update-cookbook
+```
+
+用途：
+
+- 论证 `STC8H8K64U` 是否适合通过 IAP 做自定义 bootloader 和 OTA。
+- 核对 STC 官方对 IAP 系列、用户自定义 ISP、程序空间可改写和 Flash 分区的描述。
+- 判断官方 STC-ISP/BSL 是否适合作为产品 OTA 基础。
+- 吸收成熟 DFU/bootloader 方案对镜像 metadata、状态提交、失败恢复和 bootloader 边界的设计经验。
+
+吸收结论：
+
+- `STC8H8K64U` 属于可自定义 EEPROM 大小的 IAP 系列，可作为自定义 ISP/bootloader 的目标芯片。
+- 若要让 IAP 更新程序区，生产烧录时必须把 IAP/EEPROM 空间规划为覆盖需要更新的程序空间；仅配置小 EEPROM 区不能实现应用 OTA。
+- 官方 STC-ISP/BSL 适合开发下载和生产烧录；产品 OTA 更适合自定义 bootloader，因为需要控制 RS485 协议、升级状态、commit 和恢复流程。
+- 第一版 OTA 基础能力只支持 `STC8H8K64U-45I-LQFP48`，采用 ESP32 暂存完整固件、STC 单应用区 IAP 写入、CRC 校验和永久 bootloader 恢复。
+- STC 侧不做 HTTPS、JSON、压缩或复杂签名验签；这些能力由 ESP32 负责。
+- bootloader 区、boot stub/向量区和参数区不得被普通 OTA 擦写。
+
+不直接采用的点：
+
+- 不把 MCUboot 移植到 8051/STC8H8K64U；只吸收分区、metadata、状态和恢复原则。
+- 不直接依赖 `stcgal` 或 `stc8prog` 的 STC ISP 协议作为产品 OTA 协议。
+- 不照搬官方附录示例的地址作为最终产品分区；最终分区必须按实际 bootloader 体积、应用空间和验证结果确认。
+
 ## 4. 吸收为本库建设要求
 
 ### 4.1 编译器差异必须集中隔离
