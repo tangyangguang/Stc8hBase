@@ -140,6 +140,91 @@ boot stub 固定持有复位和中断向量。中断处理有两种可选实现�
 
 OTA 核心 API 必须传输无关。RS485 只作为第一版示例传输，基础库不实现灌溉业务协议、不实现 Modbus，也不假设帧来自 UART。应用项目可以把 RS485、UART、RF 或其他总线收到的 payload 喂给 OTA API。
 
+### 9.1 当前基础库相关能力
+
+当前基础库已有能力：
+
+- `STC8H8K64U-45I-LQFP48` 显式芯片 profile。
+- UART1、UART2、UART3 轮询初始化、发送、接收。
+- H8K64U 板级配置默认定义 `BOARD_RS485_UART = STC8H_UART2`、`BOARD_RF433_UART = STC8H_UART3`。
+- UART2 默认引脚组为 P1.0/P1.1，UART3 默认引脚组为 P0.0/P0.1，均可通过板级宏调整。
+- `h8k64u_uart2_hello`、`h8k64u_uart3_hello` 已覆盖 H8K64U UART2/UART3 最小发送验证。
+- `drv_nrf24l01` 和 `proto_rf_link` 已覆盖 nRF24L01/2.4GHz 小包射频链路，但它们不是 433MHz 透明串口模块驱动，也不是 OTA 专用协议。
+
+当前缺口：
+
+- 没有独立 RS485 DE/RE 方向控制模块。
+- 没有半双工串口帧收发 helper。
+- 没有串口透传模块统一抽象。
+- 没有 433MHz 具体模块驱动或 433 透传验证示例。
+- UART 当前是轮询 API，没有中断 ring buffer；OTA bootloader 第一版应继续使用轮询，避免中断和应用向量表耦合。
+
+### 9.2 传输适配层边界
+
+OTA 传输适配层只负责把外部链路上的字节流或小包转换为 OTA payload 操作。它不能理解业务命令，也不能直接擦写 Flash。
+
+建议传输适配层能力：
+
+- 从链路接收 OTA 帧。
+- 校验帧头、长度、序号和 CRC16。
+- 提取 `BEGIN`、`WRITE_BLOCK`、`VERIFY`、`COMMIT` 等 OTA payload。
+- 调用 `stc8h_ota_begin()`、`stc8h_ota_write_chunk()` 等 OTA 核心 API。
+- 发送 ACK、NAK、状态和错误码。
+- 对半双工链路控制 TX/RX 方向。
+
+传输适配层明确不做：
+
+- 不下载云端固件。
+- 不做签名验签。
+- 不解释灌溉业务命令。
+- 不实现 Modbus 业务寄存器表。
+- 不私有实现 IAP 写入。
+- 不假设底层一定是 RS485。
+
+### 9.3 RS485 第一阶段方案
+
+RS485 是第一版参考链路。建议新增一个很薄的半双工 UART/RS485 适配能力，而不是把 RS485 逻辑写进 OTA 核心。
+
+RS485 适配层应支持：
+
+- 编译期选择 UART：默认使用 `BOARD_RS485_UART`。
+- 板级宏控制 DE/RE：
+  - `STC8H_RS485_TX_ENABLE()`
+  - `STC8H_RS485_RX_ENABLE()`
+  - `STC8H_RS485_CONFIGURE_PINS()`
+- 发送前切 TX，发送完成后切 RX。
+- 方向切换前后允许板级短延时，避免收发器尾字节被截断。
+- 可选从机地址字段，支持一主多从。
+- 不占用 Timer、中断或隐藏全局缓冲。
+
+第一版 RS485 OTA bootloader 推荐使用 UART2，调试串口继续使用 UART1。若应用板卡把 UART2 分配给其他设备，可通过板级宏切到 UART3。
+
+RS485 示例必须覆盖：
+
+- 单从机升级。
+- 错地址帧忽略。
+- CRC 错误 NAK。
+- 半双工方向切换。
+- 连续 chunk 写入。
+- 超时后仍能继续接收新 `BEGIN`。
+
+### 9.4 433MHz 和其他串口透传计划
+
+433MHz 支持应先分清两类硬件：
+
+- 透明串口类 433 模块：模块对 STC 暴露 UART RX/TX，基础库可复用 UART 传输适配层。
+- SPI/寄存器型 433 射频芯片：需要独立驱动，不能假装成串口透传。
+
+第一阶段只规划透明串口类 433：
+
+- 默认使用 `BOARD_RF433_UART`，当前 H8K64U 板级配置为 UART3。
+- 复用与 RS485 相同的 OTA 帧格式和 OTA 核心 API。
+- 不需要 DE/RE 控制。
+- 因无线链路丢包更高，建议更小 chunk、更长超时、更保守重试。
+- 433 链路不应直接复用 `proto_rf_link`，除非实际模块是小包射频芯片且项目明确需要该链路层。
+
+后续如果需要 SPI/寄存器型 433 芯片，必须单独按芯片 datasheet 设计驱动和链路层，不能并入第一版 OTA 基础能力。
+
 RS485 使用主从模式。ESP32 是主站，STC 是从站。STC 只响应目标地址匹配的帧，不主动发起升级。
 
 建议帧格式：
@@ -406,7 +491,9 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 | `hal/` | `STC8H8K64U` IAP 程序区擦写原语 |
 | `utils/` | CRC16、CRC32 |
 | `protocols/` | 可选分块传输状态机，不直接绑定具体 UART |
+| `protocols/` 或 `drivers/` | RS485/半双工 UART 传输适配，边界只到 payload 帧 |
 | `examples/` | `h8k64u_rs485_bootloader` 最小示例 |
+| `examples/` | `h8k64u_uart_passthrough_ota` 或 `h8k64u_433_uart_ota` 后续串口透传示例 |
 | `docs/` | 本设计、协议、验证计划、硬件记录 |
 
 模块必须遵守基础库原则：
@@ -433,6 +520,8 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - chunk 丢失、重复、乱序均能检测或按设计处理。
 - bootloader 区不会被擦写。
 - OTA 关闭编译时不引入 OTA API、CRC、IAP 程序区写入符号或全局缓冲。
+- RS485 DE/RE 方向切换不会截断最后一个字节。
+- UART3 透明串口链路能复用同一 OTA payload API。
 
 第二阶段：ESP32 集成。
 
@@ -453,6 +542,7 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - 低电压拒绝升级。
 - 不同固件大小边界测试。
 - 参数区双份记录掉电测试。
+- 433 透明串口模块接入前，先用有线 UART3 透传模拟完成同一 OTA 流程。
 
 ## 20. 应用方需求映射
 
