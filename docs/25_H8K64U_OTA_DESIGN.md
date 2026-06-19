@@ -446,6 +446,8 @@ BOOT_ERROR
 - 新应用完成早期自检和输出安全初始化后，调用应用有效标记能力，把 `app_valid=1` 写入参数区。
 - 若试启动后复位且 `app_valid` 仍为 0，bootloader 不再继续跳转该应用，进入 recovery 等待 ESP32 重新升级。
 
+当前 `h8k64u_ota_min_app` 默认构建只保留 mark-valid 调用点，不写参数区；`STC8H8K64U_mark_valid_iap` 构建环境会编译真实 `hal/stc8h_ota_params_store + hal/stc8h_iap_ota_params` 接入路径。真实运行该环境会写擦 `0xFC00/0xFE00` OTA 参数扇区，必须在硬件验证阶段确认测试板可接受该操作后再烧录。
+
 应用启动健康确认：
 
 - `COMMIT` 后 bootloader 只允许一次试启动新应用，新应用必须在完成早期自检和输出安全初始化后调用应用有效标记能力。

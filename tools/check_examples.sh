@@ -327,6 +327,8 @@ for ini in "${ROOT_DIR}"/examples/platformio/*/platformio.ini; do
     run_platformio_example "examples/platformio/$(basename "$(dirname "${ini}")")"
 done
 
+run_platformio_env "examples/platformio/h8k64u_ota_min_app" "STC8H8K64U_mark_valid_iap"
+
 sh "${ROOT_DIR}/tools/check_nrf24_examples.sh"
 
 run_platformio_env "examples/platformio/delay_us_probe" "pulse_1687"
@@ -410,6 +412,9 @@ check_map_absent \
 
 check_ota_app_base \
     "examples/platformio/h8k64u_ota_min_app/.pio/build/STC8H8K64U/firmware.map"
+
+check_ota_app_base \
+    "examples/platformio/h8k64u_ota_min_app/.pio/build/STC8H8K64U_mark_valid_iap/firmware.map"
 
 check_ota_bootloader_layout \
     "examples/platformio/h8k64u_rs485_ota_bootloader/.pio/build/STC8H8K64U/firmware.map"

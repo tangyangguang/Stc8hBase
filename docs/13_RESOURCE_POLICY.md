@@ -131,6 +131,7 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | OTA core | `STC8H_OTA_ENABLE_SHOULD_ENTER_BOOTLOADER` | `1` | 是否编译 `stc8h_ota_should_enter_bootloader()` 便捷 API |
 | OTA params store | `STC8H_OTA_PARAMS_STORE_WORK_MEM` | 空 | 参数 store 内部工作缓冲的内存限定；H8K64U bootloader 示例设为 `static STC8H_XDATA` |
 | OTA params store | `STC8H_OTA_PARAMS_STORE_ENABLE_MARK_APP_VALID` | `1` | bootloader 不调用 app-valid 标记时可关闭；应用侧需要标记 app valid 时必须开启 |
+| OTA min app | `H8K64U_OTA_MIN_APP_ENABLE_MARK_VALID_IAP` | `0` | `h8k64u_ota_min_app` 专用示例宏；设为 `1` 时 `stc8h_boot_mark_app_valid()` 接入真实参数区 IAP 写入路径 |
 | CRC32 | `UTIL_CRC32_ENABLE_ONESHOT` | `1` | 是否编译一次性 CRC32 API；只用 incremental update 的 bootloader 可关闭 |
 
 裁剪宏应放在板级配置或构建系统里，并随固件资源报告记录；基础库源码不应为某个应用硬编码固定端口或固定命令表。

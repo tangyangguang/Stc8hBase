@@ -88,6 +88,11 @@ STC8H1K08 项目通过 PlatformIO wrapper 接入 `proto_rf_link` 时，不要在
 
 应用项目生成 OTA 镜像时必须从 `0x0200` 链接，且 manifest 的 `app_size` 不能超过 `0xB600` 字节。ESP32 侧负责云端下载、验签、暂存完整镜像、总线重试和业务升级窗口；基础库侧提供 manifest/frame/params 编解码、状态机、IAP backend、RS485 bootloader 示例和边界检查。
 
+OTA 应用启动后必须先把业务输出初始化到安全态，再标记 app valid。基础库提供两类参考构建：
+
+- `h8k64u_ota_min_app` 默认环境只保留 `stc8h_boot_mark_app_valid()` 调用点，不写参数区，适合做链接和调用顺序验证。
+- `h8k64u_ota_min_app` 的 `STC8H8K64U_mark_valid_iap` 环境会把 `stc8h_boot_mark_app_valid()` 接到 `hal/stc8h_ota_params_store` 和 `hal/stc8h_iap_ota_params`，用于编译验证真实参数区 mark-valid 路径。实际烧录运行前必须确认允许写擦 `0xFC00/0xFE00` 参数扇区。
+
 RS485 项目使用 `drivers/drv_rs485_uart` 时，需要在板级定义：
 
 ```c
