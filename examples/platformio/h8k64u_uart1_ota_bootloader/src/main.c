@@ -1,16 +1,16 @@
-#include "drv_rs485_uart.h"
 #include "proto_ota_frame.h"
 #include "stc8h_boot_stub.h"
 #include "stc8h_iap_ota_params.h"
 #include "stc8h_iap_program.h"
 #include "stc8h_ota.h"
 #include "stc8h_ota_params_store.h"
+#include "stc8h_uart.h"
 
 #ifndef H8K64U_OTA_LOCAL_ADDR
 #define H8K64U_OTA_LOCAL_ADDR 0x22u
 #endif
 
-#define H8K64U_OTA_STATUS_PAYLOAD_LEN 4u
+#define H8K64U_OTA_STATUS_PAYLOAD_LEN 8u
 
 typedef void (*h8k64u_ota_app_entry_t)(void);
 
@@ -43,30 +43,29 @@ static void boot_jump_to_app(void)
     ((h8k64u_ota_app_entry_t)STC8H_BOOT_APP_BASE)();
 }
 
-static void boot_jump_existing_app_if_allowed(void)
-{
-    static STC8H_XDATA stc8h_ota_params_t params;
-    stc8h_ota_boot_action_t action;
-
-    if (stc8h_ota_params_store_load_active(&params_store, &params) != STC8H_OK) {
-        return;
-    }
-
-    action = stc8h_ota_get_boot_action(&params);
-    if (action == STC8H_OTA_BOOT_ACTION_JUMP_APP) {
-        boot_jump_to_app();
-    }
-    if (action == STC8H_OTA_BOOT_ACTION_TRIAL_APP) {
-        if (stc8h_ota_params_store_mark_boot_attempted(&params_store) == STC8H_OK) {
-            boot_jump_to_app();
-        }
-    }
-}
-
 static void boot_reset_rx_frame(void)
 {
     rx_len = 0u;
     rx_expected_len = 0u;
+}
+
+static void boot_uart1_write_bytes(const stc8h_u8 *data, stc8h_u16 len)
+{
+    stc8h_u16 i;
+
+    for (i = 0u; i < len; ++i) {
+        stc8h_uart_putc(STC8H_UART1, (char)data[i]);
+    }
+}
+
+static void boot_uart1_write_banner(void)
+{
+    stc8h_uart_putc(STC8H_UART1, 'B');
+    stc8h_uart_putc(STC8H_UART1, 'O');
+    stc8h_uart_putc(STC8H_UART1, 'O');
+    stc8h_uart_putc(STC8H_UART1, 'T');
+    stc8h_uart_putc(STC8H_UART1, '\r');
+    stc8h_uart_putc(STC8H_UART1, '\n');
 }
 
 static stc8h_status_t boot_send_status(const proto_ota_frame_t *request, stc8h_u8 status)
@@ -82,6 +81,10 @@ static stc8h_status_t boot_send_status(const proto_ota_frame_t *request, stc8h_u
     payload[1] = status;
     payload[2] = (stc8h_u8)stc8h_ota_get_status(&ota_ctx);
     payload[3] = ota_ctx.fail_reason;
+    payload[4] = (stc8h_u8)(ota_ctx.manifest.app_size & 0xFFUL);
+    payload[5] = (stc8h_u8)((ota_ctx.manifest.app_size >> 8) & 0xFFUL);
+    payload[6] = (stc8h_u8)(request->len & 0xFFu);
+    payload[7] = (stc8h_u8)((request->len >> 8) & 0xFFu);
 
     if (proto_ota_frame_build(tx_frame,
                               sizeof(tx_frame),
@@ -96,7 +99,8 @@ static stc8h_status_t boot_send_status(const proto_ota_frame_t *request, stc8h_u
         return STC8H_ERROR;
     }
 
-    return drv_rs485_uart_write(BOARD_RS485_UART, tx_frame, frame_len);
+    boot_uart1_write_bytes(tx_frame, frame_len);
+    return STC8H_OK;
 }
 
 static stc8h_status_t boot_handle_begin(const proto_ota_frame_t *frame)
@@ -211,13 +215,13 @@ void main(void)
                                 stc8h_iap_ota_params_write,
                                 stc8h_iap_ota_params_read);
     stc8h_ota_init(&ota_ctx, &app_backend, &params_store);
-    (void)drv_rs485_uart_init(BOARD_RS485_UART);
+    (void)stc8h_uart_init(STC8H_UART1);
+    boot_uart1_write_banner();
     boot_reset_rx_frame();
-    boot_jump_existing_app_if_allowed();
 
     while (1) {
-        if (drv_rs485_uart_readable(BOARD_RS485_UART) != 0u) {
-            boot_feed_byte(drv_rs485_uart_getc(BOARD_RS485_UART));
+        if (stc8h_uart_readable(STC8H_UART1) != 0u) {
+            boot_feed_byte((stc8h_u8)stc8h_uart_getc(STC8H_UART1));
         }
     }
 }

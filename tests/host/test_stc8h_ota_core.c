@@ -17,6 +17,9 @@ static stc8h_u8 fake_app_flash[FAKE_FLASH_SIZE];
 static stc8h_u8 fake_param_flash[FAKE_FLASH_SIZE];
 static stc8h_u16 fake_erase_count;
 static stc8h_u16 fake_write_count;
+static stc8h_u8 fake_app_erase_fail;
+static stc8h_u8 fake_app_write_fail;
+static stc8h_u8 fake_app_read_fail;
 
 static const stc8h_u8 manifest_bytes[STC8H_OTA_MANIFEST_WIRE_SIZE] = {
     0x31u, 0x41u, 0x54u, 0x4Fu, 0x01u, 0x64u, 0x08u, 0x01u,
@@ -57,6 +60,9 @@ static void fake_reset(void)
     }
     fake_erase_count = 0u;
     fake_write_count = 0u;
+    fake_app_erase_fail = 0u;
+    fake_app_write_fail = 0u;
+    fake_app_read_fail = 0u;
 }
 
 static stc8h_status_t fake_app_erase(stc8h_u16 addr) STC8H_REENTRANT
@@ -64,6 +70,9 @@ static stc8h_status_t fake_app_erase(stc8h_u16 addr) STC8H_REENTRANT
     stc8h_u16 i;
 
     ++fake_erase_count;
+    if (fake_app_erase_fail != 0u) {
+        return STC8H_ERROR;
+    }
     for (i = 0u; i < FAKE_SECTOR_SIZE; ++i) {
         fake_app_flash[(stc8h_u32)addr + i] = 0xFFu;
     }
@@ -77,6 +86,9 @@ static stc8h_status_t fake_app_write(stc8h_u16 addr,
     stc8h_u16 i;
 
     ++fake_write_count;
+    if (fake_app_write_fail != 0u) {
+        return STC8H_ERROR;
+    }
     for (i = 0u; i < len; ++i) {
         fake_app_flash[(stc8h_u32)addr + i] = data[i];
     }
@@ -89,6 +101,9 @@ static stc8h_status_t fake_app_read(stc8h_u16 addr,
 {
     stc8h_u16 i;
 
+    if (fake_app_read_fail != 0u) {
+        return STC8H_ERROR;
+    }
     for (i = 0u; i < len; ++i) {
         data[i] = fake_app_flash[(stc8h_u32)addr + i];
     }
@@ -266,6 +281,31 @@ static int test_begin_erases_application_sectors(void)
     return failures;
 }
 
+static int test_begin_erase_failure_sets_reason(void)
+{
+    stc8h_ota_context_t ctx;
+    stc8h_ota_params_store_t store;
+    stc8h_ota_backend_t backend;
+    stc8h_ota_manifest_t manifest;
+    stc8h_u8 image[1];
+    int failures;
+
+    failures = 0;
+    image[0] = 0x11u;
+    manifest = make_image_manifest(image, sizeof(image));
+    fake_reset();
+    init_context(&ctx, &store, &backend);
+    fake_app_erase_fail = 1u;
+
+    failures += require(stc8h_ota_begin(&ctx, &manifest) == STC8H_ERROR,
+                        "begin must fail when backend erase fails");
+    failures += require(stc8h_ota_get_status(&ctx) == STC8H_OTA_STATE_FAILED,
+                        "erase failure must enter failed state");
+    failures += require(ctx.fail_reason == STC8H_OTA_FAIL_ERASE,
+                        "erase failure must set erase fail reason");
+    return failures;
+}
+
 static int test_first_chunk_advances_offset(void)
 {
     stc8h_ota_context_t ctx;
@@ -289,6 +329,35 @@ static int test_first_chunk_advances_offset(void)
                         "first chunk at offset 0 must write");
     failures += require(ctx.write_offset == sizeof(image),
                         "first chunk must advance write offset");
+    return failures;
+}
+
+static int test_write_failure_sets_reason(void)
+{
+    stc8h_ota_context_t ctx;
+    stc8h_ota_params_store_t store;
+    stc8h_ota_backend_t backend;
+    stc8h_ota_manifest_t manifest;
+    stc8h_u8 image[4];
+    int failures;
+
+    failures = 0;
+    image[0] = 1u;
+    image[1] = 2u;
+    image[2] = 3u;
+    image[3] = 4u;
+    manifest = make_image_manifest(image, sizeof(image));
+    fake_reset();
+    init_context(&ctx, &store, &backend);
+    (void)stc8h_ota_begin(&ctx, &manifest);
+    fake_app_write_fail = 1u;
+
+    failures += require(stc8h_ota_write_chunk(&ctx, 0UL, image, sizeof(image)) == STC8H_ERROR,
+                        "write chunk must fail when backend write fails");
+    failures += require(stc8h_ota_get_status(&ctx) == STC8H_OTA_STATE_FAILED,
+                        "write failure must enter failed state");
+    failures += require(ctx.fail_reason == STC8H_OTA_FAIL_WRITE,
+                        "write failure must set write fail reason");
     return failures;
 }
 
@@ -364,8 +433,9 @@ static int test_stale_chunk_with_different_data_fails(void)
     (void)stc8h_ota_begin(&ctx, &manifest);
     (void)stc8h_ota_write_chunk(&ctx, 0UL, image, sizeof(image));
 
-    return require(stc8h_ota_write_chunk(&ctx, 0UL, other, sizeof(other)) == STC8H_ERROR,
-                   "stale chunk with different data must fail");
+    return require((stc8h_ota_write_chunk(&ctx, 0UL, other, sizeof(other)) == STC8H_ERROR) &&
+                   (ctx.fail_reason == STC8H_OTA_FAIL_DUPLICATE),
+                   "stale chunk with different data must fail with duplicate reason");
 }
 
 static int test_future_offset_fails(void)
@@ -385,8 +455,9 @@ static int test_future_offset_fails(void)
     init_context(&ctx, &store, &backend);
     (void)stc8h_ota_begin(&ctx, &manifest);
 
-    return require(stc8h_ota_write_chunk(&ctx, 2UL, image, 1u) == STC8H_ERROR,
-                   "future offset must fail");
+    return require((stc8h_ota_write_chunk(&ctx, 2UL, image, 1u) == STC8H_ERROR) &&
+                   (ctx.fail_reason == STC8H_OTA_FAIL_OFFSET),
+                   "future offset must fail with offset reason");
 }
 
 static int test_final_short_chunk_completes_image(void)
@@ -437,8 +508,39 @@ static int test_verify_before_complete_fails(void)
     (void)stc8h_ota_begin(&ctx, &manifest);
     (void)stc8h_ota_write_chunk(&ctx, 0UL, image, 2u);
 
-    return require(stc8h_ota_verify(&ctx) == STC8H_ERROR,
-                   "verify before complete image must fail");
+    return require((stc8h_ota_verify(&ctx) == STC8H_ERROR) &&
+                   (ctx.fail_reason == STC8H_OTA_FAIL_INCOMPLETE),
+                   "verify before complete image must fail with incomplete reason");
+}
+
+static int test_verify_read_failure_sets_reason(void)
+{
+    stc8h_ota_context_t ctx;
+    stc8h_ota_params_store_t store;
+    stc8h_ota_backend_t backend;
+    stc8h_ota_manifest_t manifest;
+    stc8h_u8 image[4];
+    int failures;
+
+    failures = 0;
+    image[0] = 1u;
+    image[1] = 2u;
+    image[2] = 3u;
+    image[3] = 4u;
+    manifest = make_image_manifest(image, sizeof(image));
+    fake_reset();
+    init_context(&ctx, &store, &backend);
+    (void)stc8h_ota_begin(&ctx, &manifest);
+    (void)stc8h_ota_write_chunk(&ctx, 0UL, image, sizeof(image));
+    fake_app_read_fail = 1u;
+
+    failures += require(stc8h_ota_verify(&ctx) == STC8H_ERROR,
+                        "verify must fail when backend read fails");
+    failures += require(stc8h_ota_get_status(&ctx) == STC8H_OTA_STATE_FAILED,
+                        "verify read failure must enter failed state");
+    failures += require(ctx.fail_reason == STC8H_OTA_FAIL_READ,
+                        "verify read failure must set read fail reason");
+    return failures;
 }
 
 static int test_verify_matching_crc_enters_pending_commit(void)
@@ -571,13 +673,16 @@ int main(void)
     failures += test_hw_revision_fails_when_configured();
     failures += test_app_id_fails_when_configured();
     failures += test_begin_erases_application_sectors();
+    failures += test_begin_erase_failure_sets_reason();
     failures += test_first_chunk_advances_offset();
+    failures += test_write_failure_sets_reason();
     failures += test_duplicate_chunk_is_accepted_without_rewrite();
     failures += test_stale_chunk_with_different_length_fails();
     failures += test_stale_chunk_with_different_data_fails();
     failures += test_future_offset_fails();
     failures += test_final_short_chunk_completes_image();
     failures += test_verify_before_complete_fails();
+    failures += test_verify_read_failure_sets_reason();
     failures += test_verify_matching_crc_enters_pending_commit();
     failures += test_commit_before_verify_fails();
     failures += test_commit_after_verify_writes_parameter_record();

@@ -101,6 +101,15 @@ ESP32 云端下载/验签/暂存完整固件
 
 前置要求：生产烧录 bootloader 时必须确认 `STC8H8K64U` 的 IAP/EEPROM 规划允许 IAP 改写应用程序区。若仍使用类似 `0.5KB EEPROM` 的配置，只能写参数区，不能实现应用 OTA。
 
+2026-06-19 硬件实测结论：
+
+- 测试板通过 `stcgal` 识别为 `STC8H8K64U`，当前 `program_eeprom_split=65024`，即代码区到 `0xFDFF`，只有 `0xFE00..0xFFFF` 512 字节属于 EEPROM/IAP 区。
+- 在该配置下，UART1 OTA 验证 bootloader 可以启动并接收 OTA 帧。修正 manifest 结构体整体赋值问题后，PC smoke 脚本发送 `BEGIN` 时 STC 侧正确保留 `app_size=8178`，随后在擦除 `0x0200` 应用区时返回 `ERASE` 失败。
+- 该失败不是 RS485/UART 帧协议问题，而是当前芯片持久化 Flash/IAP 分区不允许 IAP 改写 `0x0200` 应用区。
+- 因此，当前方案只能在“生产烧录阶段确认并固定 IAP/EEPROM split 覆盖 OTA 应用区”后，才能宣称完整 OTA 可用；未确认前只能宣称 bootloader、协议、状态机和参数区能力已验证到相应阶段。
+- 修改 `program_eeprom_split` 是芯片持久化配置变更，会改变 code/EEPROM 边界，必须单独评审可执行区、bootloader 区、参数区和救援路径后再执行，不得在普通 smoke 测试中自动修改。
+- SDCC/8051 实现中不得依赖结构体整体赋值保存 OTA manifest；本库已将 `stc8h_ota_begin()` 中的 manifest 保存改为字段复制，避免生成 generic `memcpy` 后在 XDATA/`--stack-auto` 场景下丢失 `app_size`。
+
 建议逻辑分区：
 
 | 区域 | 建议范围 | 用途 |
@@ -111,6 +120,8 @@ ESP32 云端下载/验签/暂存完整固件
 | Boot 参数区 | `0xFC00..0xFFFF` | 双份升级状态、版本、长度、CRC、有效标志、失败原因 |
 
 以上地址为当前已编译验证的实现基线。最初评审曾尝试保留应用区到 `0xEFFF`，但带 RS485 帧、CRC32、IAP、双参数记录和状态回包的 bootloader 不能可靠放入 `0xF000..0xFBFF`。当前 `h8k64u_rs485_ota_bootloader` 通过 `--code-loc 0xB800` 链接，`tools/check_examples.sh` 会检查 reset stub 在 `0x0000`、bootloader `s_HOME` 在 `0xB800`，并禁止代码符号进入 `0xFC00..0xFFFF` 参数区。
+
+注意：上述逻辑分区还必须和 STC ISP 下载时的 code/EEPROM split 兼容。若 split 仍为 `0xFE00`，则 IAP 只能覆盖顶部 512 字节，`Application 区` 不可由 bootloader 自写。后续如果将 split 下移到覆盖应用区，需要重新确认 bootloader 是否仍可执行、参数区是否仍可写、ISP 生产烧录是否能稳定写入 bootloader，以及官方/工具链对 code 区和 EEPROM/IAP 区的执行语义。
 
 应用镜像大小上限相应调整为 `0xB600` 字节，即 `0x0200..0xB7FF`。应用项目生成 OTA manifest 时必须使用相同的 `app_base/app_size` 边界；超过该范围的镜像应在 ESP32 侧拒绝下发，并会被 STC 侧 manifest/IAP 边界检查拒绝。
 
@@ -519,6 +530,7 @@ stc8h_ota_mark_app_valid()
 API 边界：
 
 - `stc8h_ota_write_chunk()` 接收 payload，不关心 payload 来自 RS485、普通 UART 还是 433 串口透传。
+- `stc8h_ota_write_chunk()` 的应用镜像 offset 使用 `stc8h_u16`；外层帧协议若使用 32 位 offset，适配层必须先检查 `offset <= 0xFFFF` 再传入 OTA core。
 - `stc8h_ota_manifest_decode()` 把规范化 manifest 字节流解码为内部结构，并验证 `manifest_crc`。
 - `stc8h_ota_begin()` 只接受已由上层完成传输帧校验和 manifest 解码后的 manifest。
 - `stc8h_ota_commit()` 只在整包 CRC32 通过后成功。
@@ -590,6 +602,14 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - OTA 关闭编译时不引入 OTA API、CRC、IAP 程序区写入符号或全局缓冲。
 - RS485 DE/RE 方向切换不会截断最后一个字节。
 - UART3 透明串口链路能复用同一 OTA payload API。
+
+当前硬件验证状态：
+
+- 已验证 UART1 验证 bootloader 的 reset vector 真实写入 hex：`firmware.hex` 必须包含 `:0300000002B80043`，否则 map 中看到 reset stub 不代表烧录镜像真的包含 `0x0000 -> 0xB800` 跳转。
+- 已验证 UART1 bootloader 上电输出 `BOOT`，说明 reset stub 可以进入高地址 bootloader。
+- 已验证 UART1 OTA frame、manifest decode 和状态回包链路；STC 侧能正确解析 `app_size=8178`。
+- 已验证当前 `0.5KB EEPROM` split 下，`BEGIN` 擦除 `0x0200` 应用区失败并返回 `ERASE`；完整 OTA 验收暂停在“应用区 IAP 写入前置配置未满足”。
+- 下一步若要继续完整硬件 OTA 验证，必须先确认是否允许修改测试芯片 `program_eeprom_split`，并明确修改后的分区边界和救援恢复方式。
 
 第二阶段：ESP32 集成。
 

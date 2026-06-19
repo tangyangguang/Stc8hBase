@@ -83,10 +83,16 @@ check_ota_app_base() {
 
 check_ota_bootloader_layout() {
     map_file=$1
+    hex_file=$2
 
     if ! awk '$3 == "_h8k64u_ota_reset_stub" && $1 == "C:" && $2 == "00000000" { found = 1 } END { exit found ? 0 : 1 }' \
         "${ROOT_DIR}/${map_file}"; then
         echo "OTA bootloader reset stub is not linked at 0x0000 in ${map_file}" >&2
+        exit 1
+    fi
+
+    if ! grep -qx ':0300000002B80043' "${ROOT_DIR}/${hex_file}"; then
+        echo "OTA bootloader reset stub is not present in ${hex_file}" >&2
         exit 1
     fi
 
@@ -417,7 +423,12 @@ check_ota_app_base \
     "examples/platformio/h8k64u_ota_min_app/.pio/build/STC8H8K64U_mark_valid_iap/firmware.map"
 
 check_ota_bootloader_layout \
-    "examples/platformio/h8k64u_rs485_ota_bootloader/.pio/build/STC8H8K64U/firmware.map"
+    "examples/platformio/h8k64u_rs485_ota_bootloader/.pio/build/STC8H8K64U/firmware.map" \
+    "examples/platformio/h8k64u_rs485_ota_bootloader/.pio/build/STC8H8K64U/firmware.hex"
+
+check_ota_bootloader_layout \
+    "examples/platformio/h8k64u_uart1_ota_bootloader/.pio/build/STC8H8K64U/firmware.map" \
+    "examples/platformio/h8k64u_uart1_ota_bootloader/.pio/build/STC8H8K64U/firmware.hex"
 
 # Hard ROM ceilings for the "small" fixed-path examples. The guards
 # catch regressions in:

@@ -58,6 +58,22 @@ typedef enum {
     STC8H_OTA_BOOT_ACTION_TRIAL_APP = 2
 } stc8h_ota_boot_action_t;
 
+typedef enum {
+    STC8H_OTA_FAIL_NONE = 0,
+    STC8H_OTA_FAIL_ARG = 1,
+    STC8H_OTA_FAIL_MANIFEST = 2,
+    STC8H_OTA_FAIL_ERASE = 3,
+    STC8H_OTA_FAIL_STATE = 4,
+    STC8H_OTA_FAIL_OFFSET = 5,
+    STC8H_OTA_FAIL_RANGE = 6,
+    STC8H_OTA_FAIL_DUPLICATE = 7,
+    STC8H_OTA_FAIL_WRITE = 8,
+    STC8H_OTA_FAIL_READ = 9,
+    STC8H_OTA_FAIL_INCOMPLETE = 10,
+    STC8H_OTA_FAIL_CRC = 11,
+    STC8H_OTA_FAIL_PARAMS = 12
+} stc8h_ota_fail_reason_t;
+
 typedef struct stc8h_ota_params_store_s stc8h_ota_params_store_t;
 
 typedef stc8h_status_t (*stc8h_ota_backend_erase_fn)(stc8h_u16 addr) STC8H_REENTRANT;
@@ -118,7 +134,7 @@ stc8h_u8 stc8h_ota_should_enter_bootloader(const stc8h_ota_params_t *params);
 stc8h_status_t stc8h_ota_begin(stc8h_ota_context_t *ctx,
                                const stc8h_ota_manifest_t *manifest);
 stc8h_status_t stc8h_ota_write_chunk(stc8h_ota_context_t *ctx,
-                                     stc8h_u32 offset,
+                                     stc8h_u16 offset,
                                      const stc8h_u8 *data,
                                      stc8h_u16 len);
 stc8h_status_t stc8h_ota_verify(stc8h_ota_context_t *ctx);

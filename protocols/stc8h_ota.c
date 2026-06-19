@@ -29,6 +29,31 @@ static stc8h_u16 stc8h_ota_get_sector_size(const stc8h_ota_backend_t *backend)
     return backend->sector_size;
 }
 
+static void stc8h_ota_set_fail(stc8h_ota_context_t *ctx,
+                               stc8h_ota_fail_reason_t reason,
+                               stc8h_u8 failed_state)
+{
+    if (ctx == 0) {
+        return;
+    }
+
+    ctx->fail_reason = (stc8h_u8)reason;
+    if (failed_state != 0u) {
+        ctx->state = STC8H_OTA_STATE_FAILED;
+    }
+}
+
+static void stc8h_ota_copy_manifest(stc8h_ota_manifest_t *dst,
+                                    const stc8h_ota_manifest_t *src)
+{
+    dst->app_base = src->app_base;
+    dst->app_size = src->app_size;
+    dst->app_crc32 = src->app_crc32;
+    dst->version_major = src->version_major;
+    dst->version_minor = src->version_minor;
+    dst->version_patch = src->version_patch;
+}
+
 static stc8h_status_t stc8h_ota_erase_app_area(stc8h_ota_context_t *ctx)
 {
     stc8h_u32 addr;
@@ -54,7 +79,7 @@ static stc8h_status_t stc8h_ota_erase_app_area(stc8h_ota_context_t *ctx)
 }
 
 static stc8h_status_t stc8h_ota_compare_written_chunk(stc8h_ota_context_t *ctx,
-                                                      stc8h_u32 offset,
+                                                      stc8h_u16 offset,
                                                       const stc8h_u8 *data,
                                                       stc8h_u16 len)
 {
@@ -223,15 +248,16 @@ stc8h_status_t stc8h_ota_begin(stc8h_ota_context_t *ctx,
 {
     if ((ctx == 0) || (manifest == 0) || (ctx->backend == 0) ||
         (ctx->backend->write == 0) || (ctx->backend->read == 0)) {
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_ARG, 0u);
         return STC8H_ERROR;
     }
 
     if (stc8h_ota_validate_manifest(manifest) != STC8H_OK) {
-        ctx->state = STC8H_OTA_STATE_FAILED;
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_MANIFEST, 1u);
         return STC8H_ERROR;
     }
 
-    ctx->manifest = *manifest;
+    stc8h_ota_copy_manifest(&ctx->manifest, manifest);
     ctx->write_offset = 0UL;
     ctx->last_chunk_offset = 0UL;
     ctx->last_chunk_len = 0u;
@@ -239,7 +265,7 @@ stc8h_status_t stc8h_ota_begin(stc8h_ota_context_t *ctx,
     ctx->state = STC8H_OTA_STATE_PREPARING;
 
     if (stc8h_ota_erase_app_area(ctx) != STC8H_OK) {
-        ctx->state = STC8H_OTA_STATE_FAILED;
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_ERASE, 1u);
         return STC8H_ERROR;
     }
 
@@ -248,36 +274,50 @@ stc8h_status_t stc8h_ota_begin(stc8h_ota_context_t *ctx,
 }
 
 stc8h_status_t stc8h_ota_write_chunk(stc8h_ota_context_t *ctx,
-                                     stc8h_u32 offset,
+                                     stc8h_u16 offset,
                                      const stc8h_u8 *data,
                                      stc8h_u16 len)
 {
     stc8h_u32 end_offset;
 
     if ((ctx == 0) || (ctx->backend == 0) || (ctx->backend->write == 0) ||
-        (ctx->state != STC8H_OTA_STATE_RECEIVING) || (len == 0u) || (data == 0)) {
+        (len == 0u) || (data == 0)) {
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_ARG, 0u);
+        return STC8H_ERROR;
+    }
+
+    if (ctx->state != STC8H_OTA_STATE_RECEIVING) {
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_STATE, 0u);
         return STC8H_ERROR;
     }
 
     if (offset < ctx->write_offset) {
         if ((offset == ctx->last_chunk_offset) && (len == ctx->last_chunk_len)) {
-            return stc8h_ota_compare_written_chunk(ctx, offset, data, len);
+            if (stc8h_ota_compare_written_chunk(ctx, offset, data, len) == STC8H_OK) {
+                return STC8H_OK;
+            }
+            stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_DUPLICATE, 0u);
+            return STC8H_ERROR;
         }
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_OFFSET, 0u);
         return STC8H_ERROR;
     }
 
     if (offset != ctx->write_offset) {
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_OFFSET, 0u);
         return STC8H_ERROR;
     }
 
     end_offset = offset + len;
     if (end_offset > ctx->manifest.app_size) {
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_RANGE, 0u);
         return STC8H_ERROR;
     }
 
     if (ctx->backend->write((stc8h_u16)((stc8h_u32)ctx->manifest.app_base + offset),
                             data,
                             len) != STC8H_OK) {
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_WRITE, 1u);
         return STC8H_ERROR;
     }
 
@@ -292,20 +332,22 @@ stc8h_status_t stc8h_ota_verify(stc8h_ota_context_t *ctx)
     stc8h_u32 crc32;
 
     if ((ctx == 0) || (ctx->state != STC8H_OTA_STATE_RECEIVING)) {
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_STATE, 0u);
         return STC8H_ERROR;
     }
 
     if (ctx->write_offset != ctx->manifest.app_size) {
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_INCOMPLETE, 0u);
         return STC8H_ERROR;
     }
 
     ctx->state = STC8H_OTA_STATE_VERIFYING;
     if (stc8h_ota_read_image_crc32(ctx, &crc32) != STC8H_OK) {
-        ctx->state = STC8H_OTA_STATE_FAILED;
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_READ, 1u);
         return STC8H_ERROR;
     }
     if (crc32 != ctx->manifest.app_crc32) {
-        ctx->state = STC8H_OTA_STATE_FAILED;
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_CRC, 1u);
         return STC8H_ERROR;
     }
 
@@ -321,6 +363,7 @@ stc8h_status_t stc8h_ota_commit(stc8h_ota_context_t *ctx)
 
     if ((ctx == 0) || (ctx->params_store == 0) ||
         (ctx->state != STC8H_OTA_STATE_PENDING_COMMIT)) {
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_STATE, 0u);
         return STC8H_ERROR;
     }
 
@@ -347,7 +390,7 @@ stc8h_status_t stc8h_ota_commit(stc8h_ota_context_t *ctx)
     params.param_crc = 0u;
 
     if (stc8h_ota_params_store_write_next(ctx->params_store, &params) != STC8H_OK) {
-        ctx->state = STC8H_OTA_STATE_FAILED;
+        stc8h_ota_set_fail(ctx, STC8H_OTA_FAIL_PARAMS, 1u);
         return STC8H_ERROR;
     }
 

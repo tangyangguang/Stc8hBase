@@ -234,6 +234,8 @@ https://memfault.com/blog/ota-testing-101-the-ultimate-guide/
 
 - `STC8H8K64U` 属于可自定义 EEPROM 大小的 IAP 系列，可作为自定义 ISP/bootloader 的目标芯片。
 - 若要让 IAP 更新程序区，生产烧录时必须把 IAP/EEPROM 空间规划为覆盖需要更新的程序空间；仅配置小 EEPROM 区不能实现应用 OTA。
+- 2026-06-19 实测：当前测试芯片 `program_eeprom_split=65024`，stcgal 显示 `EEPROM flash: 0.5 KB`；UART1 OTA bootloader 能启动并接收 `BEGIN`，但擦除 `0x0200` 应用区时返回 `ERASE` 失败。该结果验证了“小 EEPROM split 不能实现应用 OTA”的风险。
+- 2026-06-19 实测同时发现 SDCC/8051 `--stack-auto` + XDATA 场景下不应依赖结构体整体赋值保存 OTA manifest；`stc8h_ota_begin()` 已改为只字段复制运行期需要的 manifest 字段。
 - 官方 STC-ISP/BSL 适合开发下载和生产烧录；产品 OTA 更适合自定义 bootloader，因为需要控制 RS485 协议、升级状态、commit 和恢复流程。
 - 第一版 OTA 基础能力只支持 `STC8H8K64U-45I-LQFP48`，采用 ESP32 暂存完整固件、STC 单应用区 IAP 写入、CRC 校验和永久 bootloader 恢复。
 - STC 侧不做 HTTPS、JSON、压缩或复杂签名验签；这些能力由 ESP32 负责。
