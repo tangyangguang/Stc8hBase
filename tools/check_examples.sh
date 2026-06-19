@@ -68,14 +68,37 @@ check_no_gptr_in_tree() {
 check_ota_app_base() {
     map_file=$1
 
-    if ! awk '$3 == "s_HOME" && $1 == "C:" && $2 == "00000200" { found = 1 } END { exit found ? 0 : 1 }' \
-        "${ROOT_DIR}/${map_file}"; then
+    if ! python3 - "${ROOT_DIR}/${map_file}" <<'PY'
+import sys
+found = False
+with open(sys.argv[1], "r", encoding="utf-8", errors="ignore") as fh:
+    for line in fh:
+        parts = line.split()
+        if len(parts) >= 3 and parts[0] == "C:" and parts[1] == "00000200" and parts[2] == "s_HOME":
+            found = True
+            break
+raise SystemExit(0 if found else 1)
+PY
+    then
         echo "OTA app HOME area is not linked at 0x0200 in ${map_file}" >&2
         exit 1
     fi
 
-    if awk '$3 == "_main" && $1 == "C:" && ("0x" $2) + 0 < 0x0200 { bad = 1 } END { exit bad ? 0 : 1 }' \
-        "${ROOT_DIR}/${map_file}"; then
+    if python3 - "${ROOT_DIR}/${map_file}" <<'PY'
+import sys
+bad = False
+with open(sys.argv[1], "r", encoding="utf-8", errors="ignore") as fh:
+    for line in fh:
+        parts = line.split()
+        if len(parts) >= 3 and parts[0] == "C:" and parts[2] == "_main":
+            try:
+                bad = int(parts[1], 16) < 0x0200
+            except ValueError:
+                bad = False
+            break
+raise SystemExit(0 if bad else 1)
+PY
+    then
         echo "OTA app main is linked below 0x0200 in ${map_file}" >&2
         exit 1
     fi
@@ -85,8 +108,18 @@ check_ota_bootloader_layout() {
     map_file=$1
     hex_file=$2
 
-    if ! awk '$3 == "_h8k64u_ota_reset_stub" && $1 == "C:" && $2 == "00000000" { found = 1 } END { exit found ? 0 : 1 }' \
-        "${ROOT_DIR}/${map_file}"; then
+    if ! python3 - "${ROOT_DIR}/${map_file}" <<'PY'
+import sys
+found = False
+with open(sys.argv[1], "r", encoding="utf-8", errors="ignore") as fh:
+    for line in fh:
+        parts = line.split()
+        if len(parts) >= 3 and parts[0] == "C:" and parts[1] == "00000000" and parts[2] == "_h8k64u_ota_reset_stub":
+            found = True
+            break
+raise SystemExit(0 if found else 1)
+PY
+    then
         echo "OTA bootloader reset stub is not linked at 0x0000 in ${map_file}" >&2
         exit 1
     fi
@@ -96,14 +129,39 @@ check_ota_bootloader_layout() {
         exit 1
     fi
 
-    if ! awk '$3 == "s_HOME" && $1 == "C:" && $2 == "0000B800" { found = 1 } END { exit found ? 0 : 1 }' \
-        "${ROOT_DIR}/${map_file}"; then
+    if ! python3 - "${ROOT_DIR}/${map_file}" <<'PY'
+import sys
+found = False
+with open(sys.argv[1], "r", encoding="utf-8", errors="ignore") as fh:
+    for line in fh:
+        parts = line.split()
+        if len(parts) >= 3 and parts[0] == "C:" and parts[1] == "0000B800" and parts[2] == "s_HOME":
+            found = True
+            break
+raise SystemExit(0 if found else 1)
+PY
+    then
         echo "OTA bootloader HOME area is not linked at 0xB800 in ${map_file}" >&2
         exit 1
     fi
 
-    if awk '$1 == "C:" && $2 ~ /^[0-9A-F]+$/ && ("0x" $2) + 0 >= 0xFC00 && ("0x" $2) + 0 < 0x10000 { bad = 1 } END { exit bad ? 0 : 1 }' \
-        "${ROOT_DIR}/${map_file}"; then
+    if python3 - "${ROOT_DIR}/${map_file}" <<'PY'
+import sys
+bad = False
+with open(sys.argv[1], "r", encoding="utf-8", errors="ignore") as fh:
+    for line in fh:
+        parts = line.split()
+        if len(parts) >= 2 and parts[0] == "C:":
+            try:
+                addr = int(parts[1], 16)
+            except ValueError:
+                continue
+            if 0xFC00 <= addr < 0x10000:
+                bad = True
+                break
+raise SystemExit(0 if bad else 1)
+PY
+    then
         echo "OTA bootloader code overlaps parameter sectors in ${map_file}" >&2
         exit 1
     fi

@@ -55,6 +55,7 @@ stc8h_status_t stc8h_ota_params_store_load_active(stc8h_ota_params_store_t *stor
     STC8H_OTA_PARAMS_STORE_WORK_MEM stc8h_ota_params_t record_b;
     stc8h_status_t status_a;
     stc8h_status_t status_b;
+    stc8h_u16 selected_addr;
 
     if ((store == 0) || (params == 0)) {
         return STC8H_ERROR;
@@ -74,20 +75,22 @@ stc8h_status_t stc8h_ota_params_store_load_active(stc8h_ota_params_store_t *stor
             return STC8H_ERROR;
         }
         if (record_b.sequence > record_a.sequence) {
-            *params = record_b;
-            store->active_addr = STC8H_OTA_PARAM_B_BASE;
+            selected_addr = STC8H_OTA_PARAM_B_BASE;
         } else {
-            *params = record_a;
-            store->active_addr = STC8H_OTA_PARAM_A_BASE;
+            selected_addr = STC8H_OTA_PARAM_A_BASE;
         }
     } else if (status_a == STC8H_OK) {
-        *params = record_a;
-        store->active_addr = STC8H_OTA_PARAM_A_BASE;
+        selected_addr = STC8H_OTA_PARAM_A_BASE;
     } else {
-        *params = record_b;
-        store->active_addr = STC8H_OTA_PARAM_B_BASE;
+        selected_addr = STC8H_OTA_PARAM_B_BASE;
     }
 
+    if (stc8h_ota_params_store_read_record(store, selected_addr, params) != STC8H_OK) {
+        store->has_active = 0u;
+        return STC8H_ERROR;
+    }
+
+    store->active_addr = selected_addr;
     store->has_active = 1u;
     return STC8H_OK;
 }
