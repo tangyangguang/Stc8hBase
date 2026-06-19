@@ -65,6 +65,22 @@ check_no_gptr_in_tree() {
     fi
 }
 
+check_ota_app_base() {
+    map_file=$1
+
+    if ! awk '$3 == "s_HOME" && $1 == "C:" && $2 == "00000200" { found = 1 } END { exit found ? 0 : 1 }' \
+        "${ROOT_DIR}/${map_file}"; then
+        echo "OTA app HOME area is not linked at 0x0200 in ${map_file}" >&2
+        exit 1
+    fi
+
+    if awk '$3 == "_main" && $1 == "C:" && ("0x" $2) + 0 < 0x0200 { bad = 1 } END { exit bad ? 0 : 1 }' \
+        "${ROOT_DIR}/${map_file}"; then
+        echo "OTA app main is linked below 0x0200 in ${map_file}" >&2
+        exit 1
+    fi
+}
+
 # Asserts the .mem ROM line reports at most $2 bytes used.
 # Catches accidental regressions when trim macros stop working.
 check_mem_rom_at_most() {
@@ -369,6 +385,9 @@ check_map_absent \
 check_map_absent \
     "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.mem" \
     "Could not get" "DSEG.*overflow" "OSEG.*overflow"
+
+check_ota_app_base \
+    "examples/platformio/h8k64u_ota_min_app/.pio/build/STC8H8K64U/firmware.map"
 
 # Hard ROM ceilings for the "small" fixed-path examples. The guards
 # catch regressions in:

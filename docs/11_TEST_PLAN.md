@@ -112,6 +112,7 @@ Keil C51 验证按模块进行。每个已实现模块至少完成 Keil C51 编�
 | `h8k64u_eeprom_safe` | STC8H8K64U EEPROM 安全占位编译验证，不执行写擦 |
 | `h8k64u_eeprom_rw` | STC8H8K64U EEPROM 破坏性擦写读回验证，需确认测试页可擦后手动烧录 |
 | `h8k64u_wdt_feed` | STC8H8K64U WDT 编译和后续硬件验证 |
+| `h8k64u_ota_min_app` | STC8H8K64U OTA 应用链接基址 `0x0200` 和启动后 mark-valid 调用位置编译验证 |
 
 ## 5. 资源占用测试
 
@@ -157,6 +158,8 @@ docs/RESOURCE_REPORT.md
 - 每个示例记录 Timer、PWM、UART、I2C、SPI、ADC、中断占用。
 - 每个示例记录参与编译的 `.c` 文件清单。
 - 每个示例检查 map 文件或符号表，未使用模块的符号前缀不应出现。
+- `h8k64u_ota_min_app` 必须检查 map 文件中 `s_HOME` 位于 `0x0200`，且 `_main` 不得链接到 `0x0000..0x01FF`。
+- `h8k64u_ota_min_app` 只验证应用侧调用顺序：先完成安全输出初始化和 UART 初始化，再调用 mark-valid hook。真实 `0xFC00/0xFE00` 参数区写入由后续 bootloader/应用集成示例接入，不在该最小示例中执行。
 - 单个简单示例不应因为引入基础库框架产生明显无关代码。
 
 ### 6.3 UART 验收
