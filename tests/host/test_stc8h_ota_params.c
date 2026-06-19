@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "../../utils/util_crc32.c"
 #include "../../protocols/stc8h_ota_format.c"
 #include "../../protocols/stc8h_ota.c"
 #include "../../hal/stc8h_ota_params_store.c"

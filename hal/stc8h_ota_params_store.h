@@ -11,13 +11,13 @@ typedef stc8h_status_t (*stc8h_ota_param_read_fn)(stc8h_u16 addr,
                                                   stc8h_u8 *data,
                                                   stc8h_u16 len) STC8H_REENTRANT;
 
-typedef struct {
+struct stc8h_ota_params_store_s {
     stc8h_ota_param_erase_fn erase;
     stc8h_ota_param_write_fn write;
     stc8h_ota_param_read_fn read;
     stc8h_u16 active_addr;
     stc8h_u8 has_active;
-} stc8h_ota_params_store_t;
+};
 
 void stc8h_ota_params_store_init(stc8h_ota_params_store_t *store,
                                  stc8h_ota_param_erase_fn erase,

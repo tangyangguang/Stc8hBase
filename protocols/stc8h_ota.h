@@ -19,6 +19,7 @@
 
 #define STC8H_OTA_PARAM_MAGIC 0x4F545041UL
 #define STC8H_OTA_PARAM_VERSION 1u
+#define STC8H_OTA_DEFAULT_SECTOR_SIZE 512u
 
 typedef enum {
     STC8H_OTA_STATE_IDLE = 0,
@@ -37,6 +38,34 @@ typedef enum {
     STC8H_OTA_BOOT_ACTION_JUMP_APP = 1,
     STC8H_OTA_BOOT_ACTION_TRIAL_APP = 2
 } stc8h_ota_boot_action_t;
+
+typedef struct stc8h_ota_params_store_s stc8h_ota_params_store_t;
+
+typedef stc8h_status_t (*stc8h_ota_backend_erase_fn)(stc8h_u16 addr) STC8H_REENTRANT;
+typedef stc8h_status_t (*stc8h_ota_backend_write_fn)(stc8h_u16 addr,
+                                                     const stc8h_u8 *data,
+                                                     stc8h_u16 len) STC8H_REENTRANT;
+typedef stc8h_status_t (*stc8h_ota_backend_read_fn)(stc8h_u16 addr,
+                                                    stc8h_u8 *data,
+                                                    stc8h_u16 len) STC8H_REENTRANT;
+
+typedef struct {
+    stc8h_ota_backend_erase_fn erase_sector;
+    stc8h_ota_backend_write_fn write;
+    stc8h_ota_backend_read_fn read;
+    stc8h_u16 sector_size;
+} stc8h_ota_backend_t;
+
+typedef struct {
+    const stc8h_ota_backend_t *backend;
+    stc8h_ota_params_store_t *params_store;
+    stc8h_ota_manifest_t manifest;
+    stc8h_u32 write_offset;
+    stc8h_u32 last_chunk_offset;
+    stc8h_u16 last_chunk_len;
+    stc8h_ota_state_t state;
+    stc8h_u8 fail_reason;
+} stc8h_ota_context_t;
 
 #ifdef STC8H_OTA_EXPECTED_BOARD_ID
 #define STC8H_OTA_CHECK_BOARD_ID 1
@@ -59,8 +88,21 @@ typedef enum {
 #define STC8H_OTA_EXPECTED_APP_ID 0u
 #endif
 
+void stc8h_ota_init(stc8h_ota_context_t *ctx,
+                    const stc8h_ota_backend_t *backend,
+                    stc8h_ota_params_store_t *params_store);
 stc8h_status_t stc8h_ota_validate_manifest(const stc8h_ota_manifest_t *manifest);
 stc8h_ota_boot_action_t stc8h_ota_get_boot_action(const stc8h_ota_params_t *params);
 stc8h_u8 stc8h_ota_should_enter_bootloader(const stc8h_ota_params_t *params);
+stc8h_status_t stc8h_ota_begin(stc8h_ota_context_t *ctx,
+                               const stc8h_ota_manifest_t *manifest);
+stc8h_status_t stc8h_ota_write_chunk(stc8h_ota_context_t *ctx,
+                                     stc8h_u32 offset,
+                                     const stc8h_u8 *data,
+                                     stc8h_u16 len);
+stc8h_status_t stc8h_ota_verify(stc8h_ota_context_t *ctx);
+stc8h_status_t stc8h_ota_commit(stc8h_ota_context_t *ctx);
+stc8h_status_t stc8h_ota_abort(stc8h_ota_context_t *ctx, stc8h_u8 reason);
+stc8h_ota_state_t stc8h_ota_get_status(const stc8h_ota_context_t *ctx);
 
 #endif
