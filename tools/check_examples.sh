@@ -81,6 +81,28 @@ check_ota_app_base() {
     fi
 }
 
+check_ota_bootloader_layout() {
+    map_file=$1
+
+    if ! awk '$3 == "_h8k64u_ota_reset_stub" && $1 == "C:" && $2 == "00000000" { found = 1 } END { exit found ? 0 : 1 }' \
+        "${ROOT_DIR}/${map_file}"; then
+        echo "OTA bootloader reset stub is not linked at 0x0000 in ${map_file}" >&2
+        exit 1
+    fi
+
+    if ! awk '$3 == "s_HOME" && $1 == "C:" && $2 == "0000B800" { found = 1 } END { exit found ? 0 : 1 }' \
+        "${ROOT_DIR}/${map_file}"; then
+        echo "OTA bootloader HOME area is not linked at 0xB800 in ${map_file}" >&2
+        exit 1
+    fi
+
+    if awk '$1 == "C:" && $2 ~ /^[0-9A-F]+$/ && ("0x" $2) + 0 >= 0xFC00 && ("0x" $2) + 0 < 0x10000 { bad = 1 } END { exit bad ? 0 : 1 }' \
+        "${ROOT_DIR}/${map_file}"; then
+        echo "OTA bootloader code overlaps parameter sectors in ${map_file}" >&2
+        exit 1
+    fi
+}
+
 # Asserts the .mem ROM line reports at most $2 bytes used.
 # Catches accidental regressions when trim macros stop working.
 check_mem_rom_at_most() {
@@ -388,6 +410,9 @@ check_map_absent \
 
 check_ota_app_base \
     "examples/platformio/h8k64u_ota_min_app/.pio/build/STC8H8K64U/firmware.map"
+
+check_ota_bootloader_layout \
+    "examples/platformio/h8k64u_rs485_ota_bootloader/.pio/build/STC8H8K64U/firmware.map"
 
 # Hard ROM ceilings for the "small" fixed-path examples. The guards
 # catch regressions in:

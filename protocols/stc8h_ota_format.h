@@ -6,6 +6,14 @@
 #define STC8H_OTA_MANIFEST_WIRE_SIZE 31u
 #define STC8H_OTA_PARAMS_WIRE_SIZE 31u
 
+#ifndef STC8H_OTA_FORMAT_ENABLE_MANIFEST_ENCODE
+#define STC8H_OTA_FORMAT_ENABLE_MANIFEST_ENCODE 1
+#endif
+
+#ifndef STC8H_OTA_FORMAT_ENABLE_PARAMS_ENCODE
+#define STC8H_OTA_FORMAT_ENABLE_PARAMS_ENCODE 1
+#endif
+
 typedef struct {
     stc8h_u32 magic;
     stc8h_u8 format_version;
@@ -44,8 +52,12 @@ typedef struct {
 } stc8h_ota_params_t;
 
 stc8h_status_t stc8h_ota_manifest_decode(const stc8h_u8 *bytes, stc8h_u16 len, stc8h_ota_manifest_t *manifest);
+#if STC8H_OTA_FORMAT_ENABLE_MANIFEST_ENCODE
 stc8h_status_t stc8h_ota_manifest_encode(const stc8h_ota_manifest_t *manifest, stc8h_u8 *bytes, stc8h_u16 len);
+#endif
 stc8h_status_t stc8h_ota_params_decode(const stc8h_u8 *bytes, stc8h_u16 len, stc8h_ota_params_t *params);
+#if STC8H_OTA_FORMAT_ENABLE_PARAMS_ENCODE
 stc8h_status_t stc8h_ota_params_encode(const stc8h_ota_params_t *params, stc8h_u8 *bytes, stc8h_u16 len);
+#endif
 
 #endif

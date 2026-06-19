@@ -4,7 +4,7 @@ static stc8h_status_t stc8h_ota_params_store_read_record(stc8h_ota_params_store_
                                                          stc8h_u16 addr,
                                                          stc8h_ota_params_t *params)
 {
-    stc8h_u8 bytes[STC8H_OTA_PARAMS_WIRE_SIZE];
+    STC8H_OTA_PARAMS_STORE_WORK_MEM stc8h_u8 bytes[STC8H_OTA_PARAMS_WIRE_SIZE];
 
     if ((store == 0) || (params == 0) || (store->read == 0)) {
         return STC8H_ERROR;
@@ -51,8 +51,8 @@ void stc8h_ota_params_store_init(stc8h_ota_params_store_t *store,
 stc8h_status_t stc8h_ota_params_store_load_active(stc8h_ota_params_store_t *store,
                                                   stc8h_ota_params_t *params)
 {
-    stc8h_ota_params_t record_a;
-    stc8h_ota_params_t record_b;
+    STC8H_OTA_PARAMS_STORE_WORK_MEM stc8h_ota_params_t record_a;
+    STC8H_OTA_PARAMS_STORE_WORK_MEM stc8h_ota_params_t record_b;
     stc8h_status_t status_a;
     stc8h_status_t status_b;
 
@@ -95,9 +95,9 @@ stc8h_status_t stc8h_ota_params_store_load_active(stc8h_ota_params_store_t *stor
 stc8h_status_t stc8h_ota_params_store_write_next(stc8h_ota_params_store_t *store,
                                                  const stc8h_ota_params_t *params)
 {
-    stc8h_ota_params_t active;
-    stc8h_u8 bytes[STC8H_OTA_PARAMS_WIRE_SIZE];
-    stc8h_u8 verify[STC8H_OTA_PARAMS_WIRE_SIZE];
+    STC8H_OTA_PARAMS_STORE_WORK_MEM stc8h_ota_params_t active;
+    STC8H_OTA_PARAMS_STORE_WORK_MEM stc8h_u8 bytes[STC8H_OTA_PARAMS_WIRE_SIZE];
+    STC8H_OTA_PARAMS_STORE_WORK_MEM stc8h_u8 verify[STC8H_OTA_PARAMS_WIRE_SIZE];
     stc8h_u16 target_addr;
 
     if ((store == 0) || (params == 0) || (store->erase == 0) ||
@@ -135,7 +135,7 @@ stc8h_status_t stc8h_ota_params_store_write_next(stc8h_ota_params_store_t *store
 
 stc8h_status_t stc8h_ota_params_store_mark_boot_attempted(stc8h_ota_params_store_t *store)
 {
-    stc8h_ota_params_t params;
+    STC8H_OTA_PARAMS_STORE_WORK_MEM stc8h_ota_params_t params;
 
     if (stc8h_ota_params_store_load_active(store, &params) != STC8H_OK) {
         return STC8H_ERROR;
@@ -146,9 +146,10 @@ stc8h_status_t stc8h_ota_params_store_mark_boot_attempted(stc8h_ota_params_store
     return stc8h_ota_params_store_write_next(store, &params);
 }
 
+#if STC8H_OTA_PARAMS_STORE_ENABLE_MARK_APP_VALID
 stc8h_status_t stc8h_ota_params_store_mark_app_valid(stc8h_ota_params_store_t *store)
 {
-    stc8h_ota_params_t params;
+    STC8H_OTA_PARAMS_STORE_WORK_MEM stc8h_ota_params_t params;
 
     if (stc8h_ota_params_store_load_active(store, &params) != STC8H_OK) {
         return STC8H_ERROR;
@@ -160,3 +161,4 @@ stc8h_status_t stc8h_ota_params_store_mark_app_valid(stc8h_ota_params_store_t *s
     params.boot_attempted = 0u;
     return stc8h_ota_params_store_write_next(store, &params);
 }
+#endif

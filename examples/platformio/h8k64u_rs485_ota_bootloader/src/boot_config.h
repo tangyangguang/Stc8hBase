@@ -1,0 +1,9 @@
+#ifndef H8K64U_RS485_OTA_BOOT_CONFIG_H
+#define H8K64U_RS485_OTA_BOOT_CONFIG_H
+
+#include "board_config.h"
+
+#define STC8H_OTA_WORK_MEM static STC8H_XDATA
+#define STC8H_OTA_PARAMS_STORE_WORK_MEM static STC8H_XDATA
+
+#endif

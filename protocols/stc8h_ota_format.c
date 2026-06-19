@@ -83,6 +83,7 @@ stc8h_status_t stc8h_ota_manifest_decode(const stc8h_u8 *bytes, stc8h_u16 len, s
     return STC8H_OK;
 }
 
+#if STC8H_OTA_FORMAT_ENABLE_MANIFEST_ENCODE
 stc8h_status_t stc8h_ota_manifest_encode(const stc8h_ota_manifest_t *manifest, stc8h_u8 *bytes, stc8h_u16 len)
 {
     stc8h_u16 crc;
@@ -109,6 +110,7 @@ stc8h_status_t stc8h_ota_manifest_encode(const stc8h_ota_manifest_t *manifest, s
     stc8h_ota_put_le16(&bytes[29], crc);
     return STC8H_OK;
 }
+#endif
 
 stc8h_status_t stc8h_ota_params_decode(const stc8h_u8 *bytes, stc8h_u16 len, stc8h_ota_params_t *params)
 {
@@ -144,6 +146,7 @@ stc8h_status_t stc8h_ota_params_decode(const stc8h_u8 *bytes, stc8h_u16 len, stc
     return STC8H_OK;
 }
 
+#if STC8H_OTA_FORMAT_ENABLE_PARAMS_ENCODE
 stc8h_status_t stc8h_ota_params_encode(const stc8h_ota_params_t *params, stc8h_u8 *bytes, stc8h_u16 len)
 {
     stc8h_u16 crc;
@@ -171,3 +174,4 @@ stc8h_status_t stc8h_ota_params_encode(const stc8h_ota_params_t *params, stc8h_u
     stc8h_ota_put_le16(&bytes[29], crc);
     return STC8H_OK;
 }
+#endif

@@ -58,7 +58,7 @@ static stc8h_status_t stc8h_ota_compare_written_chunk(stc8h_ota_context_t *ctx,
                                                       const stc8h_u8 *data,
                                                       stc8h_u16 len)
 {
-    stc8h_u8 buffer[STC8H_OTA_READ_CHUNK_SIZE];
+    STC8H_OTA_WORK_MEM stc8h_u8 buffer[STC8H_OTA_READ_CHUNK_SIZE];
     stc8h_u16 pos;
     stc8h_u16 read_len;
     stc8h_u16 i;
@@ -93,7 +93,7 @@ static stc8h_status_t stc8h_ota_compare_written_chunk(stc8h_ota_context_t *ctx,
 static stc8h_status_t stc8h_ota_read_image_crc32(stc8h_ota_context_t *ctx,
                                                  stc8h_u32 *crc32)
 {
-    stc8h_u8 buffer[STC8H_OTA_READ_CHUNK_SIZE];
+    STC8H_OTA_WORK_MEM stc8h_u8 buffer[STC8H_OTA_READ_CHUNK_SIZE];
     stc8h_u32 offset;
     stc8h_u32 remaining;
     stc8h_u16 read_len;
@@ -211,10 +211,12 @@ stc8h_ota_boot_action_t stc8h_ota_get_boot_action(const stc8h_ota_params_t *para
     return STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER;
 }
 
+#if STC8H_OTA_ENABLE_SHOULD_ENTER_BOOTLOADER
 stc8h_u8 stc8h_ota_should_enter_bootloader(const stc8h_ota_params_t *params)
 {
     return (stc8h_ota_get_boot_action(params) == STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER) ? 1u : 0u;
 }
+#endif
 
 stc8h_status_t stc8h_ota_begin(stc8h_ota_context_t *ctx,
                                const stc8h_ota_manifest_t *manifest)
@@ -313,8 +315,8 @@ stc8h_status_t stc8h_ota_verify(stc8h_ota_context_t *ctx)
 
 stc8h_status_t stc8h_ota_commit(stc8h_ota_context_t *ctx)
 {
-    stc8h_ota_params_t params;
-    stc8h_ota_params_t active;
+    STC8H_OTA_WORK_MEM stc8h_ota_params_t params;
+    STC8H_OTA_WORK_MEM stc8h_ota_params_t active;
     stc8h_u16 sequence;
 
     if ((ctx == 0) || (ctx->params_store == 0) ||

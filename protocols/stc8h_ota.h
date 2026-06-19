@@ -12,10 +12,29 @@
 #define STC8H_OTA_TARGET_STC8H8K64U 0x0864u
 #define STC8H_OTA_BOOTLOADER_VERSION 1u
 
+#ifndef STC8H_OTA_APP_BASE
 #define STC8H_OTA_APP_BASE 0x0200u
+#endif
+
+#ifndef STC8H_OTA_APP_LIMIT
 #define STC8H_OTA_APP_LIMIT 0xEFFFu
+#endif
+
+#ifndef STC8H_OTA_PARAM_A_BASE
 #define STC8H_OTA_PARAM_A_BASE 0xFC00u
+#endif
+
+#ifndef STC8H_OTA_PARAM_B_BASE
 #define STC8H_OTA_PARAM_B_BASE 0xFE00u
+#endif
+
+#ifndef STC8H_OTA_WORK_MEM
+#define STC8H_OTA_WORK_MEM
+#endif
+
+#ifndef STC8H_OTA_ENABLE_SHOULD_ENTER_BOOTLOADER
+#define STC8H_OTA_ENABLE_SHOULD_ENTER_BOOTLOADER 1
+#endif
 
 #define STC8H_OTA_PARAM_MAGIC 0x4F545041UL
 #define STC8H_OTA_PARAM_VERSION 1u
@@ -93,7 +112,9 @@ void stc8h_ota_init(stc8h_ota_context_t *ctx,
                     stc8h_ota_params_store_t *params_store);
 stc8h_status_t stc8h_ota_validate_manifest(const stc8h_ota_manifest_t *manifest);
 stc8h_ota_boot_action_t stc8h_ota_get_boot_action(const stc8h_ota_params_t *params);
+#if STC8H_OTA_ENABLE_SHOULD_ENTER_BOOTLOADER
 stc8h_u8 stc8h_ota_should_enter_bootloader(const stc8h_ota_params_t *params);
+#endif
 stc8h_status_t stc8h_ota_begin(stc8h_ota_context_t *ctx,
                                const stc8h_ota_manifest_t *manifest);
 stc8h_status_t stc8h_ota_write_chunk(stc8h_ota_context_t *ctx,

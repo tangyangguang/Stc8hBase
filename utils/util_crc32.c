@@ -23,7 +23,9 @@ stc8h_u32 util_crc32_ieee_update(stc8h_u32 finalized_crc, const stc8h_u8 *data, 
     return (~crc) & UTIL_CRC32_MASK;
 }
 
+#if UTIL_CRC32_ENABLE_ONESHOT
 stc8h_u32 util_crc32_ieee(const stc8h_u8 *data, stc8h_u16 len)
 {
     return util_crc32_ieee_update(0UL, data, len);
 }
+#endif
