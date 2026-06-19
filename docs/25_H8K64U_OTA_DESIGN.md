@@ -106,7 +106,9 @@ ESP32 云端下载/验签/暂存完整固件
 - 测试板通过 `stcgal` 识别为 `STC8H8K64U`，当前 `program_eeprom_split=65024`，即代码区到 `0xFDFF`，只有 `0xFE00..0xFFFF` 512 字节属于 EEPROM/IAP 区。
 - 在该配置下，UART1 OTA 验证 bootloader 可以启动并接收 OTA 帧。修正 manifest 结构体整体赋值问题后，PC smoke 脚本发送 `BEGIN` 时 STC 侧正确保留 `app_size=8178`，随后在擦除 `0x0200` 应用区时返回 `ERASE` 失败。
 - 该失败不是 RS485/UART 帧协议问题，而是当前芯片持久化 Flash/IAP 分区不允许 IAP 改写 `0x0200` 应用区。
-- 因此，当前方案只能在“生产烧录阶段确认并固定 IAP/EEPROM split 覆盖 OTA 应用区”后，才能宣称完整 OTA 可用；未确认前只能宣称 bootloader、协议、状态机和参数区能力已验证到相应阶段。
+- 经授权将测试芯片改为 `program_eeprom_split=512` 后，UART1 smoke 的 `BEGIN/WRITE/VERIFY/COMMIT` 可走到更后阶段；但无论直接跳转还是软件复位后 trial jump，OTA 写入的 app 尚未能从 `0x0200` 执行并打印验证 banner。
+- 对照实验：同一个 app 加 `0x0000 -> 0x0200` reset vector 后通过 ISP 直接烧录，在 `program_eeprom_split=512` 下可以正常打印 `H8K64U OTA app v1.0.0`。因此 app 入口、UART 初始化和 `0x0200` 执行本身成立，失败集中在“由用户 bootloader 通过 IAP 写入的内容是否成为 CPU 可执行代码”这一点。
+- 因此，当前不能再把“bootloader 直接 IAP 写应用区”作为已验证最佳方案；正式方案必须增加一个验证阶段，比较两条路线：`A.` STC8H 专用高地址搬移器，把已接收镜像按官方 EEPROM/IAP 语义搬移到可执行区；`B.` ESP32 触发 STC 原厂 BSL/ISP 并代理下载协议。未通过硬件闭环前，基础库只能宣称传输无关 OTA 状态机、manifest、帧协议和 EEPROM/IAP 数据写入验证能力，不能宣称完整应用 OTA。
 - 修改 `program_eeprom_split` 是芯片持久化配置变更，会改变 code/EEPROM 边界，必须单独评审可执行区、bootloader 区、参数区和救援路径后再执行，不得在普通 smoke 测试中自动修改。
 - SDCC/8051 实现中不得依赖结构体整体赋值保存 OTA manifest；本库已将 `stc8h_ota_begin()` 中的 manifest 保存改为字段复制，避免生成 generic `memcpy` 后在 XDATA/`--stack-auto` 场景下丢失 `app_size`。
 
@@ -609,7 +611,8 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - 已验证 UART1 bootloader 上电输出 `BOOT`，说明 reset stub 可以进入高地址 bootloader。
 - 已验证 UART1 OTA frame、manifest decode 和状态回包链路；STC 侧能正确解析 `app_size=8178`。
 - 已验证当前 `0.5KB EEPROM` split 下，`BEGIN` 擦除 `0x0200` 应用区失败并返回 `ERASE`；完整 OTA 验收暂停在“应用区 IAP 写入前置配置未满足”。
-- 下一步若要继续完整硬件 OTA 验证，必须先确认是否允许修改测试芯片 `program_eeprom_split`，并明确修改后的分区边界和救援恢复方式。
+- 已验证将测试芯片改为 `program_eeprom_split=512` 后，直接 ISP 烧录的 `0x0200` app 可执行；但同一 app 经 UART1 bootloader/IAP 写入后未能执行，说明当前直接 IAP 写应用区方案仍缺关键机制。
+- 下一步若要继续完整硬件 OTA 验证，不应继续堆叠状态机改动，而应先做最小可复现实验：用固定字节序列分别通过 ISP 和 IAP 写入 EEPROM/可执行区，再用 MOVC/跳转验证 CPU 取指视图；随后决定采用高地址搬移器还是 ESP32 代理原厂 ISP。
 
 第二阶段：ESP32 集成。
 

@@ -13,7 +13,6 @@ import serial
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP_DIR = ROOT / "examples/platformio/h8k64u_ota_min_app"
 BOOT_DIR = ROOT / "examples/platformio/h8k64u_uart1_ota_bootloader"
-APP_HEX = APP_DIR / ".pio/build/STC8H8K64U_mark_valid_iap/firmware.hex"
 
 APP_BASE = 0x0200
 APP_LIMIT = 0xB7FF
@@ -248,15 +247,18 @@ def main():
     parser.add_argument("--port", default="/dev/cu.usbserial-110")
     parser.add_argument("--baud", type=int, default=115200)
     parser.add_argument("--chunk", type=int, default=64)
+    parser.add_argument("--app-env", default="STC8H8K64U_mark_valid_iap")
     parser.add_argument("--skip-upload", action="store_true")
     args = parser.parse_args()
 
     if args.chunk <= 0 or args.chunk > FRAME_PAYLOAD_MAX:
         raise SystemExit("--chunk must be 1..128")
 
-    run(["pio", "run", "-e", "STC8H8K64U_mark_valid_iap"], APP_DIR)
+    app_hex = APP_DIR / f".pio/build/{args.app_env}/firmware.hex"
+
+    run(["pio", "run", "-e", args.app_env], APP_DIR)
     run(["pio", "run"], BOOT_DIR)
-    image = load_app_image(APP_HEX)
+    image = load_app_image(app_hex)
     manifest = encode_manifest(image)
     print(f"app image: {len(image)} bytes, crc32=0x{binascii.crc32(image) & 0xFFFFFFFF:08X}")
 

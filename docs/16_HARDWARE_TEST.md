@@ -1029,4 +1029,5 @@ pio device monitor --port /dev/cu.usbserial-110 --baud 115200
 - `h8k64u_eeprom_rw` 已按当前 ISP 配置的 512 字节 EEPROM split 烧录成功，擦除 `0x0000..0x01FF`，写入并读回 `0x0000..0x0003`，UART1 115200 监视到 `H8K64U EEPROM ok`。
 - 破坏性 EEPROM 测试后已重新烧录 `h8k64u_eeprom_safe`，UART1 115200 监视到 `H8K64U EEPROM write disabled`，当前板上固件不再执行 EEPROM 写擦。
 - 2026-06-19 已烧录 UART1 OTA 验证 bootloader，UART1 115200 监视到 `BOOT`。PC smoke 脚本发送 `BEGIN` 后，STC 侧正确解析 `app_size=8178`，随后擦除 `0x0200` 应用区返回 `ERASE` 失败；结合 stcgal 读到的 `program_eeprom_split=65024` / `EEPROM flash: 0.5 KB`，判断当前芯片配置只允许顶部 512 字节 IAP/EEPROM 区写入，不能直接写 OTA 应用区。未修改该持久化 split。
+- 2026-06-19 后续授权破坏性实验：已将测试芯片 `program_eeprom_split` 改为 `512`。在该配置下，UART1 OTA smoke 可完成 `BEGIN/WRITE/VERIFY/COMMIT`，但 OTA 写入后的 app 未打印 `H8K64U OTA app v1.0.0`；对照实验中，同一 app 增加 `0x0000 -> 0x0200` reset vector 后通过 ISP 直接烧录，可以正常打印该 banner。结论：app 与 `0x0200` 执行本身可用，当前失败集中在“用户 bootloader 通过 IAP 写入的数据是否进入 CPU 可执行视图”。
 - UART2/UART3 真实引脚波形或外部接收仍需单独 USB 转串口或示波器确认。
