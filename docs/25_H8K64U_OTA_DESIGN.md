@@ -56,7 +56,7 @@ ESP32 云端下载/验签/暂存完整固件
 - STC 侧做分帧 CRC16 和整包 CRC32。
 - ESP32 侧做固件签名或 hash 校验。
 - RS485 作为第一版参考传输链路。
-- OTA 核心按 payload 级 API 设计，不绑定 RS485、Modbus 或业务协议。
+- OTA 核心按 payload 级 API 设计，不绑定 RS485、Modbus、433 串口透传或业务协议。
 - 升级失败后 bootloader 可重新接收完整固件。
 
 第一版明确不支持：
@@ -138,7 +138,7 @@ boot stub 固定持有复位和中断向量。中断处理有两种可选实现�
 
 ## 9. RS485 升级协议
 
-OTA 核心 API 必须传输无关。RS485 只作为第一版示例传输，基础库不实现灌溉业务协议、不实现 Modbus，也不假设帧来自 UART。应用项目可以把 RS485、UART、RF 或其他总线收到的 payload 喂给 OTA API。
+OTA 核心 API 必须传输无关。RS485 只作为第一版示例传输，基础库不实现灌溉业务协议、不实现 Modbus，也不假设帧来自某一个 UART。应用项目可以把 RS485、普通 UART 或 433 串口透传收到的 payload 喂给 OTA API。
 
 ### 9.1 当前基础库相关能力
 
@@ -149,19 +149,19 @@ OTA 核心 API 必须传输无关。RS485 只作为第一版示例传输，基�
 - H8K64U 板级配置默认定义 `BOARD_RS485_UART = STC8H_UART2`、`BOARD_RF433_UART = STC8H_UART3`。
 - UART2 默认引脚组为 P1.0/P1.1，UART3 默认引脚组为 P0.0/P0.1，均可通过板级宏调整。
 - `h8k64u_uart2_hello`、`h8k64u_uart3_hello` 已覆盖 H8K64U UART2/UART3 最小发送验证。
-- `drv_nrf24l01` 和 `proto_rf_link` 已覆盖 nRF24L01/2.4GHz 小包射频链路，但它们不是 433MHz 透明串口模块驱动，也不是 OTA 专用协议。
+- `drv_nrf24l01` 和 `proto_rf_link` 已覆盖 nRF24L01/2.4GHz 小包射频链路，但它们不是 433MHz 串口透传模块能力，也不是 OTA 专用协议。
 
 当前缺口：
 
 - 没有独立 RS485 DE/RE 方向控制模块。
 - 没有半双工串口帧收发 helper。
 - 没有串口透传模块统一抽象。
-- 没有 433MHz 具体模块驱动或 433 透传验证示例。
+- 没有 433MHz 串口透传验证示例。
 - UART 当前是轮询 API，没有中断 ring buffer；OTA bootloader 第一版应继续使用轮询，避免中断和应用向量表耦合。
 
 ### 9.2 传输适配层边界
 
-OTA 传输适配层只负责把外部链路上的字节流或小包转换为 OTA payload 操作。它不能理解业务命令，也不能直接擦写 Flash。
+OTA 传输适配层只负责把外部串口类链路上的字节流转换为 OTA payload 操作。它不能理解业务命令，也不能直接擦写 Flash。
 
 建议传输适配层能力：
 
@@ -179,7 +179,7 @@ OTA 传输适配层只负责把外部链路上的字节流或小包转换为 OTA
 - 不解释灌溉业务命令。
 - 不实现 Modbus 业务寄存器表。
 - 不私有实现 IAP 写入。
-- 不假设底层一定是 RS485。
+- 不假设底层一定是 RS485；UART 透传和 433 串口透传必须复用同一套 payload 帧和 OTA 核心。
 
 ### 9.3 RS485 第一阶段方案
 
@@ -208,22 +208,24 @@ RS485 示例必须覆盖：
 - 连续 chunk 写入。
 - 超时后仍能继续接收新 `BEGIN`。
 
-### 9.4 433MHz 和其他串口透传计划
+### 9.4 433MHz 串口透传支持范围
 
-433MHz 支持应先分清两类硬件：
+433MHz 只支持透明串口类模块，即模块对 STC 暴露 UART RX/TX，基础库把它视为串口透传链路。
 
-- 透明串口类 433 模块：模块对 STC 暴露 UART RX/TX，基础库可复用 UART 传输适配层。
-- SPI/寄存器型 433 射频芯片：需要独立驱动，不能假装成串口透传。
+明确不支持：
 
-第一阶段只规划透明串口类 433：
+- SPI/寄存器型 433 射频芯片。
+- 433 频道、空中速率、发射功率、前导码、同步字、FEC 等射频参数配置。
+- 433 模块私有 AT 命令配置。
+- 433 自组网、绑定、路由或频道扫描。
 
 - 默认使用 `BOARD_RF433_UART`，当前 H8K64U 板级配置为 UART3。
 - 复用与 RS485 相同的 OTA 帧格式和 OTA 核心 API。
 - 不需要 DE/RE 控制。
 - 因无线链路丢包更高，建议更小 chunk、更长超时、更保守重试。
-- 433 链路不应直接复用 `proto_rf_link`，除非实际模块是小包射频芯片且项目明确需要该链路层。
+- 433 串口透传不复用 `proto_rf_link`；它只复用 OTA payload 帧。
 
-后续如果需要 SPI/寄存器型 433 芯片，必须单独按芯片 datasheet 设计驱动和链路层，不能并入第一版 OTA 基础能力。
+如果后续项目使用 SPI/寄存器型 433 芯片，该需求不属于本 OTA 基础能力范围，也不作为当前路线的后续计划。
 
 RS485 使用主从模式。ESP32 是主站，STC 是从站。STC 只响应目标地址匹配的帧，不主动发起升级。
 
@@ -458,7 +460,7 @@ stc8h_ota_mark_app_valid()
 
 API 边界：
 
-- `stc8h_ota_write_chunk()` 接收 payload，不关心 payload 来自 RS485、UART、RF 还是其他链路。
+- `stc8h_ota_write_chunk()` 接收 payload，不关心 payload 来自 RS485、普通 UART 还是 433 串口透传。
 - `stc8h_ota_begin()` 只接受已由上层完成传输帧校验后的 manifest。
 - `stc8h_ota_commit()` 只在整包 CRC32 通过后成功。
 - `stc8h_ota_abort()` 清理接收状态，但不得擦写 bootloader、boot stub 或参数保留区。
