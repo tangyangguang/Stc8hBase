@@ -77,7 +77,9 @@ ESP32 云端下载/验签/暂存完整固件
 
 - `STC8H8K64U` IAP 擦页、写入、读回、错误码。
 - 软件复位和进入 bootloader/ISP 相关的最小封装。
+- boot stub、应用链接基址和中断跳转表的最小约定。
 - boot metadata 结构定义：应用地址、长度、版本、CRC、状态和有效标志。
+- manifest、frame 和 boot metadata 的固定字节序编解码。
 - 地址范围检查，禁止擦写 bootloader、boot stub 和参数保留区。
 - 分块写入状态机。
 - CRC16、CRC32 小工具。
@@ -120,6 +122,7 @@ ESP32 云端下载/验签/暂存完整固件
   -> bootloader 检查参数区
       -> update_pending=1：停留 bootloader，等待 ESP32
       -> app_valid=1 且 app_crc 匹配：跳转应用
+      -> state=BOOT_COMMITTED 且 boot_attempted=0 且 app_crc 匹配：记录 boot_attempted=1 后试启动应用
       -> 其他情况：停留 bootloader，等待 ESP32 恢复升级
 ```
 
@@ -127,14 +130,23 @@ ESP32 云端下载/验签/暂存完整固件
 
 ## 8. 应用链接和中断策略
 
-应用从 `0x0200` 开始链接，不占用低地址 `0x0000..0x01FF`。
+应用从 `0x0200` 开始链接，不占用低地址 `0x0000..0x01FF`。这不是建议项，而是 OTA bootloader 可工作的硬约束；默认从 `0x0000` 链接的应用不能作为 OTA 镜像使用。
 
 boot stub 固定持有复位和中断向量。中断处理有两种可选实现：
 
 - 第一版最小验证：示例应用尽量不依赖中断，只验证启动、版本输出和主循环行为。
 - 正式应用支持：boot stub 的固定中断向量跳转到应用中断跳转表，应用构建必须生成固定格式的跳转表。
 
-第一版设计文档先保留中断跳转表要求；具体链接脚本、Keil C51 配置和 SDCC 配置在实现计划中展开。
+第一版必须先实现和验证以下启动链路：
+
+- boot stub 固定编译到 `0x0000..0x01FF`。
+- boot stub 复位入口只做最小跳转，进入高地址 bootloader 决策函数。
+- bootloader 判断可以启动应用时，跳转到 `STC8H_OTA_APP_BASE`。
+- OTA 应用示例必须通过 SDCC/PlatformIO 明确从 `0x0200` 链接。
+- Keil C51 必须记录等价链接配置，即使第一阶段只能做 Windows 环境人工验证。
+- 示例应用若使用中断，必须通过应用中断跳转表进入，不得重新占用低地址硬向量。
+
+第一版验收时，如果不能证明应用镜像确实从 `0x0200` 链接并能被 bootloader 跳转启动，则不得宣称 bootloader OTA 已完成。
 
 ## 9. RS485 升级协议
 
@@ -189,9 +201,9 @@ RS485 适配层应支持：
 
 - 编译期选择 UART：默认使用 `BOARD_RS485_UART`。
 - 板级宏控制 DE/RE：
-  - `STC8H_RS485_TX_ENABLE()`
-  - `STC8H_RS485_RX_ENABLE()`
-  - `STC8H_RS485_CONFIGURE_PINS()`
+  - `DRV_RS485_UART_TX_ENABLE()`
+  - `DRV_RS485_UART_RX_ENABLE()`
+  - `DRV_RS485_UART_CONFIGURE_PINS()`
 - 发送前切 TX，发送完成后切 RX。
 - 方向切换前后允许板级短延时，避免收发器尾字节被截断。
 - 可选从机地址字段，支持一主多从。
@@ -218,6 +230,8 @@ RS485 示例必须覆盖：
 - 433 频道、空中速率、发射功率、前导码、同步字、FEC 等射频参数配置。
 - 433 模块私有 AT 命令配置。
 - 433 自组网、绑定、路由或频道扫描。
+
+支持范围：
 
 - 默认使用 `BOARD_RF433_UART`，当前 H8K64U 板级配置为 UART3。
 - 复用与 RS485 相同的 OTA 帧格式和 OTA 核心 API。
@@ -256,7 +270,9 @@ SOF | proto_ver | dst_addr | src_addr | cmd | seq | offset | len | payload | crc
 
 - 只支持顺序写入。
 - `offset` 必须等于当前 `write_offset`，否则拒绝。
-- 允许重复发送当前 chunk；重复 chunk 必须与已接收数据一致，否则拒绝。
+- 允许重复发送上一块已接受 chunk；重复 chunk 必须满足 `offset`、`len` 和 flash 读回数据全部一致，才返回 ACK。
+- 小于 `write_offset` 但不是上一块完整重复的 chunk 一律 NAK。
+- 大于 `write_offset` 的未来 chunk 一律 NAK。
 - 不支持乱序写入。
 - 断点恢复由 ESP32 通过 `READ_STATUS` 获取 `write_offset` 后继续发送。
 
@@ -271,7 +287,7 @@ SOF | proto_ver | dst_addr | src_addr | cmd | seq | offset | len | payload | crc
 | `WRITE_BLOCK` | ESP32 -> STC | 写入一块固件数据 |
 | `READ_STATUS` | ESP32 -> STC | 查询状态、offset、错误码 |
 | `VERIFY` | ESP32 -> STC | 触发 STC 计算应用区 CRC32 |
-| `COMMIT` | ESP32 -> STC | CRC 通过后标记新应用有效 |
+| `COMMIT` | ESP32 -> STC | CRC 通过后提交为待试启动应用 |
 | `REBOOT` | ESP32 -> STC | 重启运行新应用 |
 | `ABORT` | ESP32 -> STC | 取消升级，保持 bootloader 可恢复 |
 
@@ -279,7 +295,9 @@ SOF | proto_ver | dst_addr | src_addr | cmd | seq | offset | len | payload | crc
 
 ESP32 下载的固件包应包含 manifest，不应只传裸二进制。
 
-STC 侧 manifest 字段分为强制字段和可裁剪字段。强制字段必须出现在第一版实现中。
+STC 侧 manifest 字段分为强制字段和可裁剪字段。强制字段必须出现在第一版实现中。manifest 在线上传输和持久化时必须使用固定字节序，不允许直接对 C struct 内存做 CRC 或作为协议格式。
+
+第一版统一采用 little-endian 字节序。多字节字段按低字节在前编码，字段顺序必须由协议文档固定。`manifest_crc` 计算范围是从 `magic` 到 `flags` 的规范化字节序内容，不包含 `manifest_crc` 字段本身。
 
 强制字段：
 
@@ -338,6 +356,7 @@ ESP32 必须先校验 `signature` 或 hash。STC 侧只检查：
 | `state` | 当前升级状态 |
 | `app_valid` | 应用是否有效 |
 | `update_pending` | 是否请求进入升级 |
+| `boot_attempted` | commit 后是否已试启动新应用 |
 | `app_base` | 应用起始地址 |
 | `app_size` | 应用长度 |
 | `app_crc32` | 应用整体 CRC |
@@ -347,6 +366,23 @@ ESP32 必须先校验 `signature` 或 hash。STC 侧只检查：
 | `param_crc` | 参数自身 CRC |
 
 参数区必须采用双份或等价的掉电保护结构。写新状态时先写新记录，校验通过后用 `sequence` 选择最新有效记录。不得只有单份状态记录。
+
+第一版固定参数区布局：
+
+| 记录 | 范围 | 说明 |
+|---|---:|---|
+| Param A | `0xFC00..0xFDFF` | 512 字节参数记录 A |
+| Param B | `0xFE00..0xFFFF` | 512 字节参数记录 B |
+
+写入规则：
+
+- 每条记录单独占用一个 512 字节擦除页。
+- 启动时读取 A/B，CRC 正确且 `param_magic`/`param_version` 匹配的记录才有效。
+- A/B 都有效时选择 `sequence` 更新的一条；`sequence` 相同视为参数损坏，进入 recovery。
+- 写新状态时选择非当前记录所在页，先擦除，再写完整规范化字节序记录，再读回校验。
+- 如果写新记录期间断电，旧记录仍可被选择。
+- `param_crc` 计算规范化字节序内容，不对 C struct 裸内存计算。
+- 参数区写入失败不得跳转应用。
 
 ## 12. Bootloader 状态机
 
@@ -368,6 +404,7 @@ BOOT_ERROR
 BOOT_IDLE
   -> BOOT_WAIT_BEGIN        收到 ENTER_UPDATE 或参数区已有 update_pending
   -> 应用跳转               app_valid=1 且无 update_pending
+  -> 试启动应用             state=BOOT_COMMITTED 且 boot_attempted=0 且 CRC 匹配
 
 BOOT_WAIT_BEGIN
   -> BOOT_ERASING           BEGIN 校验通过
@@ -386,7 +423,8 @@ BOOT_VERIFYING
   -> BOOT_ERROR             CRC32 不匹配
 
 BOOT_COMMITTED
-  -> REBOOT                 写 app_valid 成功后复位
+  -> REBOOT                 写 trial 状态成功后复位
+  -> BOOT_WAIT_BEGIN        trial 已尝试但 app_valid 仍为 0
 
 BOOT_ERROR
   -> BOOT_WAIT_BEGIN        ESP32 重新 BEGIN
@@ -394,9 +432,16 @@ BOOT_ERROR
 
 `COMMIT` 之前不得设置 `app_valid=1`。
 
+`COMMIT` 也不得直接设置 `app_valid=1`。第一版采用 trial boot 语义：
+
+- `COMMIT` 只写入 `state=BOOT_COMMITTED`、`app_valid=0`、`boot_attempted=0`、`update_pending=0`。
+- bootloader 首次看到该状态且 CRC32 匹配时，先把 `boot_attempted=1` 持久化，再跳转应用。
+- 新应用完成早期自检和输出安全初始化后，调用应用有效标记能力，把 `app_valid=1` 写入参数区。
+- 若试启动后复位且 `app_valid` 仍为 0，bootloader 不再继续跳转该应用，进入 recovery 等待 ESP32 重新升级。
+
 应用启动健康确认：
 
-- `COMMIT` 后 bootloader 可启动新应用，但新应用必须在完成早期自检和输出安全初始化后调用应用有效标记能力。
+- `COMMIT` 后 bootloader 只允许一次试启动新应用，新应用必须在完成早期自检和输出安全初始化后调用应用有效标记能力。
 - 若新应用未在约定条件下标记有效，下一次复位时 bootloader 应进入 recovery 等待 ESP32 重新升级。
 - 第一版不恢复旧应用，因为单应用区已覆盖旧固件；这里的恢复语义是重新进入 bootloader 接收固件。
 
@@ -412,6 +457,7 @@ BOOT_ERROR
 | 写入中断电 | 下次上电停留 bootloader，ESP32 重新升级 |
 | 写完但 CRC32 错 | 不提交，保持 bootloader |
 | COMMIT 前断电 | 不认为应用有效，保持 bootloader |
+| COMMIT 后、试启动前断电 | 下次继续按 trial 状态试启动一次 |
 | COMMIT 后应用启动失败 | 应用未完成健康确认时，下次 bootloader 进入 recovery 等待 |
 | 低电压或电源不稳 | 拒绝擦写，返回错误 |
 
@@ -449,21 +495,27 @@ BOOT_ERROR
 ```c
 stc8h_ota_init()
 stc8h_ota_should_enter_bootloader()
+stc8h_ota_get_boot_action()
+stc8h_ota_manifest_decode()
 stc8h_ota_begin(manifest)
 stc8h_ota_write_chunk(offset, data, len)
 stc8h_ota_verify()
 stc8h_ota_commit()
 stc8h_ota_abort()
 stc8h_ota_get_status()
+stc8h_ota_mark_boot_attempted()
 stc8h_ota_mark_app_valid()
 ```
 
 API 边界：
 
 - `stc8h_ota_write_chunk()` 接收 payload，不关心 payload 来自 RS485、普通 UART 还是 433 串口透传。
-- `stc8h_ota_begin()` 只接受已由上层完成传输帧校验后的 manifest。
+- `stc8h_ota_manifest_decode()` 把规范化 manifest 字节流解码为内部结构，并验证 `manifest_crc`。
+- `stc8h_ota_begin()` 只接受已由上层完成传输帧校验和 manifest 解码后的 manifest。
 - `stc8h_ota_commit()` 只在整包 CRC32 通过后成功。
 - `stc8h_ota_abort()` 清理接收状态，但不得擦写 bootloader、boot stub 或参数保留区。
+- `stc8h_ota_get_boot_action()` 返回留在 bootloader、正常跳转应用或 trial 跳转应用三类启动决策。
+- `stc8h_ota_mark_boot_attempted()` 只能在 trial 跳转应用前调用，用于持久化 `boot_attempted=1`。
 - `stc8h_ota_mark_app_valid()` 由新应用在早期健康确认后调用。
 - 未启用 OTA 构建时，上述 API 不声明、不编译。
 
@@ -491,8 +543,10 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 | 位置 | 内容 |
 |---|---|
 | `hal/` | `STC8H8K64U` IAP 程序区擦写原语 |
+| `hal/` | OTA 参数区双记录读写原语 |
+| `core/` 或 `hal/` | boot stub、跳转入口和应用基址约定 |
 | `utils/` | CRC16、CRC32 |
-| `protocols/` | 可选分块传输状态机，不直接绑定具体 UART |
+| `protocols/` | manifest/frame/参数规范化编解码和分块传输状态机，不直接绑定具体 UART |
 | `protocols/` 或 `drivers/` | RS485/半双工 UART 传输适配，边界只到 payload 帧 |
 | `examples/` | `h8k64u_rs485_bootloader` 最小示例 |
 | `examples/` | `h8k64u_uart_passthrough_ota` 或 `h8k64u_433_uart_ota` 后续串口透传示例 |
@@ -511,6 +565,8 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 第一阶段：PC 模拟 ESP32。
 
 - 能烧入 bootloader。
+- boot stub、bootloader 和应用镜像地址分区正确。
+- 应用镜像从 `0x0200` 链接并能被 bootloader 跳转启动。
 - 能通过串口/RS485 写入最小 app。
 - app 能启动并输出版本。
 - 擦除后断电能停留 bootloader。
@@ -521,6 +577,7 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - `board_id`、`hw_revision` 或 `app_id` 不匹配会拒绝。
 - chunk 丢失、重复、乱序均能检测或按设计处理。
 - bootloader 区不会被擦写。
+- 参数区 A/B 单页掉电损坏时能选择另一条有效记录。
 - OTA 关闭编译时不引入 OTA API、CRC、IAP 程序区写入符号或全局缓冲。
 - RS485 DE/RE 方向切换不会截断最后一个字节。
 - UART3 透明串口链路能复用同一 OTA payload API。
@@ -532,7 +589,7 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - RS485 分块发送。
 - 超时重试。
 - STC 验证 CRC32。
-- COMMIT 后 STC 重启运行新版本。
+- COMMIT 后 STC 试启动新版本，新应用自检通过后再标记有效。
 - ESP32 读取新版本并上报结果。
 
 第三阶段：硬件压力。
@@ -580,6 +637,7 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - 应用是否需要中断；若需要，必须先确认中断跳转表方案。
 - 应用最大可接受代码空间是多少，是否允许 bootloader 占用 4KB 到 8KB。
 - 生产烧录工具是否能固定配置 IAP/EEPROM 覆盖程序空间。
+- H8K64U 实物验证时允许使用哪一段应用区做首次破坏性擦写测试。
 
 ## 22. 评审结论
 
@@ -600,6 +658,7 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - bootloader 体积必须严格控制。
 - 单应用区方案升级失败时旧应用不可继续运行。
 - 参数区必须做双份掉电保护。
+- manifest、frame 和参数区必须使用规范化字节序，不能依赖 C struct 布局。
 - 应用方如果需要真正 rollback，必须增加外部暂存区或改为双应用区，不能由当前单区方案隐式满足。
 
 第一版应坚持范围收敛，先完成可恢复、可验证、可维护的最小 OTA 基础能力。
