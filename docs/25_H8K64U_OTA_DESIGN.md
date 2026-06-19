@@ -119,7 +119,11 @@ ESP32 云端下载/验签/暂存完整固件
 - 修正地址转换后，UART1 smoke 的 `BEGIN/WRITE/VERIFY/COMMIT` 仍可完成；bootloader 用 `MOVC` 从 `0x0200` 读取到应用镜像开头 `02 02 06 02`，和 SDCC app 的跳转入口一致。
 - 但在当前验证板上，直接跳转、提交后软件复位再 trial jump 仍未观察到应用 banner。因此“首字节可见 + IAP readback CRC 正确”还不足以证明完整应用可执行。
 - bootloader 示例已改为更稳妥的提交模型：`COMMIT` 只提交参数记录并回 OK，随后软件复位；复位后的 bootloader 根据参数区决定是否 trial boot，并在跳应用前关闭中断、恢复 `SP=0x07`。这个模型适合正式方案，但硬件闭环仍需继续验证。
-- 下一步不得继续扩大 API；应先做最小硬件实验：只验证 `IAP_CONTR=0x20` 是否能从当前 bootloader 复位回用户区、验证 `MOVC` 视角下整个 app 区 CRC 是否与镜像一致、验证极简 app 入口第一条可观察指令是否执行。
+- `h8k64u_soft_reset_probe` 已在实物上验证 `IAP_CONTR=0x20` 软件复位有效：程序打印复位前 banner 后触发软件复位，复位后再次从用户程序入口运行。
+- 临时增加的 bootloader 读码窗口曾验证 `MOVC` 视角下 `0x0200` 应用区完整内容与 PC 侧 OTA 镜像一致；但该诊断命令会把 UART1 bootloader 代码推入 `0xFC00..0xFFFF` 参数区，不能保留为正式能力。
+- 在移除临时读码窗口后，UART1 bootloader 重新编译的最高代码相关符号为 `s_XINIT=0xFB9D`，未进入 `0xFC00..0xFFFF` 参数区。
+- 用 `STC8H8K64U_entry_probe` 重新执行 UART1 smoke，`BEGIN/WRITE/VERIFY/COMMIT` 完成，commit 时读到应用入口 `02020602`，但仍未收到 `APP-ENTRY`。该结果再次确认当前阻塞点不是传输协议或软件复位，而是 IAP 写入内容的取指执行闭环。
+- 目前最关键的能力边界是：软件复位有效，IAP/MOVC 读回也可一致，但仍未证明“用户 bootloader 通过 IAP 写入的应用区”可被 CPU 取指执行。后续不得继续扩大 API；应先做最小可复现实验，隔离 STC IAP 写入区的取指执行规则。
 
 建议逻辑分区：
 
@@ -621,7 +625,11 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - 已验证 UART1 OTA frame、manifest decode 和状态回包链路；STC 侧能正确解析 `app_size=8178`。
 - 已验证当前 `0.5KB EEPROM` split 下，`BEGIN` 擦除 `0x0200` 应用区失败并返回 `ERASE`；完整 OTA 验收暂停在“应用区 IAP 写入前置配置未满足”。
 - 已验证将测试芯片改为 `program_eeprom_split=512` 后，直接 ISP 烧录的 `0x0200` app 可执行；但同一 app 经 UART1 bootloader/IAP 写入后未能执行，说明当前直接 IAP 写应用区方案仍缺关键机制。
-- 下一步若要继续完整硬件 OTA 验证，不应继续堆叠状态机改动，而应先做最小可复现实验：用固定字节序列分别通过 ISP 和 IAP 写入 EEPROM/可执行区，再用 MOVC/跳转验证 CPU 取指视图；随后决定采用高地址搬移器还是 ESP32 代理原厂 ISP。
+- 已验证官方软件复位路径：`h8k64u_soft_reset_probe` 使用 `IAP_CONTR=0x20` 后能重新从用户程序入口运行，说明当前“提交后软件复位”机制本身不是主要阻塞点。
+- 已用临时诊断证明 `MOVC` 读码视角下 OTA 写入后的应用区可与镜像逐字节一致；但这仍不能等价证明 CPU 取指可执行。
+- 已确认临时读码诊断会导致 bootloader 代码接近或进入参数区，正式 UART1/RS485 bootloader 必须继续由 map 检查禁止代码符号进入 `0xFC00..0xFFFF`。
+- 已复测 `STC8H8K64U_entry_probe`：app 镜像 425 字节，CRC32 为 `0xC3AD8B43`，UART1 bootloader commit code probe 为 `02020602`，但应用入口 banner 未出现，smoke 以 `app did not print expected validation banner` 结束。
+- 下一步若要继续完整硬件 OTA 验证，不应继续堆叠状态机改动，而应先做最小可复现实验：用固定字节序列分别通过 ISP 和 IAP 写入目标区，再用 `MOVC`、直接跳转、复位 trial boot 分别验证读码视图和取指视图；随后决定采用高地址搬移器、官方用户 ISP 模式，还是 ESP32 代理原厂 BSL/ISP。
 
 第二阶段：ESP32 集成。
 
@@ -695,6 +703,7 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 主要风险：
 
 - IAP/EEPROM 生产配置错误会导致 OTA 不可用。
+- IAP 读回正确不等于 CPU 一定能从该区域取指执行；这是当前实物验证中未闭环的最大技术风险。
 - 低地址向量和应用链接地址必须一次设计清楚。
 - bootloader 体积必须严格控制。
 - 单应用区方案升级失败时旧应用不可继续运行。

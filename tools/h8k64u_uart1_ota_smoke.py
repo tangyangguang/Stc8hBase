@@ -298,11 +298,11 @@ def main():
             data = ser.read(256)
             if data:
                 text.extend(data)
-                if b"H8K64U OTA app" in text:
+                if (b"H8K64U OTA app" in text) or (b"APP-ENTRY" in text):
                     break
         decoded = text.decode("ascii", errors="replace")
         print(decoded)
-        if "H8K64U OTA app" not in decoded:
+        if ("H8K64U OTA app" not in decoded) and ("APP-ENTRY" not in decoded):
             raise RuntimeError("app did not print expected validation banner")
 
     print("UART1 OTA smoke passed")
