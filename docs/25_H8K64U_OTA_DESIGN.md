@@ -2,7 +2,7 @@
 
 ## 1. 目标
 
-本文档用于持续评审 `STC8H8K64U-45I-LQFP48` 专用 OTA 基础能力。当前阶段只定义方案、边界和验收标准，不进入代码实现。
+本文档用于持续评审 `STC8H8K64U-45I-LQFP48` 专用 OTA 基础能力，并记录当前实现边界。
 
 目标场景：
 
@@ -106,11 +106,13 @@ ESP32 云端下载/验签/暂存完整固件
 | 区域 | 建议范围 | 用途 |
 |---|---:|---|
 | Boot stub / 向量区 | `0x0000..0x01FF` | 复位入口、中断跳转表、进入 bootloader 或 app |
-| Application 区 | `0x0200..0xEFFF` | 可 OTA 更新的业务固件 |
-| Bootloader 区 | `0xF000..0xFBFF` | RS485 升级协议、IAP 写入、CRC、状态机 |
+| Application 区 | `0x0200..0xB7FF` | 可 OTA 更新的业务固件 |
+| Bootloader 区 | `0xB800..0xFBFF` | RS485 升级协议、IAP 写入、CRC、状态机 |
 | Boot 参数区 | `0xFC00..0xFFFF` | 双份升级状态、版本、长度、CRC、有效标志、失败原因 |
 
-以上地址为第一版设计基线。实现前必须用实际 bootloader 链接结果确认 `Bootloader 区` 是否足够；若不足，优先扩大 bootloader 区并缩小应用区，不允许让 bootloader 溢出到参数区。
+以上地址为当前已编译验证的实现基线。最初评审曾尝试保留应用区到 `0xEFFF`，但带 RS485 帧、CRC32、IAP、双参数记录和状态回包的 bootloader 不能可靠放入 `0xF000..0xFBFF`。当前 `h8k64u_rs485_ota_bootloader` 通过 `--code-loc 0xB800` 链接，`tools/check_examples.sh` 会检查 reset stub 在 `0x0000`、bootloader `s_HOME` 在 `0xB800`，并禁止代码符号进入 `0xFC00..0xFFFF` 参数区。
+
+应用镜像大小上限相应调整为 `0xB600` 字节，即 `0x0200..0xB7FF`。应用项目生成 OTA manifest 时必须使用相同的 `app_base/app_size` 边界；超过该范围的镜像应在 ESP32 侧拒绝下发，并会被 STC 侧 manifest/IAP 边界检查拒绝。
 
 ## 7. 启动流程
 
@@ -163,13 +165,17 @@ OTA 核心 API 必须传输无关。RS485 只作为第一版示例传输，基�
 - `h8k64u_uart2_hello`、`h8k64u_uart3_hello` 已覆盖 H8K64U UART2/UART3 最小发送验证。
 - `drv_nrf24l01` 和 `proto_rf_link` 已覆盖 nRF24L01/2.4GHz 小包射频链路，但它们不是 433MHz 串口透传模块能力，也不是 OTA 专用协议。
 
+当前已实现：
+
+- `drivers/drv_rs485_uart.*` 提供薄半双工 UART 方向控制 wrapper，通过 `BOARD_RS485_TX_ENABLE()` / `BOARD_RS485_RX_ENABLE()` 由板级控制 DE/RE。
+- `protocols/proto_ota_frame.*` 提供传输无关 OTA 帧 build/parse、CRC16、地址过滤、重复序号上报和 STATUS 回包命令。
+- `examples/platformio/h8k64u_rs485_ota_bootloader` 接入 UART2/RS485、应用区 IAP、参数区 IAP、OTA 状态机和高地址 bootloader 布局。
+- UART 当前仍是轮询 API，OTA bootloader 第一版继续使用轮询，避免中断和应用向量表耦合。
+
 当前缺口：
 
-- 没有独立 RS485 DE/RE 方向控制模块。
-- 没有半双工串口帧收发 helper。
-- 没有串口透传模块统一抽象。
-- 没有 433MHz 串口透传验证示例。
-- UART 当前是轮询 API，没有中断 ring buffer；OTA bootloader 第一版应继续使用轮询，避免中断和应用向量表耦合。
+- 还没有 433MHz 串口透传验证示例。
+- 还没有真实硬件上的 RS485 方向时序、IAP 写入和断电恢复验证。
 
 ### 9.2 传输适配层边界
 
@@ -201,15 +207,14 @@ RS485 适配层应支持：
 
 - 编译期选择 UART：默认使用 `BOARD_RS485_UART`。
 - 板级宏控制 DE/RE：
-  - `DRV_RS485_UART_TX_ENABLE()`
-  - `DRV_RS485_UART_RX_ENABLE()`
-  - `DRV_RS485_UART_CONFIGURE_PINS()`
+  - `BOARD_RS485_TX_ENABLE()`
+  - `BOARD_RS485_RX_ENABLE()`
 - 发送前切 TX，发送完成后切 RX。
 - 方向切换前后允许板级短延时，避免收发器尾字节被截断。
 - 可选从机地址字段，支持一主多从。
 - 不占用 Timer、中断或隐藏全局缓冲。
 
-第一版 RS485 OTA bootloader 推荐使用 UART2，调试串口继续使用 UART1。若应用板卡把 UART2 分配给其他设备，可通过板级宏切到 UART3。
+第一版 RS485 OTA bootloader 使用 `BOARD_RS485_UART`，当前 H8K64U 基板默认是 UART2。示例中的方向脚仅用于构建参考，真实项目必须在自己的 `board_pins.h` 中绑定实际 DE/RE 引脚，并实测发送完成后的方向切回时序。
 
 RS485 示例必须覆盖：
 

@@ -74,3 +74,25 @@ STC8H1K08 项目通过 PlatformIO wrapper 接入 `proto_rf_link` 时，不要在
 推荐做法是在 `platformio.ini` 里声明当前阶段实际需要的链路 API。阶段 2 只编译 radio 驱动和应用 radio 骨架时，可关闭全部 `PROTO_RF_LINK_ENABLE_*`；真实接入发送、接收、心跳或状态回传时，再逐项打开 `CONNECT`、`SEND_DATA`、`POLL`、`SEND_STATUS`、`SEND_HEARTBEAT`、`TICK`、`GET_STATE`。
 
 基础库示例 `examples/platformio/rf_link_nrf24_small` 只记录 `drv_nrf24l01 + stc8h_spi + proto_rf_link` 在 STC8H1K08 上的裁剪接入和资源边界；它不是链路可靠性运行参考。需要真实 nRF24 TX 完成、`MAX_RT` 恢复或 ACK payload 判定时，以 `nrf24_pair_diag`、`nrf24_fixed_ping` 和 `nrf24_ack_payload` 的 wait + `drv_nrf24l01_complete_tx()` 流程为准。
+
+## 7. H8K64U OTA 接入边界
+
+当前 `STC8H8K64U` OTA 示例采用单应用区布局：
+
+```text
+0x0000..0x01FF  boot stub / reset vector
+0x0200..0xB7FF  OTA application
+0xB800..0xFBFF  bootloader
+0xFC00..0xFFFF  dual OTA parameter records
+```
+
+应用项目生成 OTA 镜像时必须从 `0x0200` 链接，且 manifest 的 `app_size` 不能超过 `0xB600` 字节。ESP32 侧负责云端下载、验签、暂存完整镜像、总线重试和业务升级窗口；基础库侧提供 manifest/frame/params 编解码、状态机、IAP backend、RS485 bootloader 示例和边界检查。
+
+RS485 项目使用 `drivers/drv_rs485_uart` 时，需要在板级定义：
+
+```c
+#define BOARD_RS485_TX_ENABLE()  /* DE/RE 切到发送 */
+#define BOARD_RS485_RX_ENABLE()  /* DE/RE 切到接收 */
+```
+
+基础库不实现 Modbus 或灌溉业务寄存器；业务层收到升级命令后应关闭所有输出、拒绝普通业务命令，并让 ESP32 通过 OTA 帧协议驱动 bootloader。

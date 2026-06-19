@@ -116,6 +116,7 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | nRF24L01 | `DRV_NRF24L01_CONFIGURE_PINS()` | 空操作 | `drv_nrf24l01_init_pins()` 驱动 CE/CSN 前调用的板级 hook，用于配置 CE/CSN 端口模式和锁存 |
 | UART | `STC8H_UART_ASSUME_UART1` | `0` | 只使用 UART1 时省去 id 检查 |
 | UART | `STC8H_UART_ENABLE_WRITE_RAM` | `1` | 是否编译 RAM 字符串输出 |
+| UART | `STC8H_UART_ENABLE_WRITE_CODE` | `1` | 是否编译 CODE/flash 字符串输出；无调试输出的 bootloader 可关闭 |
 | UART | `STC8H_UART_ENABLE_RX` | `1` | 是否编译轮询接收 |
 | UART | `STC8H_UART_ENABLE_UART2` | `0` | 是否编译 UART2 轮询路径；使用 UART2 时由板级或示例显式开启 |
 | UART | `STC8H_UART_ENABLE_UART3` | `0` | 是否编译 UART3 轮询路径；使用 UART3 时由板级或示例显式开启 |
@@ -124,6 +125,13 @@ SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减�
 | UART | `STC8H_UART_CONFIGURE_PORT_MODE` | `1` | UART2/UART3 初始化时是否配置所选 RX/TX 引脚为准双向并释放锁存 |
 | IR RX | `DRV_IR_RX_ENABLE_PULSE` | `1` | 是否编译 NEC mark/space pulse 解码 |
 | IR RX | `DRV_IR_RX_ENABLE_FALLING` | `1` | 是否编译 falling interval 解码 |
+| OTA format | `STC8H_OTA_FORMAT_ENABLE_MANIFEST_ENCODE` | `1` | 是否编译 manifest encode；只接收 manifest 的 bootloader 可关闭 |
+| OTA format | `STC8H_OTA_FORMAT_ENABLE_PARAMS_ENCODE` | `1` | 是否编译参数记录 encode；写参数区的 bootloader/应用必须开启 |
+| OTA core | `STC8H_OTA_WORK_MEM` | 空 | OTA core 内部工作缓冲的内存限定；H8K64U bootloader 示例设为 `static STC8H_XDATA` 降低 DSEG 压力 |
+| OTA core | `STC8H_OTA_ENABLE_SHOULD_ENTER_BOOTLOADER` | `1` | 是否编译 `stc8h_ota_should_enter_bootloader()` 便捷 API |
+| OTA params store | `STC8H_OTA_PARAMS_STORE_WORK_MEM` | 空 | 参数 store 内部工作缓冲的内存限定；H8K64U bootloader 示例设为 `static STC8H_XDATA` |
+| OTA params store | `STC8H_OTA_PARAMS_STORE_ENABLE_MARK_APP_VALID` | `1` | bootloader 不调用 app-valid 标记时可关闭；应用侧需要标记 app valid 时必须开启 |
+| CRC32 | `UTIL_CRC32_ENABLE_ONESHOT` | `1` | 是否编译一次性 CRC32 API；只用 incremental update 的 bootloader 可关闭 |
 
 裁剪宏应放在板级配置或构建系统里，并随固件资源报告记录；基础库源码不应为某个应用硬编码固定端口或固定命令表。
 
