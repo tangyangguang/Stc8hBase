@@ -18,6 +18,32 @@ run_c_test() {
     "${output_file}"
 }
 
+run_c_test_h8k64u() {
+    source_file=$1
+    output_file="${BUILD_DIR}/$(basename "${source_file}" .c)-h8k64u"
+
+    echo "== host h8k64u: ${source_file}"
+    cc -std=c89 -Wall -Wextra \
+        -DSTC8H_CHIP_STC8H1K08=0 -DSTC8H_CHIP_STC8H8K64U=1 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/drivers" -I"${ROOT_DIR}/hal" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        "${ROOT_DIR}/${source_file}" -o "${output_file}"
+    "${output_file}"
+}
+
+run_sdcc_compile_h8k64u() {
+    source_file=$1
+    output_file=${2:-"${BUILD_DIR}/$(basename "${source_file}" .c)-h8k64u.rel"}
+
+    echo "== sdcc h8k64u: ${source_file}"
+    sdcc -mmcs51 --std-sdcc11 \
+        -DSTC8H_CHIP_STC8H1K08=0 \
+        -DSTC8H_CHIP_STC8H8K64U=1 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${output_file}" "${source_file}"
+}
+
 extract_sdcc_function_body() {
     asm_file=$1
     function_name=$2
