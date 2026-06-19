@@ -170,11 +170,12 @@ OTA 核心 API 必须传输无关。RS485 只作为第一版示例传输，基�
 - `drivers/drv_rs485_uart.*` 提供薄半双工 UART 方向控制 wrapper，通过 `BOARD_RS485_TX_ENABLE()` / `BOARD_RS485_RX_ENABLE()` 由板级控制 DE/RE。
 - `protocols/proto_ota_frame.*` 提供传输无关 OTA 帧 build/parse、CRC16、地址过滤、重复序号上报和 STATUS 回包命令。
 - `examples/platformio/h8k64u_rs485_ota_bootloader` 接入 UART2/RS485、应用区 IAP、参数区 IAP、OTA 状态机和高地址 bootloader 布局。
+- `examples/platformio/h8k64u_uart3_ota_passthrough` 使用 UART3 验证 433 透明串口链路可承载同一 OTA frame，并返回 STATUS 帧。
 - UART 当前仍是轮询 API，OTA bootloader 第一版继续使用轮询，避免中断和应用向量表耦合。
 
 当前缺口：
 
-- 还没有 433MHz 串口透传验证示例。
+- 还没有真实 433 模块空口丢包、延时和重试参数验证。
 - 还没有真实硬件上的 RS485 方向时序、IAP 写入和断电恢复验证。
 
 ### 9.2 传输适配层边界
@@ -241,6 +242,7 @@ RS485 示例必须覆盖：
 - 默认使用 `BOARD_RF433_UART`，当前 H8K64U 板级配置为 UART3。
 - 复用与 RS485 相同的 OTA 帧格式和 OTA 核心 API。
 - 不需要 DE/RE 控制。
+- `h8k64u_uart3_ota_passthrough` 只验证 UART3 透明串口收发 OTA frame 和 STATUS 回包，不执行 IAP 写擦。
 - 因无线链路丢包更高，建议更小 chunk、更长超时、更保守重试。
 - 433 串口透传不复用 `proto_rf_link`；它只复用 OTA payload 帧。
 

@@ -114,6 +114,7 @@ Keil C51 验证按模块进行。每个已实现模块至少完成 Keil C51 编�
 | `h8k64u_wdt_feed` | STC8H8K64U WDT 编译和后续硬件验证 |
 | `h8k64u_ota_min_app` | STC8H8K64U OTA 应用链接基址 `0x0200` 和启动后 mark-valid 调用位置编译验证 |
 | `h8k64u_rs485_ota_bootloader` | STC8H8K64U RS485 OTA bootloader 高地址链接、参数区不重叠和构建验证 |
+| `h8k64u_uart3_ota_passthrough` | STC8H8K64U UART3/433 透明串口 OTA frame 收发编译验证，不执行 IAP 写擦 |
 
 ## 5. 资源占用测试
 
