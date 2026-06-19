@@ -56,3 +56,38 @@ stc8h_status_t stc8h_ota_validate_manifest(const stc8h_ota_manifest_t *manifest)
 
     return STC8H_OK;
 }
+
+stc8h_ota_boot_action_t stc8h_ota_get_boot_action(const stc8h_ota_params_t *params)
+{
+    if (params == 0) {
+        return STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER;
+    }
+
+    if ((params->param_magic != STC8H_OTA_PARAM_MAGIC) ||
+        (params->param_version != STC8H_OTA_PARAM_VERSION)) {
+        return STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER;
+    }
+
+    if (stc8h_ota_validate_app_range(params->app_base, params->app_size) != STC8H_OK) {
+        return STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER;
+    }
+
+    if (params->update_pending != 0u) {
+        return STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER;
+    }
+
+    if (params->app_valid != 0u) {
+        return STC8H_OTA_BOOT_ACTION_JUMP_APP;
+    }
+
+    if ((params->state == STC8H_OTA_STATE_COMMITTED) && (params->boot_attempted == 0u)) {
+        return STC8H_OTA_BOOT_ACTION_TRIAL_APP;
+    }
+
+    return STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER;
+}
+
+stc8h_u8 stc8h_ota_should_enter_bootloader(const stc8h_ota_params_t *params)
+{
+    return (stc8h_ota_get_boot_action(params) == STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER) ? 1u : 0u;
+}

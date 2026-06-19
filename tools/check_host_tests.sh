@@ -487,6 +487,7 @@ run_c_test "tests/host/test_nrf24_pair_diag_logic.c"
 run_c_test "tests/host/test_proto_rf_link_address_space.c"
 run_c_test_h8k64u "tests/host/test_stc8h_ota_core.c"
 run_c_test_h8k64u "tests/host/test_stc8h_ota_format.c"
+run_c_test_h8k64u "tests/host/test_stc8h_ota_params.c"
 run_c_test "tests/host/test_util_crc32.c"
 run_trim_compile_checks
 
