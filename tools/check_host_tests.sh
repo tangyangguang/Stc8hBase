@@ -546,6 +546,58 @@ EOF
     fi
 }
 
+run_iap_ota_params_compile_checks() {
+    tmp_dir="${BUILD_DIR}/iap-ota-params-checks"
+
+    rm -rf "${tmp_dir}"
+    mkdir -p "${tmp_dir}"
+
+    echo "== sdcc h8k64u: OTA parameter IAP backend"
+    cat > "${tmp_dir}/iap_ota_params_h8k64u.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 0
+#define STC8H_CHIP_STC8H8K64U 1
+#define STC8H_IAP_OTA_PARAMS_ENABLE 1
+#include "${ROOT_DIR}/hal/stc8h_iap_ota_params.c"
+EOF
+    sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/iap_ota_params_h8k64u.rel" "${tmp_dir}/iap_ota_params_h8k64u.c"
+
+    echo "== sdcc expect fail: OTA parameter IAP rejects STC8H1K08"
+    cat > "${tmp_dir}/iap_ota_params_wrong_chip.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#define STC8H_IAP_OTA_PARAMS_ENABLE 1
+#include "${ROOT_DIR}/hal/stc8h_iap_ota_params.c"
+EOF
+    if sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/iap_ota_params_wrong_chip.rel" "${tmp_dir}/iap_ota_params_wrong_chip.c" \
+        > "${tmp_dir}/iap_ota_params_wrong_chip.log" 2>&1; then
+        echo "OTA parameter IAP backend compiled for STC8H1K08" >&2
+        exit 1
+    fi
+
+    echo "== sdcc expect fail: OTA parameter IAP rejects moved record A"
+    cat > "${tmp_dir}/iap_ota_params_moved_a.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 0
+#define STC8H_CHIP_STC8H8K64U 1
+#define STC8H_IAP_OTA_PARAMS_ENABLE 1
+#define STC8H_IAP_OTA_PARAM_A_BASE 0xFA00u
+#include "${ROOT_DIR}/hal/stc8h_iap_ota_params.c"
+EOF
+    if sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/iap_ota_params_moved_a.rel" "${tmp_dir}/iap_ota_params_moved_a.c" \
+        > "${tmp_dir}/iap_ota_params_moved_a.log" 2>&1; then
+        echo "OTA parameter IAP backend accepted moved record A" >&2
+        exit 1
+    fi
+}
+
 run_rs485_uart_compile_checks() {
     tmp_dir="${BUILD_DIR}/rs485-uart-checks"
 
@@ -592,6 +644,7 @@ run_c_test_h8k64u "tests/host/test_stc8h_ota_params.c"
 run_c_test "tests/host/test_util_crc32.c"
 run_trim_compile_checks
 run_iap_program_compile_checks
+run_iap_ota_params_compile_checks
 run_rs485_uart_compile_checks
 
 echo "host tests passed"
