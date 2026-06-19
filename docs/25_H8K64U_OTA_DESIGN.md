@@ -106,9 +106,9 @@ ESP32 云端下载/验签/暂存完整固件
 - 测试板通过 `stcgal` 识别为 `STC8H8K64U`，当前 `program_eeprom_split=65024`，即代码区到 `0xFDFF`，只有 `0xFE00..0xFFFF` 512 字节属于 EEPROM/IAP 区。
 - 在该配置下，UART1 OTA 验证 bootloader 可以启动并接收 OTA 帧。修正 manifest 结构体整体赋值问题后，PC smoke 脚本发送 `BEGIN` 时 STC 侧正确保留 `app_size=8178`，随后在擦除 `0x0200` 应用区时返回 `ERASE` 失败。
 - 该失败不是 RS485/UART 帧协议问题，而是当前芯片持久化 Flash/IAP 分区不允许 IAP 改写 `0x0200` 应用区。
-- 经授权将测试芯片改为 `program_eeprom_split=512` 后，UART1 smoke 的 `BEGIN/WRITE/VERIFY/COMMIT` 可走到更后阶段；但无论直接跳转还是软件复位后 trial jump，OTA 写入的 app 尚未能从 `0x0200` 执行并打印验证 banner。
+- 经授权将测试芯片改为 `program_eeprom_split=512` 后，UART1 smoke 的 `BEGIN/WRITE/VERIFY/COMMIT` 可完成；修复 PC smoke 对 COMMIT 后串口余量的丢弃问题后，OTA 写入的 app 已能从 `0x0200` trial boot 并打印 `APP-ENTRY` 和应用 banner。
 - 对照实验：同一个 app 加 `0x0000 -> 0x0200` reset vector 后通过 ISP 直接烧录，在 `program_eeprom_split=512` 下可以正常打印 `H8K64U OTA app v1.0.0`。因此 app 入口、UART 初始化和 `0x0200` 执行本身成立，失败集中在“由用户 bootloader 通过 IAP 写入的内容是否成为 CPU 可执行代码”这一点。
-- 因此，当前不能再把“bootloader 直接 IAP 写应用区”作为已验证最佳方案；正式方案必须增加一个验证阶段，比较两条路线：`A.` STC8H 专用高地址搬移器，把已接收镜像按官方 EEPROM/IAP 语义搬移到可执行区；`B.` ESP32 触发 STC 原厂 BSL/ISP 并代理下载协议。未通过硬件闭环前，基础库只能宣称传输无关 OTA 状态机、manifest、帧协议和 EEPROM/IAP 数据写入验证能力，不能宣称完整应用 OTA。
+- 因此，在 `program_eeprom_split=512` 这类允许 IAP 覆盖应用区的生产配置下，“bootloader 直接 IAP 写单应用区”已通过 UART1 最小硬件闭环验证，可作为当前推荐路线继续完善。ESP32 代理原厂 BSL/ISP 仍保留为生产/救援备选方案，不再作为当前主线。
 - 修改 `program_eeprom_split` 是芯片持久化配置变更，会改变 code/EEPROM 边界，必须单独评审可执行区、bootloader 区、参数区和救援路径后再执行，不得在普通 smoke 测试中自动修改。
 - SDCC/8051 实现中不得依赖结构体整体赋值保存 OTA manifest；本库已将 `stc8h_ota_begin()` 中的 manifest 保存改为字段复制，避免生成 generic `memcpy` 后在 XDATA/`--stack-auto` 场景下丢失 `app_size`。
 
@@ -117,13 +117,15 @@ ESP32 云端下载/验签/暂存完整固件
 - 根据官方手册，`IAP_CONTR.SWRST` 为 B5，`IAP_CONTR=0x20` 表示软件复位后从用户程序区执行；`IAP_CONTR=0x60` 表示软件复位后进入 ISP 区。
 - IAP 后端已增加 `STC8H_IAP_PROGRAM_FLASH_BASE` / `STC8H_IAP_OTA_PARAMS_FLASH_BASE`，把 CPU 代码地址转换为 STC IAP 相对地址，避免把 `0x0200` 这类 CPU 地址直接写入 IAP 地址寄存器。
 - 修正地址转换后，UART1 smoke 的 `BEGIN/WRITE/VERIFY/COMMIT` 仍可完成；bootloader 用 `MOVC` 从 `0x0200` 读取到应用镜像开头 `02 02 06 02`，和 SDCC app 的跳转入口一致。
-- 但在当前验证板上，直接跳转、提交后软件复位再 trial jump 仍未观察到应用 banner。因此“首字节可见 + IAP readback CRC 正确”还不足以证明完整应用可执行。
+- 早期 UART1 smoke 未观察到应用 banner 的原因已定位为 PC 侧 `read_status()` 在返回 COMMIT 状态帧时丢弃同一批串口 read 中的后续 `BOOT/APP-ENTRY` 文本，不是 STC 侧应用未执行。
 - bootloader 示例已改为更稳妥的提交模型：`COMMIT` 只提交参数记录并回 OK，随后软件复位；复位后的 bootloader 根据参数区决定是否 trial boot，并在跳应用前关闭中断、恢复 `SP=0x07`。这个模型适合正式方案，但硬件闭环仍需继续验证。
 - `h8k64u_soft_reset_probe` 已在实物上验证 `IAP_CONTR=0x20` 软件复位有效：程序打印复位前 banner 后触发软件复位，复位后再次从用户程序入口运行。
 - 临时增加的 bootloader 读码窗口曾验证 `MOVC` 视角下 `0x0200` 应用区完整内容与 PC 侧 OTA 镜像一致；但该诊断命令会把 UART1 bootloader 代码推入 `0xFC00..0xFFFF` 参数区，不能保留为正式能力。
 - 在移除临时读码窗口后，UART1 bootloader 重新编译的最高代码相关符号为 `s_XINIT=0xFB9D`，未进入 `0xFC00..0xFFFF` 参数区。
-- 用 `STC8H8K64U_entry_probe` 重新执行 UART1 smoke，`BEGIN/WRITE/VERIFY/COMMIT` 完成，commit 时读到应用入口 `02020602`，但仍未收到 `APP-ENTRY`。该结果再次确认当前阻塞点不是传输协议或软件复位，而是 IAP 写入内容的取指执行闭环。
-- 目前最关键的能力边界是：软件复位有效，IAP/MOVC 读回也可一致，但仍未证明“用户 bootloader 通过 IAP 写入的应用区”可被 CPU 取指执行。后续不得继续扩大 API；应先做最小可复现实验，隔离 STC IAP 写入区的取指执行规则。
+- `h8k64u_iap_exec_probe` 已验证最小取指：bootloader 通过 IAP 把 10 字节 8051 原生机器码写入 `0x0200`，IAP readback 与 `MOVC` 均为 `C2997599583099FD80FE`，直接跳转后输出 `X`。
+- 修复 UART1 smoke 的串口余量保留后，用 `STC8H8K64U_entry_probe` 重新执行完整 OTA，`BEGIN/WRITE/VERIFY/COMMIT` 完成，commit code probe 为 `02020602`，随后收到 `BOOT`、`APP-ENTRY` 和 `H8K64U OTA app v1.0.0`。
+- 用 `STC8H8K64U_mark_valid_iap` 重新执行完整 OTA，应用镜像 7923 字节、CRC32 为 `0xC327AA47`，COMMIT 后进入应用并打印 `H8K64U OTA app v1.0.0`；随后通过串口控制线复位，仍能看到 `BOOT` 后跳转应用，说明 `mark_app_valid` 持久化路径在当前测试板上成立。
+- 当前最关键的技术边界已从“能否取指执行”转为“如何把该闭环固化为生产可控流程”：生产烧录必须固定正确的 code/EEPROM split，bootloader 体积必须持续由 map 检查约束，RS485 方向时序、断电恢复和多从机重试仍需实物验证。
 
 建议逻辑分区：
 
@@ -624,12 +626,13 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - 已验证 UART1 bootloader 上电输出 `BOOT`，说明 reset stub 可以进入高地址 bootloader。
 - 已验证 UART1 OTA frame、manifest decode 和状态回包链路；STC 侧能正确解析 `app_size=8178`。
 - 已验证当前 `0.5KB EEPROM` split 下，`BEGIN` 擦除 `0x0200` 应用区失败并返回 `ERASE`；完整 OTA 验收暂停在“应用区 IAP 写入前置配置未满足”。
-- 已验证将测试芯片改为 `program_eeprom_split=512` 后，直接 ISP 烧录的 `0x0200` app 可执行；但同一 app 经 UART1 bootloader/IAP 写入后未能执行，说明当前直接 IAP 写应用区方案仍缺关键机制。
+- 已验证将测试芯片改为 `program_eeprom_split=512` 后，直接 ISP 烧录的 `0x0200` app 可执行；修复 PC smoke 串口余量丢弃问题后，同一 app 经 UART1 bootloader/IAP 写入后也能 trial boot 并打印验证 banner。
 - 已验证官方软件复位路径：`h8k64u_soft_reset_probe` 使用 `IAP_CONTR=0x20` 后能重新从用户程序入口运行，说明当前“提交后软件复位”机制本身不是主要阻塞点。
-- 已用临时诊断证明 `MOVC` 读码视角下 OTA 写入后的应用区可与镜像逐字节一致；但这仍不能等价证明 CPU 取指可执行。
+- 已用 `h8k64u_iap_exec_probe` 证明 IAP 写入的 `0x0200` 代码不仅可被 `MOVC` 读回，也可被 CPU 直接取指执行。
 - 已确认临时读码诊断会导致 bootloader 代码接近或进入参数区，正式 UART1/RS485 bootloader 必须继续由 map 检查禁止代码符号进入 `0xFC00..0xFFFF`。
-- 已复测 `STC8H8K64U_entry_probe`：app 镜像 425 字节，CRC32 为 `0xC3AD8B43`，UART1 bootloader commit code probe 为 `02020602`，但应用入口 banner 未出现，smoke 以 `app did not print expected validation banner` 结束。
-- 下一步若要继续完整硬件 OTA 验证，不应继续堆叠状态机改动，而应先做最小可复现实验：用固定字节序列分别通过 ISP 和 IAP 写入目标区，再用 `MOVC`、直接跳转、复位 trial boot 分别验证读码视图和取指视图；随后决定采用高地址搬移器、官方用户 ISP 模式，还是 ESP32 代理原厂 BSL/ISP。
+- 已复测 `STC8H8K64U_entry_probe`：app 镜像 425 字节，CRC32 为 `0xC3AD8B43`，UART1 bootloader commit code probe 为 `02020602`，随后输出 `BOOT`、`APP-ENTRY` 和 `H8K64U OTA app v1.0.0`，UART1 OTA smoke 通过。
+- 已复测 `STC8H8K64U_mark_valid_iap`：app 镜像 7923 字节，CRC32 为 `0xC327AA47`，UART1 OTA smoke 通过；应用调用 `stc8h_boot_mark_app_valid()` 后，复位仍能经 bootloader 跳转应用。
+- 下一步应从“证明能启动”转入“证明可恢复”：RS485 实物方向时序、掉电/复位中断、参数区 A/B 损坏、错误固件拒绝和多从机重试都必须继续做硬件验收。
 
 第二阶段：ESP32 集成。
 
@@ -676,6 +679,33 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - 在业务协议中只负责把 OTA payload 可靠送到 STC OTA API。
 - 在进入 OTA 前停止普通控制命令，并调用板级安全关闭逻辑。
 
+可同步给应用项目的当前口径：
+
+```text
+Stc8hBase 会提供 STC8H8K64U-45I-LQFP48 专用 Bootloader OTA 基础能力，不做 STC8H 全系列通用 OTA。
+
+基础库侧负责：
+- 固定 boot stub + 高地址 bootloader 布局。
+- manifest/frame/params 的规范化编解码。
+- 单应用区 IAP 擦写、CRC32 校验、commit、trial boot、mark_app_valid 和 recovery。
+- payload 级 OTA frame，传输无关；RS485、普通 UART、433 透明串口都应复用同一套 payload/frame。
+- RS485/UART 示例和边界检查，不实现灌溉业务协议、不实现 Modbus 业务表。
+
+应用项目侧负责：
+- ESP32 下载、验签/hash、暂存完整 STC 固件。
+- RS485 总线寻址、重试、超时、升级窗口、结果上报。
+- 进入 OTA 前停止业务命令并关闭所有危险输出。
+- 生成从 0x0200 链接的 STC OTA 应用镜像，大小不得超过基础库定义的应用区上限。
+- 生产烧录时确保 STC8H8K64U 的 code/EEPROM split 允许 bootloader IAP 覆盖应用区。
+
+当前不提供：
+- STC 内部 A/B 双镜像或真正 rollback。
+- bootloader 自升级。
+- STC 侧 HTTPS/签名验签。
+- SPI/寄存器型 433 支持。
+- 应用项目私有 Flash/IAP 分块写入协议。
+```
+
 ## 21. 当前待确认问题
 
 实现前仍需确认：
@@ -703,7 +733,7 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 主要风险：
 
 - IAP/EEPROM 生产配置错误会导致 OTA 不可用。
-- IAP 读回正确不等于 CPU 一定能从该区域取指执行；这是当前实物验证中未闭环的最大技术风险。
+- IAP 写应用区依赖生产时正确配置 code/EEPROM split；若 split 仍为 `0xFE00` 只保留 0.5KB EEPROM，则应用 OTA 会在擦写应用区时失败。
 - 低地址向量和应用链接地址必须一次设计清楚。
 - bootloader 体积必须严格控制。
 - 单应用区方案升级失败时旧应用不可继续运行。

@@ -172,31 +172,30 @@ def parse_frame(frame, local_addr):
     }
 
 
-def read_status(ser, seq, request_cmd, timeout):
+def read_status(ser, seq, request_cmd, timeout, rx_buf):
     deadline = time.time() + timeout
-    buf = bytearray()
     while time.time() < deadline:
         data = ser.read(256)
         if data:
-            buf.extend(data)
-        while len(buf) >= FRAME_OVERHEAD:
-            if buf[0] != SOF[0]:
-                del buf[0]
+            rx_buf.extend(data)
+        while len(rx_buf) >= FRAME_OVERHEAD:
+            if rx_buf[0] != SOF[0]:
+                del rx_buf[0]
                 continue
-            if len(buf) >= 2 and buf[1] != SOF[1]:
-                del buf[0]
+            if len(rx_buf) >= 2 and rx_buf[1] != SOF[1]:
+                del rx_buf[0]
                 continue
-            if len(buf) < 14:
+            if len(rx_buf) < 14:
                 break
-            payload_len = struct.unpack_from("<H", buf, 12)[0]
+            payload_len = struct.unpack_from("<H", rx_buf, 12)[0]
             total_len = FRAME_OVERHEAD + payload_len
             if payload_len > FRAME_PAYLOAD_MAX:
-                del buf[0]
+                del rx_buf[0]
                 continue
-            if len(buf) < total_len:
+            if len(rx_buf) < total_len:
                 break
-            raw = bytes(buf[:total_len])
-            del buf[:total_len]
+            raw = bytes(rx_buf[:total_len])
+            del rx_buf[:total_len]
             frame = parse_frame(raw, HOST_ADDR)
             if frame is None:
                 continue
@@ -209,10 +208,12 @@ def read_status(ser, seq, request_cmd, timeout):
     raise TimeoutError(f"timeout waiting status for seq {seq}")
 
 
-def send_command(ser, seq, cmd, offset=0, payload=b"", timeout=3.0):
+def send_command(ser, seq, cmd, offset=0, payload=b"", timeout=3.0, rx_buf=None):
+    if rx_buf is None:
+        rx_buf = bytearray()
     ser.write(build_frame(LOCAL_ADDR, HOST_ADDR, cmd, seq, offset, payload))
     ser.flush()
-    status = read_status(ser, seq, cmd, timeout)
+    status = read_status(ser, seq, cmd, timeout, rx_buf)
     if status[1] != STATUS_OK:
         reason_name = FAIL_REASON_NAMES.get(status[3], "UNKNOWN")
         extra = ""
@@ -269,31 +270,33 @@ def main():
     with serial.Serial(args.port, args.baud, timeout=0.05, write_timeout=2) as ser:
         wait_boot_banner(ser)
         ser.reset_input_buffer()
+        rx_buf = bytearray()
         seq = 1
         print("ota begin")
-        send_command(ser, seq, CMD_BEGIN, payload=manifest, timeout=8.0)
+        send_command(ser, seq, CMD_BEGIN, payload=manifest, timeout=8.0, rx_buf=rx_buf)
         seq += 1
 
         offset = 0
         while offset < len(image):
             chunk = image[offset:offset + args.chunk]
-            send_command(ser, seq, CMD_WRITE_BLOCK, offset=offset, payload=chunk, timeout=3.0)
+            send_command(ser, seq, CMD_WRITE_BLOCK, offset=offset, payload=chunk, timeout=3.0, rx_buf=rx_buf)
             offset += len(chunk)
             seq += 1
             if offset % 1024 == 0 or offset == len(image):
                 print(f"wrote {offset}/{len(image)}")
 
         print("ota verify")
-        send_command(ser, seq, CMD_VERIFY, timeout=8.0)
+        send_command(ser, seq, CMD_VERIFY, timeout=8.0, rx_buf=rx_buf)
         seq += 1
 
         print("ota commit")
-        commit_status = send_command(ser, seq, CMD_COMMIT, timeout=8.0)
+        commit_status = send_command(ser, seq, CMD_COMMIT, timeout=8.0, rx_buf=rx_buf)
         if len(commit_status) >= 8:
             print(f"commit code probe: {commit_status[4:8].hex()}")
 
         end = time.time() + 6.0
-        text = bytearray()
+        text = bytearray(rx_buf)
+        rx_buf.clear()
         while time.time() < end:
             data = ser.read(256)
             if data:
