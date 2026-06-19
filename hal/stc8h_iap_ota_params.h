@@ -11,6 +11,10 @@
 #define STC8H_IAP_OTA_PARAM_A_BASE 0xFC00u
 #endif
 
+#ifndef STC8H_IAP_OTA_PARAMS_FLASH_BASE
+#define STC8H_IAP_OTA_PARAMS_FLASH_BASE 0x0200u
+#endif
+
 #ifndef STC8H_IAP_OTA_PARAM_B_BASE
 #define STC8H_IAP_OTA_PARAM_B_BASE 0xFE00u
 #endif
@@ -33,8 +37,22 @@
 #error "STC8H_IAP_OTA_PARAM_B_BASE must stay at 0xFE00."
 #endif
 
+#if STC8H_IAP_OTA_PARAMS_FLASH_BASE > STC8H_IAP_OTA_PARAM_A_BASE
+#error "STC8H_IAP_OTA_PARAMS_FLASH_BASE must be <= STC8H_IAP_OTA_PARAM_A_BASE."
+#endif
+
 #if STC8H_IAP_OTA_PARAM_SECTOR_SIZE != 512u
 #error "STC8H OTA parameter IAP backend currently assumes 512-byte erase sectors."
+#endif
+
+#if ((STC8H_IAP_OTA_PARAM_A_BASE - STC8H_IAP_OTA_PARAMS_FLASH_BASE) & \
+     (STC8H_IAP_OTA_PARAM_SECTOR_SIZE - 1u)) != 0u
+#error "STC8H_IAP_OTA_PARAM_A_BASE must be sector-aligned to STC8H_IAP_OTA_PARAMS_FLASH_BASE."
+#endif
+
+#if ((STC8H_IAP_OTA_PARAM_B_BASE - STC8H_IAP_OTA_PARAMS_FLASH_BASE) & \
+     (STC8H_IAP_OTA_PARAM_SECTOR_SIZE - 1u)) != 0u
+#error "STC8H_IAP_OTA_PARAM_B_BASE must be sector-aligned to STC8H_IAP_OTA_PARAMS_FLASH_BASE."
 #endif
 
 stc8h_status_t stc8h_iap_ota_params_erase(stc8h_u16 addr);

@@ -288,7 +288,9 @@ def main():
         seq += 1
 
         print("ota commit")
-        send_command(ser, seq, CMD_COMMIT, timeout=8.0)
+        commit_status = send_command(ser, seq, CMD_COMMIT, timeout=8.0)
+        if len(commit_status) >= 8:
+            print(f"commit code probe: {commit_status[4:8].hex()}")
 
         end = time.time() + 6.0
         text = bytearray()

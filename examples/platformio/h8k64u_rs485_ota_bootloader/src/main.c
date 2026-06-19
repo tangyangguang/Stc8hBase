@@ -5,12 +5,14 @@
 #include "stc8h_iap_program.h"
 #include "stc8h_ota.h"
 #include "stc8h_ota_params_store.h"
+#include "stc8h_sfr.h"
 
 #ifndef H8K64U_OTA_LOCAL_ADDR
 #define H8K64U_OTA_LOCAL_ADDR 0x22u
 #endif
 
 #define H8K64U_OTA_STATUS_PAYLOAD_LEN 4u
+#define H8K64U_OTA_IAP_CONTR_SWRST 0x20u
 
 typedef void (*h8k64u_ota_app_entry_t)(void);
 
@@ -40,7 +42,17 @@ static void boot_safe_outputs_off(void)
 
 static void boot_jump_to_app(void)
 {
+    EA = 0u;
+    SP = 0x07u;
     ((h8k64u_ota_app_entry_t)STC8H_BOOT_APP_BASE)();
+}
+
+static void boot_software_reset(void)
+{
+    EA = 0u;
+    IAP_CONTR = H8K64U_OTA_IAP_CONTR_SWRST;
+    while (1) {
+    }
 }
 
 static void boot_jump_existing_app_if_allowed(void)
@@ -159,9 +171,7 @@ static void boot_process_complete_frame(void)
                                PROTO_OTA_FRAME_STATUS_OK :
                                PROTO_OTA_FRAME_STATUS_ERROR);
         if ((status == STC8H_OK) && (frame.cmd == PROTO_OTA_FRAME_CMD_COMMIT)) {
-            if (stc8h_ota_params_store_mark_boot_attempted(&params_store) == STC8H_OK) {
-                boot_jump_to_app();
-            }
+            boot_software_reset();
         }
     } else if (parse_result == PROTO_OTA_FRAME_PARSE_DUPLICATE) {
         (void)boot_send_status(&frame, PROTO_OTA_FRAME_STATUS_DUPLICATE);

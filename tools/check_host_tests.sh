@@ -544,6 +544,23 @@ EOF
         echo "IAP program backend accepted bootloader overlap" >&2
         exit 1
     fi
+
+    echo "== sdcc expect fail: IAP program rejects flash base above app base"
+    cat > "${tmp_dir}/iap_program_bad_flash_base.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 0
+#define STC8H_CHIP_STC8H8K64U 1
+#define STC8H_IAP_PROGRAM_ENABLE 1
+#define STC8H_IAP_PROGRAM_FLASH_BASE 0x0400u
+#include "${ROOT_DIR}/hal/stc8h_iap_program.c"
+EOF
+    if sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/iap_program_bad_flash_base.rel" "${tmp_dir}/iap_program_bad_flash_base.c" \
+        > "${tmp_dir}/iap_program_bad_flash_base.log" 2>&1; then
+        echo "IAP program backend accepted flash base above app base" >&2
+        exit 1
+    fi
 }
 
 run_iap_ota_params_compile_checks() {
@@ -594,6 +611,23 @@ EOF
         -c -o "${tmp_dir}/iap_ota_params_moved_a.rel" "${tmp_dir}/iap_ota_params_moved_a.c" \
         > "${tmp_dir}/iap_ota_params_moved_a.log" 2>&1; then
         echo "OTA parameter IAP backend accepted moved record A" >&2
+        exit 1
+    fi
+
+    echo "== sdcc expect fail: OTA parameter IAP rejects flash base above record A"
+    cat > "${tmp_dir}/iap_ota_params_bad_flash_base.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 0
+#define STC8H_CHIP_STC8H8K64U 1
+#define STC8H_IAP_OTA_PARAMS_ENABLE 1
+#define STC8H_IAP_OTA_PARAMS_FLASH_BASE 0xFE00u
+#include "${ROOT_DIR}/hal/stc8h_iap_ota_params.c"
+EOF
+    if sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/iap_ota_params_bad_flash_base.rel" "${tmp_dir}/iap_ota_params_bad_flash_base.c" \
+        > "${tmp_dir}/iap_ota_params_bad_flash_base.log" 2>&1; then
+        echo "OTA parameter IAP backend accepted flash base above record A" >&2
         exit 1
     fi
 }

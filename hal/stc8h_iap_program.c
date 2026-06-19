@@ -39,6 +39,11 @@ static stc8h_u8 stc8h_iap_program_range_ok(stc8h_u16 addr, stc8h_u16 len)
     return STC8H_TRUE;
 }
 
+static stc8h_u16 stc8h_iap_program_to_iap_addr(stc8h_u16 addr)
+{
+    return (stc8h_u16)(addr - STC8H_IAP_PROGRAM_FLASH_BASE);
+}
+
 static void stc8h_iap_program_enable_cmd(stc8h_u8 cmd)
 {
     IAP_CONTR = STC8H_IAP_PROGRAM_ENABLE_BIT;
@@ -79,15 +84,18 @@ static void stc8h_iap_program_set_addr(stc8h_u16 addr)
 stc8h_status_t stc8h_iap_program_erase_sector(stc8h_u16 addr)
 {
     stc8h_status_t status;
+    stc8h_u16 iap_addr;
 
     if ((STC8H_IAP_TPS == 0u) ||
         (stc8h_iap_program_range_ok(addr, STC8H_IAP_PROGRAM_SECTOR_SIZE) == STC8H_FALSE) ||
-        ((addr & (STC8H_IAP_PROGRAM_SECTOR_SIZE - 1u)) != 0u)) {
+        (((stc8h_u16)(addr - STC8H_IAP_PROGRAM_FLASH_BASE) &
+          (STC8H_IAP_PROGRAM_SECTOR_SIZE - 1u)) != 0u)) {
         return STC8H_ERROR;
     }
 
+    iap_addr = stc8h_iap_program_to_iap_addr(addr);
     stc8h_iap_program_enable_cmd(STC8H_IAP_PROGRAM_CMD_ERASE);
-    stc8h_iap_program_set_addr(addr);
+    stc8h_iap_program_set_addr(iap_addr);
     status = stc8h_iap_program_trigger();
     stc8h_iap_program_disable();
 
@@ -109,7 +117,7 @@ stc8h_status_t stc8h_iap_program_write(stc8h_u16 addr,
     status = STC8H_OK;
     stc8h_iap_program_enable_cmd(STC8H_IAP_PROGRAM_CMD_WRITE);
     while ((len != 0u) && (status == STC8H_OK)) {
-        stc8h_iap_program_set_addr(addr);
+        stc8h_iap_program_set_addr(stc8h_iap_program_to_iap_addr(addr));
         IAP_DATA = *data;
         status = stc8h_iap_program_trigger();
         ++data;
@@ -136,7 +144,7 @@ stc8h_status_t stc8h_iap_program_read(stc8h_u16 addr,
     status = STC8H_OK;
     stc8h_iap_program_enable_cmd(STC8H_IAP_PROGRAM_CMD_READ);
     while ((len != 0u) && (status == STC8H_OK)) {
-        stc8h_iap_program_set_addr(addr);
+        stc8h_iap_program_set_addr(stc8h_iap_program_to_iap_addr(addr));
         status = stc8h_iap_program_trigger();
         *data = IAP_DATA;
         ++data;

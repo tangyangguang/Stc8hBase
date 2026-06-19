@@ -47,6 +47,11 @@ static stc8h_u8 stc8h_iap_ota_params_range_ok(stc8h_u16 addr, stc8h_u16 len)
     return stc8h_iap_ota_params_in_sector(addr, len, STC8H_IAP_OTA_PARAM_B_BASE);
 }
 
+static stc8h_u16 stc8h_iap_ota_params_to_iap_addr(stc8h_u16 addr)
+{
+    return (stc8h_u16)(addr - STC8H_IAP_OTA_PARAMS_FLASH_BASE);
+}
+
 static void stc8h_iap_ota_params_enable_cmd(stc8h_u8 cmd)
 {
     IAP_CONTR = STC8H_IAP_OTA_PARAMS_ENABLE_BIT;
@@ -94,7 +99,7 @@ stc8h_status_t stc8h_iap_ota_params_erase(stc8h_u16 addr)
     }
 
     stc8h_iap_ota_params_enable_cmd(STC8H_IAP_OTA_PARAMS_CMD_ERASE);
-    stc8h_iap_ota_params_set_addr(addr);
+    stc8h_iap_ota_params_set_addr(stc8h_iap_ota_params_to_iap_addr(addr));
     status = stc8h_iap_ota_params_trigger();
     stc8h_iap_ota_params_disable();
 
@@ -116,7 +121,7 @@ stc8h_status_t stc8h_iap_ota_params_write(stc8h_u16 addr,
     status = STC8H_OK;
     stc8h_iap_ota_params_enable_cmd(STC8H_IAP_OTA_PARAMS_CMD_WRITE);
     while ((len != 0u) && (status == STC8H_OK)) {
-        stc8h_iap_ota_params_set_addr(addr);
+        stc8h_iap_ota_params_set_addr(stc8h_iap_ota_params_to_iap_addr(addr));
         IAP_DATA = *data;
         status = stc8h_iap_ota_params_trigger();
         ++data;
@@ -143,7 +148,7 @@ stc8h_status_t stc8h_iap_ota_params_read(stc8h_u16 addr,
     status = STC8H_OK;
     stc8h_iap_ota_params_enable_cmd(STC8H_IAP_OTA_PARAMS_CMD_READ);
     while ((len != 0u) && (status == STC8H_OK)) {
-        stc8h_iap_ota_params_set_addr(addr);
+        stc8h_iap_ota_params_set_addr(stc8h_iap_ota_params_to_iap_addr(addr));
         status = stc8h_iap_ota_params_trigger();
         *data = IAP_DATA;
         ++data;

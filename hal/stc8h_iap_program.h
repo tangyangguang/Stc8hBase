@@ -11,6 +11,10 @@
 #define STC8H_IAP_PROGRAM_APP_BASE 0x0200u
 #endif
 
+#ifndef STC8H_IAP_PROGRAM_FLASH_BASE
+#define STC8H_IAP_PROGRAM_FLASH_BASE STC8H_IAP_PROGRAM_APP_BASE
+#endif
+
 #ifndef STC8H_IAP_PROGRAM_APP_LIMIT
 #define STC8H_IAP_PROGRAM_APP_LIMIT 0xEFFFu
 #endif
@@ -29,6 +33,10 @@
 #error "STC8H_IAP_PROGRAM_APP_BASE must not overlap the boot stub."
 #endif
 
+#if STC8H_IAP_PROGRAM_FLASH_BASE > STC8H_IAP_PROGRAM_APP_BASE
+#error "STC8H_IAP_PROGRAM_FLASH_BASE must be <= STC8H_IAP_PROGRAM_APP_BASE."
+#endif
+
 #if STC8H_IAP_PROGRAM_APP_LIMIT >= 0xF000u
 #error "STC8H_IAP_PROGRAM_APP_LIMIT must not overlap bootloader or parameter records."
 #endif
@@ -39,6 +47,11 @@
 
 #if STC8H_IAP_PROGRAM_SECTOR_SIZE != 512u
 #error "STC8H IAP program backend currently assumes 512-byte erase sectors."
+#endif
+
+#if ((STC8H_IAP_PROGRAM_APP_BASE - STC8H_IAP_PROGRAM_FLASH_BASE) & \
+     (STC8H_IAP_PROGRAM_SECTOR_SIZE - 1u)) != 0u
+#error "STC8H_IAP_PROGRAM_APP_BASE must be sector-aligned to STC8H_IAP_PROGRAM_FLASH_BASE."
 #endif
 
 stc8h_status_t stc8h_iap_program_erase_sector(stc8h_u16 addr);

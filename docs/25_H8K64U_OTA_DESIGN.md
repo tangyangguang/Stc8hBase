@@ -112,6 +112,15 @@ ESP32 云端下载/验签/暂存完整固件
 - 修改 `program_eeprom_split` 是芯片持久化配置变更，会改变 code/EEPROM 边界，必须单独评审可执行区、bootloader 区、参数区和救援路径后再执行，不得在普通 smoke 测试中自动修改。
 - SDCC/8051 实现中不得依赖结构体整体赋值保存 OTA manifest；本库已将 `stc8h_ota_begin()` 中的 manifest 保存改为字段复制，避免生成 generic `memcpy` 后在 XDATA/`--stack-auto` 场景下丢失 `app_size`。
 
+2026-06-20 追加质量评审和硬件验证结论：
+
+- 根据官方手册，`IAP_CONTR.SWRST` 为 B5，`IAP_CONTR=0x20` 表示软件复位后从用户程序区执行；`IAP_CONTR=0x60` 表示软件复位后进入 ISP 区。
+- IAP 后端已增加 `STC8H_IAP_PROGRAM_FLASH_BASE` / `STC8H_IAP_OTA_PARAMS_FLASH_BASE`，把 CPU 代码地址转换为 STC IAP 相对地址，避免把 `0x0200` 这类 CPU 地址直接写入 IAP 地址寄存器。
+- 修正地址转换后，UART1 smoke 的 `BEGIN/WRITE/VERIFY/COMMIT` 仍可完成；bootloader 用 `MOVC` 从 `0x0200` 读取到应用镜像开头 `02 02 06 02`，和 SDCC app 的跳转入口一致。
+- 但在当前验证板上，直接跳转、提交后软件复位再 trial jump 仍未观察到应用 banner。因此“首字节可见 + IAP readback CRC 正确”还不足以证明完整应用可执行。
+- bootloader 示例已改为更稳妥的提交模型：`COMMIT` 只提交参数记录并回 OK，随后软件复位；复位后的 bootloader 根据参数区决定是否 trial boot，并在跳应用前关闭中断、恢复 `SP=0x07`。这个模型适合正式方案，但硬件闭环仍需继续验证。
+- 下一步不得继续扩大 API；应先做最小硬件实验：只验证 `IAP_CONTR=0x20` 是否能从当前 bootloader 复位回用户区、验证 `MOVC` 视角下整个 app 区 CRC 是否与镜像一致、验证极简 app 入口第一条可观察指令是否执行。
+
 建议逻辑分区：
 
 | 区域 | 建议范围 | 用途 |
