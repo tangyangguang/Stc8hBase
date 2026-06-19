@@ -477,6 +477,75 @@ EOF
         "drv_tm1637_display_raw4_data" "${tmp_dir}/tm1637_raw4_data.body"
 }
 
+run_iap_program_compile_checks() {
+    tmp_dir="${BUILD_DIR}/iap-program-checks"
+
+    rm -rf "${tmp_dir}"
+    mkdir -p "${tmp_dir}"
+
+    echo "== sdcc h8k64u: IAP program backend"
+    cat > "${tmp_dir}/iap_program_h8k64u.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 0
+#define STC8H_CHIP_STC8H8K64U 1
+#define STC8H_IAP_PROGRAM_ENABLE 1
+#include "${ROOT_DIR}/hal/stc8h_iap_program.c"
+EOF
+    sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/iap_program_h8k64u.rel" "${tmp_dir}/iap_program_h8k64u.c"
+
+    echo "== sdcc expect fail: IAP program rejects STC8H1K08"
+    cat > "${tmp_dir}/iap_program_wrong_chip.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#define STC8H_IAP_PROGRAM_ENABLE 1
+#include "${ROOT_DIR}/hal/stc8h_iap_program.c"
+EOF
+    if sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/iap_program_wrong_chip.rel" "${tmp_dir}/iap_program_wrong_chip.c" \
+        > "${tmp_dir}/iap_program_wrong_chip.log" 2>&1; then
+        echo "IAP program backend compiled for STC8H1K08" >&2
+        exit 1
+    fi
+
+    echo "== sdcc expect fail: IAP program rejects low app base"
+    cat > "${tmp_dir}/iap_program_low_base.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 0
+#define STC8H_CHIP_STC8H8K64U 1
+#define STC8H_IAP_PROGRAM_ENABLE 1
+#define STC8H_IAP_PROGRAM_APP_BASE 0x0100u
+#include "${ROOT_DIR}/hal/stc8h_iap_program.c"
+EOF
+    if sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/iap_program_low_base.rel" "${tmp_dir}/iap_program_low_base.c" \
+        > "${tmp_dir}/iap_program_low_base.log" 2>&1; then
+        echo "IAP program backend accepted low app base" >&2
+        exit 1
+    fi
+
+    echo "== sdcc expect fail: IAP program rejects bootloader overlap"
+    cat > "${tmp_dir}/iap_program_overlap.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 0
+#define STC8H_CHIP_STC8H8K64U 1
+#define STC8H_IAP_PROGRAM_ENABLE 1
+#define STC8H_IAP_PROGRAM_APP_LIMIT 0xF000u
+#include "${ROOT_DIR}/hal/stc8h_iap_program.c"
+EOF
+    if sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/iap_program_overlap.rel" "${tmp_dir}/iap_program_overlap.c" \
+        > "${tmp_dir}/iap_program_overlap.log" 2>&1; then
+        echo "IAP program backend accepted bootloader overlap" >&2
+        exit 1
+    fi
+}
+
 run_c_test "tests/host/test_drv_ec11_small.c"
 run_c_test "tests/host/test_drv_ec11_small_full_detent.c"
 run_c_test "tests/host/test_drv_ec11_small_isr.c"
@@ -490,5 +559,6 @@ run_c_test_h8k64u "tests/host/test_stc8h_ota_format.c"
 run_c_test_h8k64u "tests/host/test_stc8h_ota_params.c"
 run_c_test "tests/host/test_util_crc32.c"
 run_trim_compile_checks
+run_iap_program_compile_checks
 
 echo "host tests passed"
