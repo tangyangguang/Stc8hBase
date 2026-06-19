@@ -546,12 +546,43 @@ EOF
     fi
 }
 
+run_rs485_uart_compile_checks() {
+    tmp_dir="${BUILD_DIR}/rs485-uart-checks"
+
+    rm -rf "${tmp_dir}"
+    mkdir -p "${tmp_dir}"
+
+    echo "== sdcc: RS485 UART wrapper"
+    cat > "${tmp_dir}/rs485_uart.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 0
+#define STC8H_CHIP_STC8H8K64U 1
+#define STC8H_UART_ENABLE_UART2 1
+#define STC8H_UART2_BAUD 115200UL
+#define BOARD_RS485_TX_ENABLE() do { } while (0)
+#define BOARD_RS485_RX_ENABLE() do { } while (0)
+#include "${ROOT_DIR}/drivers/drv_rs485_uart.c"
+void main(void)
+{
+    stc8h_u8 byte;
+
+    byte = 0x55u;
+    (void)drv_rs485_uart_init(STC8H_UART2);
+    (void)drv_rs485_uart_write(STC8H_UART2, &byte, 1u);
+}
+EOF
+    sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/hal" -I"${ROOT_DIR}/drivers" \
+        -I"${ROOT_DIR}/protocols" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/rs485_uart.rel" "${tmp_dir}/rs485_uart.c"
+}
+
 run_c_test "tests/host/test_drv_ec11_small.c"
 run_c_test "tests/host/test_drv_ec11_small_full_detent.c"
 run_c_test "tests/host/test_drv_ec11_small_isr.c"
 run_c_test "tests/host/test_drv_nrf24l01_core.c"
 run_c_test "tests/host/test_drv_nrf24l01_timing.c"
 run_c_test "tests/host/test_drv_tm1637_address_space.c"
+run_c_test "tests/host/test_drv_rs485_uart.c"
 run_c_test "tests/host/test_nrf24_pair_diag_logic.c"
 run_c_test "tests/host/test_proto_ota_frame.c"
 run_c_test "tests/host/test_proto_rf_link_address_space.c"
@@ -561,5 +592,6 @@ run_c_test_h8k64u "tests/host/test_stc8h_ota_params.c"
 run_c_test "tests/host/test_util_crc32.c"
 run_trim_compile_checks
 run_iap_program_compile_checks
+run_rs485_uart_compile_checks
 
 echo "host tests passed"
