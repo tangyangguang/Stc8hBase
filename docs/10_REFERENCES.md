@@ -219,6 +219,7 @@ https://github.com/IOsetting/stc8prog
 https://www.nxp.com/docs/en/application-note/AN10764.pdf
 https://docs.mcuboot.com/design.html
 https://interrupt.memfault.com/blog/device-firmware-update-cookbook
+https://memfault.com/blog/ota-testing-101-the-ultimate-guide/
 ```
 
 用途：
@@ -227,6 +228,7 @@ https://interrupt.memfault.com/blog/device-firmware-update-cookbook
 - 核对 STC 官方对 IAP 系列、用户自定义 ISP、程序空间可改写和 Flash 分区的描述。
 - 判断官方 STC-ISP/BSL 是否适合作为产品 OTA 基础。
 - 吸收成熟 DFU/bootloader 方案对镜像 metadata、状态提交、失败恢复和 bootloader 边界的设计经验。
+- 吸收 OTA 真实环境测试对断电、坏镜像、回滚/恢复、分阶段发布和可观测性的要求。
 
 吸收结论：
 
@@ -236,6 +238,8 @@ https://interrupt.memfault.com/blog/device-firmware-update-cookbook
 - 第一版 OTA 基础能力只支持 `STC8H8K64U-45I-LQFP48`，采用 ESP32 暂存完整固件、STC 单应用区 IAP 写入、CRC 校验和永久 bootloader 恢复。
 - STC 侧不做 HTTPS、JSON、压缩或复杂签名验签；这些能力由 ESP32 负责。
 - bootloader 区、boot stub/向量区和参数区不得被普通 OTA 擦写。
+- 第一版单应用区方案只能提供 recovery/retry，不能描述为真正 rollback；真正 rollback 需要双应用区或外部暂存区。
+- OTA 验收必须覆盖 chunk 丢失、重复、乱序、CRC 错误、断电恢复、坏应用启动和关闭编译零占用。
 
 不直接采用的点：
 

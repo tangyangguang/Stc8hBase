@@ -56,6 +56,7 @@ ESP32 云端下载/验签/暂存完整固件
 - STC 侧做分帧 CRC16 和整包 CRC32。
 - ESP32 侧做固件签名或 hash 校验。
 - RS485 作为第一版参考传输链路。
+- OTA 核心按 payload 级 API 设计，不绑定 RS485、Modbus 或业务协议。
 - 升级失败后 bootloader 可重新接收完整固件。
 
 第一版明确不支持：
@@ -65,6 +66,7 @@ ESP32 云端下载/验签/暂存完整固件
 - 不支持 STC 内部 A/B 双应用区。
 - 不支持 STC 侧 HTTPS、证书、JSON、压缩或复杂签名验签。
 - 不支持 bootloader 自升级。
+- 不支持单应用区上的真正 rollback；第一版只提供 recovery/retry。
 - 不支持普通应用在未编译 OTA 模块时产生任何 ROM/RAM/外设占用。
 
 ## 5. 能力边界
@@ -80,6 +82,7 @@ ESP32 云端下载/验签/暂存完整固件
 - 分块写入状态机。
 - CRC16、CRC32 小工具。
 - RS485 bootloader 最小示例和验证文档。
+- 进入 OTA/bootloader 前的板级安全关闭钩子声明和调用点。
 
 ### 5.2 ESP32 或应用项目负责
 
@@ -90,6 +93,7 @@ ESP32 云端下载/验签/暂存完整固件
 - 控制 STC 进入升级模式。
 - 超时重试、断点恢复和升级结果上报。
 - 业务升级窗口选择。
+- 具体业务输出关闭实现，例如电磁阀、水泵、继电器、PWM 或电机输出。
 
 ## 6. Flash/IAP 规划
 
@@ -134,6 +138,8 @@ boot stub 固定持有复位和中断向量。中断处理有两种可选实现�
 
 ## 9. RS485 升级协议
 
+OTA 核心 API 必须传输无关。RS485 只作为第一版示例传输，基础库不实现灌溉业务协议、不实现 Modbus，也不假设帧来自 UART。应用项目可以把 RS485、UART、RF 或其他总线收到的 payload 喂给 OTA API。
+
 RS485 使用主从模式。ESP32 是主站，STC 是从站。STC 只响应目标地址匹配的帧，不主动发起升级。
 
 建议帧格式：
@@ -159,6 +165,14 @@ SOF | proto_ver | dst_addr | src_addr | cmd | seq | offset | len | payload | crc
 
 第一版 payload 建议为 64 或 128 字节。STC 侧不得依赖大缓冲。
 
+第一版 chunk 策略：
+
+- 只支持顺序写入。
+- `offset` 必须等于当前 `write_offset`，否则拒绝。
+- 允许重复发送当前 chunk；重复 chunk 必须与已接收数据一致，否则拒绝。
+- 不支持乱序写入。
+- 断点恢复由 ESP32 通过 `READ_STATUS` 获取 `write_offset` 后继续发送。
+
 最小命令集：
 
 | 命令 | 方向 | 作用 |
@@ -178,21 +192,35 @@ SOF | proto_ver | dst_addr | src_addr | cmd | seq | offset | len | payload | crc
 
 ESP32 下载的固件包应包含 manifest，不应只传裸二进制。
 
-建议字段：
+STC 侧 manifest 字段分为强制字段和可裁剪字段。强制字段必须出现在第一版实现中。
+
+强制字段：
 
 ```text
 magic
 format_version
 target_chip = STC8H8K64U
+board_id
+hw_revision
+app_id
 app_base = 0x0200
 app_size
 app_crc32
 version_major
 version_minor
 version_patch
-build_id
 min_bootloader_version
-payload
+flags
+manifest_crc
+```
+
+可裁剪字段：
+
+```text
+build_id
+release_channel
+compat_flags
+image_hash
 signature
 ```
 
@@ -200,10 +228,16 @@ ESP32 必须先校验 `signature` 或 hash。STC 侧只检查：
 
 - `magic`
 - `target_chip`
+- `board_id`
+- `hw_revision`
+- `app_id`
 - `app_base`
 - `app_size`
 - `app_crc32`
 - `min_bootloader_version`
+- `manifest_crc`
+
+`image_hash` 和 `signature` 默认由 ESP32 校验。第一版不要求 STC 侧计算 hash 或验证签名。
 
 ## 11. Boot 参数区
 
@@ -273,6 +307,12 @@ BOOT_ERROR
 
 `COMMIT` 之前不得设置 `app_valid=1`。
 
+应用启动健康确认：
+
+- `COMMIT` 后 bootloader 可启动新应用，但新应用必须在完成早期自检和输出安全初始化后调用应用有效标记能力。
+- 若新应用未在约定条件下标记有效，下一次复位时 bootloader 应进入 recovery 等待 ESP32 重新升级。
+- 第一版不恢复旧应用，因为单应用区已覆盖旧固件；这里的恢复语义是重新进入 bootloader 接收固件。
+
 ## 13. 失败恢复
 
 必须覆盖：
@@ -285,10 +325,10 @@ BOOT_ERROR
 | 写入中断电 | 下次上电停留 bootloader，ESP32 重新升级 |
 | 写完但 CRC32 错 | 不提交，保持 bootloader |
 | COMMIT 前断电 | 不认为应用有效，保持 bootloader |
-| COMMIT 后应用启动失败 | 应用未完成健康确认时，下次 bootloader 回到升级等待 |
+| COMMIT 后应用启动失败 | 应用未完成健康确认时，下次 bootloader 进入 recovery 等待 |
 | 低电压或电源不稳 | 拒绝擦写，返回错误 |
 
-由于第一版不做内部 A/B，升级期间旧应用不可用。恢复依赖 bootloader 永久保留和 ESP32 持有完整固件包。
+由于第一版不做内部 A/B，升级期间旧应用不可用。恢复依赖 bootloader 永久保留和 ESP32 持有完整固件包。文档和 API 中不得把该能力描述为 rollback，应描述为 recovery 或 retry。
 
 ## 14. 安全策略
 
@@ -315,7 +355,49 @@ BOOT_ERROR
 - 供电检测由 ESP32 或 STC 侧低电压检测承担；电源不稳时不得 IAP 写擦。
 - 下载串口/USB ISP 仍应保留为生产和救援通道。
 
-## 16. 基础库落点
+## 16. 候选最小 API
+
+候选 API 只表达能力边界，最终命名和参数类型在实现计划中确认。API 必须保持小、稳定、可裁剪。
+
+```c
+stc8h_ota_init()
+stc8h_ota_should_enter_bootloader()
+stc8h_ota_begin(manifest)
+stc8h_ota_write_chunk(offset, data, len)
+stc8h_ota_verify()
+stc8h_ota_commit()
+stc8h_ota_abort()
+stc8h_ota_get_status()
+stc8h_ota_mark_app_valid()
+```
+
+API 边界：
+
+- `stc8h_ota_write_chunk()` 接收 payload，不关心 payload 来自 RS485、UART、RF 还是其他链路。
+- `stc8h_ota_begin()` 只接受已由上层完成传输帧校验后的 manifest。
+- `stc8h_ota_commit()` 只在整包 CRC32 通过后成功。
+- `stc8h_ota_abort()` 清理接收状态，但不得擦写 bootloader、boot stub 或参数保留区。
+- `stc8h_ota_mark_app_valid()` 由新应用在早期健康确认后调用。
+- 未启用 OTA 构建时，上述 API 不声明、不编译。
+
+## 17. 业务安全输出边界
+
+OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状态。基础库只定义机制，不包含灌溉业务逻辑。
+
+基础库提供：
+
+- bootloader 进入 OTA 前调用板级安全关闭钩子的固定时机。
+- OTA 状态查询能力，应用可据此拒绝业务命令。
+- 示例中演示如何在进入 bootloader 前关闭 GPIO/PWM 输出。
+
+业务项目负责：
+
+- 定义哪些输出需要关闭。
+- 实现板级安全关闭函数。
+- 在 ESP32 主控侧暂停对目标从站的普通控制命令。
+- 在新应用启动早期先初始化输出到安全态，再标记 app valid。
+
+## 18. 基础库落点
 
 建议后续实现时拆为：
 
@@ -335,7 +417,7 @@ BOOT_ERROR
 - 地址、分区、从机地址和引脚必须编译期显式配置。
 - 公共 API 不暴露 Keil/SDCC 专属类型。
 
-## 17. 验收计划
+## 19. 验收计划
 
 第一阶段：PC 模拟 ESP32。
 
@@ -347,7 +429,10 @@ BOOT_ERROR
 - CRC 错误不会 commit。
 - app 超过分区会拒绝。
 - 目标芯片不匹配会拒绝。
+- `board_id`、`hw_revision` 或 `app_id` 不匹配会拒绝。
+- chunk 丢失、重复、乱序均能检测或按设计处理。
 - bootloader 区不会被擦写。
+- OTA 关闭编译时不引入 OTA API、CRC、IAP 程序区写入符号或全局缓冲。
 
 第二阶段：ESP32 集成。
 
@@ -369,7 +454,31 @@ BOOT_ERROR
 - 不同固件大小边界测试。
 - 参数区双份记录掉电测试。
 
-## 18. 当前待确认问题
+## 20. 应用方需求映射
+
+应用方提出的合理需求应吸收为基础库边界：
+
+- 传输无关 OTA 核心。
+- 上层喂入 manifest 和 chunk。
+- 基础库负责状态机、镜像校验、IAP 写入、commit 和 recovery。
+- OTA 期间业务输出保持安全态。
+- 未启用 OTA 时零占用。
+
+应用方提出但基础库不承诺的能力：
+
+- 不承诺 STC8H 全系列通用 OTA。
+- 不承诺单应用区 rollback 到旧应用。
+- 不承诺 STC 侧签名验签、HTTPS、hash 或云端版本策略。
+- 不承诺基础库实现 RS485/Modbus/灌溉业务协议。
+
+应用项目必须调整自己的 OTA 设计：
+
+- 把 ESP32 作为下载、验签、暂存、重试和上报主体。
+- 把 STC 从站 OTA 视为 payload 级写入和 recovery 机制。
+- 在业务协议中只负责把 OTA payload 可靠送到 STC OTA API。
+- 在进入 OTA 前停止普通控制命令，并调用板级安全关闭逻辑。
+
+## 21. 当前待确认问题
 
 实现前仍需确认：
 
@@ -380,7 +489,7 @@ BOOT_ERROR
 - 应用最大可接受代码空间是多少，是否允许 bootloader 占用 4KB 到 8KB。
 - 生产烧录工具是否能固定配置 IAP/EEPROM 覆盖程序空间。
 
-## 19. 评审结论
+## 22. 评审结论
 
 从专业角度看，`ESP32 暂存完整固件 + STC8H8K64U 专用 IAP bootloader + 单应用区可恢复升级` 是当前场景的推荐方案。
 
@@ -399,5 +508,6 @@ BOOT_ERROR
 - bootloader 体积必须严格控制。
 - 单应用区方案升级失败时旧应用不可继续运行。
 - 参数区必须做双份掉电保护。
+- 应用方如果需要真正 rollback，必须增加外部暂存区或改为双应用区，不能由当前单区方案隐式满足。
 
 第一版应坚持范围收敛，先完成可恢复、可验证、可维护的最小 OTA 基础能力。
