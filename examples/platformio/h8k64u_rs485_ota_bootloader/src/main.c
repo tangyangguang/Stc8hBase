@@ -6,6 +6,7 @@
 #include "stc8h_ota.h"
 #include "stc8h_ota_params_store.h"
 #include "stc8h_sfr.h"
+#include "util_crc32.h"
 
 #ifndef H8K64U_OTA_LOCAL_ADDR
 #define H8K64U_OTA_LOCAL_ADDR 0x22u
@@ -13,6 +14,7 @@
 
 #define H8K64U_OTA_STATUS_PAYLOAD_LEN 4u
 #define H8K64U_OTA_IAP_CONTR_SWRST 0x20u
+#define H8K64U_OTA_READ_CHUNK_SIZE 16u
 
 typedef void (*h8k64u_ota_app_entry_t)(void);
 
@@ -55,6 +57,37 @@ static void boot_software_reset(void)
     }
 }
 
+static stc8h_u8 boot_app_crc_matches(const stc8h_ota_params_t *params)
+{
+    static STC8H_XDATA stc8h_u8 buffer[H8K64U_OTA_READ_CHUNK_SIZE];
+    stc8h_u32 offset;
+    stc8h_u32 remaining;
+    stc8h_u32 crc;
+    stc8h_u16 read_len;
+
+    if (params == 0) {
+        return 0u;
+    }
+
+    offset = 0UL;
+    remaining = params->app_size;
+    crc = 0UL;
+    while (remaining != 0UL) {
+        read_len = (remaining > H8K64U_OTA_READ_CHUNK_SIZE) ?
+                   H8K64U_OTA_READ_CHUNK_SIZE : (stc8h_u16)remaining;
+        if (app_backend.read((stc8h_u16)((stc8h_u32)params->app_base + offset),
+                             buffer,
+                             read_len) != STC8H_OK) {
+            return 0u;
+        }
+        crc = util_crc32_ieee_update(crc, buffer, read_len);
+        offset += read_len;
+        remaining -= read_len;
+    }
+
+    return (crc == params->app_crc32) ? 1u : 0u;
+}
+
 static void boot_jump_existing_app_if_allowed(void)
 {
     static STC8H_XDATA stc8h_ota_params_t params;
@@ -65,6 +98,12 @@ static void boot_jump_existing_app_if_allowed(void)
     }
 
     action = stc8h_ota_get_boot_action(&params);
+    if (action == STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER) {
+        return;
+    }
+    if (boot_app_crc_matches(&params) == 0u) {
+        return;
+    }
     if (action == STC8H_OTA_BOOT_ACTION_JUMP_APP) {
         boot_jump_to_app();
     }

@@ -1,7 +1,7 @@
 Import("env")
 
 
-RESET_STUB_RECORD = ":0300000002B80043"
+RESET_STUB_RECORD = ":0300000002B40047"
 
 
 def _record_range(line):

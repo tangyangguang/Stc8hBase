@@ -125,6 +125,7 @@ ESP32 云端下载/验签/暂存完整固件
 - `h8k64u_iap_exec_probe` 已验证最小取指：bootloader 通过 IAP 把 10 字节 8051 原生机器码写入 `0x0200`，IAP readback 与 `MOVC` 均为 `C2997599583099FD80FE`，直接跳转后输出 `X`。
 - 修复 UART1 smoke 的串口余量保留后，用 `STC8H8K64U_entry_probe` 重新执行完整 OTA，`BEGIN/WRITE/VERIFY/COMMIT` 完成，commit code probe 为 `02020602`，随后收到 `BOOT`、`APP-ENTRY` 和 `H8K64U OTA app v1.0.0`。
 - 用 `STC8H8K64U_mark_valid_iap` 重新执行完整 OTA，应用镜像 7923 字节、CRC32 为 `0xC327AA47`，COMMIT 后进入应用并打印 `H8K64U OTA app v1.0.0`；随后通过串口控制线复位，仍能看到 `BOOT` 后跳转应用，说明 `mark_app_valid` 持久化路径在当前测试板上成立。
+- UART1/RS485 bootloader 示例已在跳转应用前按参数区记录重新读取应用区并计算 CRC32；只有 CRC32 匹配时才允许正常跳转或 trial 跳转，避免仅凭参数区有效就执行损坏应用。
 - 当前最关键的技术边界已从“能否取指执行”转为“如何把该闭环固化为生产可控流程”：生产烧录必须固定正确的 code/EEPROM split，bootloader 体积必须持续由 map 检查约束，RS485 方向时序、断电恢复和多从机重试仍需实物验证。
 
 建议逻辑分区：
@@ -132,15 +133,15 @@ ESP32 云端下载/验签/暂存完整固件
 | 区域 | 建议范围 | 用途 |
 |---|---:|---|
 | Boot stub / 向量区 | `0x0000..0x01FF` | 复位入口、中断跳转表、进入 bootloader 或 app |
-| Application 区 | `0x0200..0xB7FF` | 可 OTA 更新的业务固件 |
-| Bootloader 区 | `0xB800..0xFBFF` | RS485 升级协议、IAP 写入、CRC、状态机 |
+| Application 区 | `0x0200..0xB3FF` | 可 OTA 更新的业务固件 |
+| Bootloader 区 | `0xB400..0xFBFF` | RS485 升级协议、IAP 写入、CRC、状态机 |
 | Boot 参数区 | `0xFC00..0xFFFF` | 双份升级状态、版本、长度、CRC、有效标志、失败原因 |
 
-以上地址为当前已编译验证的实现基线。最初评审曾尝试保留应用区到 `0xEFFF`，但带 RS485 帧、CRC32、IAP、双参数记录和状态回包的 bootloader 不能可靠放入 `0xF000..0xFBFF`。当前 `h8k64u_rs485_ota_bootloader` 通过 `--code-loc 0xB800` 链接，`tools/check_examples.sh` 会检查 reset stub 在 `0x0000`、bootloader `s_HOME` 在 `0xB800`，并禁止代码符号进入 `0xFC00..0xFFFF` 参数区。
+以上地址为当前已编译验证的实现基线。最初评审曾尝试保留应用区到 `0xEFFF`，随后收敛到 `0xB7FF`；加入 bootloader 跳转前 CRC32 校验后，为避免代码逼近或进入 `0xFC00..0xFFFF` 参数区，当前基线进一步收缩到 `0xB3FF`。当前 `h8k64u_rs485_ota_bootloader` 通过 `--code-loc 0xB400` 链接，`tools/check_examples.sh` 会检查 reset stub 在 `0x0000`、bootloader `s_HOME` 在 `0xB400`，并禁止代码符号进入 `0xFC00..0xFFFF` 参数区。
 
 注意：上述逻辑分区还必须和 STC ISP 下载时的 code/EEPROM split 兼容。若 split 仍为 `0xFE00`，则 IAP 只能覆盖顶部 512 字节，`Application 区` 不可由 bootloader 自写。后续如果将 split 下移到覆盖应用区，需要重新确认 bootloader 是否仍可执行、参数区是否仍可写、ISP 生产烧录是否能稳定写入 bootloader，以及官方/工具链对 code 区和 EEPROM/IAP 区的执行语义。
 
-应用镜像大小上限相应调整为 `0xB600` 字节，即 `0x0200..0xB7FF`。应用项目生成 OTA manifest 时必须使用相同的 `app_base/app_size` 边界；超过该范围的镜像应在 ESP32 侧拒绝下发，并会被 STC 侧 manifest/IAP 边界检查拒绝。
+应用镜像大小上限相应调整为 `0xB200` 字节，即 `0x0200..0xB3FF`。应用项目生成 OTA manifest 时必须使用相同的 `app_base/app_size` 边界；超过该范围的镜像应在 ESP32 侧拒绝下发，并会被 STC 侧 manifest/IAP 边界检查拒绝。
 
 ## 7. 启动流程
 
@@ -623,7 +624,7 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 
 当前硬件验证状态：
 
-- 已验证 UART1 验证 bootloader 的 reset vector 真实写入 hex：`firmware.hex` 必须包含 `:0300000002B80043`，否则 map 中看到 reset stub 不代表烧录镜像真的包含 `0x0000 -> 0xB800` 跳转。
+- 已验证 UART1 验证 bootloader 的 reset vector 真实写入 hex：`firmware.hex` 必须包含 `:0300000002B40047`，否则 map 中看到 reset stub 不代表烧录镜像真的包含 `0x0000 -> 0xB400` 跳转。
 - 已验证 UART1 bootloader 上电输出 `BOOT`，说明 reset stub 可以进入高地址 bootloader。
 - 已验证 UART1 OTA frame、manifest decode 和状态回包链路；STC 侧能正确解析 `app_size=8178`。
 - 已验证当前 `0.5KB EEPROM` split 下，`BEGIN` 擦除 `0x0200` 应用区失败并返回 `ERASE`；完整 OTA 验收暂停在“应用区 IAP 写入前置配置未满足”。

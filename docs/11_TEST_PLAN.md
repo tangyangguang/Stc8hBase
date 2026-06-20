@@ -161,10 +161,10 @@ docs/RESOURCE_REPORT.md
 - 每个示例记录参与编译的 `.c` 文件清单。
 - 每个示例检查 map 文件或符号表，未使用模块的符号前缀不应出现。
 - `h8k64u_ota_min_app` 默认环境和 `STC8H8K64U_mark_valid_iap` 环境都必须检查 map 文件中 `s_HOME` 位于 `0x0200`，且 `_main` 不得链接到 `0x0000..0x01FF`。
-- `h8k64u_ota_min_app` 的 PlatformIO flash 上限按当前 OTA 内存图限制为 `46592` 字节，对应应用区 `0x0200..0xB7FF`。
+- `h8k64u_ota_min_app` 的 PlatformIO flash 上限按当前 OTA 内存图限制为 `45568` 字节，对应应用区 `0x0200..0xB3FF`。
 - `h8k64u_ota_min_app` 默认环境只验证应用侧调用顺序：先完成安全输出初始化和 UART 初始化，再调用 mark-valid hook，不执行参数区写入。
 - `h8k64u_ota_min_app` 的 `STC8H8K64U_mark_valid_iap` 环境会编译真实 `0xFC00/0xFE00` 参数区 mark-valid IAP 接入路径；该环境仍只做构建验证，真实烧录运行前必须确认测试板参数区可写擦。
-- `h8k64u_rs485_ota_bootloader` 必须检查 map 文件中 reset stub 位于 `0x0000`，`s_HOME` 位于 `0xB800`，且代码符号不得落入 `0xFC00..0xFFFF` 参数区。
+- `h8k64u_rs485_ota_bootloader` 必须检查 map 文件中 reset stub 位于 `0x0000`，`s_HOME` 位于 `0xB400`，且代码符号不得落入 `0xFC00..0xFFFF` 参数区。
 - 单个简单示例不应因为引入基础库框架产生明显无关代码。
 
 ### 6.3 UART 验收

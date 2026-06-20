@@ -81,12 +81,12 @@ STC8H1K08 项目通过 PlatformIO wrapper 接入 `proto_rf_link` 时，不要在
 
 ```text
 0x0000..0x01FF  boot stub / reset vector
-0x0200..0xB7FF  OTA application
-0xB800..0xFBFF  bootloader
+0x0200..0xB3FF  OTA application
+0xB400..0xFBFF  bootloader
 0xFC00..0xFFFF  dual OTA parameter records
 ```
 
-应用项目生成 OTA 镜像时必须从 `0x0200` 链接，且 manifest 的 `app_size` 不能超过 `0xB600` 字节。ESP32 侧负责云端下载、验签、暂存完整镜像、总线重试和业务升级窗口；基础库侧提供 manifest/frame/params 编解码、状态机、IAP backend、RS485 bootloader 示例和边界检查。
+应用项目生成 OTA 镜像时必须从 `0x0200` 链接，且 manifest 的 `app_size` 不能超过 `0xB200` 字节。ESP32 侧负责云端下载、验签、暂存完整镜像、总线重试和业务升级窗口；基础库侧提供 manifest/frame/params 编解码、状态机、IAP backend、RS485 bootloader 示例和边界检查。
 
 OTA 应用启动后必须先把业务输出初始化到安全态，再标记 app valid。基础库提供两类参考构建：
 

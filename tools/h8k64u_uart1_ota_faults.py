@@ -217,7 +217,7 @@ def main():
 
         def case_oversized_manifest():
             nonlocal seq
-            bad = mutate_manifest(manifest, 15, (0xB700).to_bytes(4, "little"))
+            bad = mutate_manifest(manifest, 15, (0xB300).to_bytes(4, "little"))
             expect_status("oversized app", send_command(ser, seq, smoke.CMD_BEGIN, payload=bad,
                                                         timeout=3.0, rx_buf=rx_buf),
                           STATUS_ERROR, STATE_FAILED, FAIL_MANIFEST)

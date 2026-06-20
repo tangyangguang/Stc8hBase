@@ -124,7 +124,7 @@ PY
         exit 1
     fi
 
-    if ! grep -qx ':0300000002B80043' "${ROOT_DIR}/${hex_file}"; then
+    if ! grep -qx ':0300000002B40047' "${ROOT_DIR}/${hex_file}"; then
         echo "OTA bootloader reset stub is not present in ${hex_file}" >&2
         exit 1
     fi
@@ -135,13 +135,13 @@ found = False
 with open(sys.argv[1], "r", encoding="utf-8", errors="ignore") as fh:
     for line in fh:
         parts = line.split()
-        if len(parts) >= 3 and parts[0] == "C:" and parts[1] == "0000B800" and parts[2] == "s_HOME":
+        if len(parts) >= 3 and parts[0] == "C:" and parts[1] == "0000B400" and parts[2] == "s_HOME":
             found = True
             break
 raise SystemExit(0 if found else 1)
 PY
     then
-        echo "OTA bootloader HOME area is not linked at 0xB800 in ${map_file}" >&2
+        echo "OTA bootloader HOME area is not linked at 0xB400 in ${map_file}" >&2
         exit 1
     fi
 

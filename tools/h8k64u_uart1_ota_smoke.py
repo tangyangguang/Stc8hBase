@@ -15,7 +15,7 @@ APP_DIR = ROOT / "examples/platformio/h8k64u_ota_min_app"
 BOOT_DIR = ROOT / "examples/platformio/h8k64u_uart1_ota_bootloader"
 
 APP_BASE = 0x0200
-APP_LIMIT = 0xB7FF
+APP_LIMIT = 0xB3FF
 LOCAL_ADDR = 0x22
 HOST_ADDR = 0xA5
 
