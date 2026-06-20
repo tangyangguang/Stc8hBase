@@ -204,7 +204,8 @@ OTA 核心 API 必须传输无关。RS485 只作为第一版示例传输，基�
 当前缺口：
 
 - 还没有真实 433 模块空口丢包、延时和重试参数验证。
-- 还没有真实硬件上的 RS485 方向时序、IAP 写入和断电恢复验证。
+- 还没有真实 RS485 收发器上的 DE/RE 方向时序、总线冲突和多从机重试验证。
+- 还没有真实断电切电场景下的参数区 A/B 恢复验证；当前只完成了串口控制复位和协议级中断/错误恢复验证。
 
 ### 9.2 传输适配层边界
 
@@ -632,7 +633,8 @@ OTA 期间从站必须拒绝业务运行命令，并保证输出处于安全状�
 - 已确认临时读码诊断会导致 bootloader 代码接近或进入参数区，正式 UART1/RS485 bootloader 必须继续由 map 检查禁止代码符号进入 `0xFC00..0xFFFF`。
 - 已复测 `STC8H8K64U_entry_probe`：app 镜像 425 字节，CRC32 为 `0xC3AD8B43`，UART1 bootloader commit code probe 为 `02020602`，随后输出 `BOOT`、`APP-ENTRY` 和 `H8K64U OTA app v1.0.0`，UART1 OTA smoke 通过。
 - 已复测 `STC8H8K64U_mark_valid_iap`：app 镜像 7923 字节，CRC32 为 `0xC327AA47`，UART1 OTA smoke 通过；应用调用 `stc8h_boot_mark_app_valid()` 后，复位仍能经 bootloader 跳转应用。
-- 下一步应从“证明能启动”转入“证明可恢复”：RS485 实物方向时序、掉电/复位中断、参数区 A/B 损坏、错误固件拒绝和多从机重试都必须继续做硬件验收。
+- 已新增并通过 `tools/h8k64u_uart1_ota_faults.py` UART1 硬件故障/恢复测试。该测试在没有 RS485 收发器时复用同一 OTA frame/manifest/核心状态机，覆盖坏帧 CRC 超时、错目标地址忽略、错误 target_chip、错误 app_base、超大 app_size、未写完即 VERIFY、未来 offset、重复 seq、重复 chunk 幂等、重复 chunk 内容不一致、整包 CRC32 错误、ABORT、128 字节 chunk 完整升级、16 字节 chunk 完整升级。
+- 当前“协议级可恢复”和“单应用区 IAP 写入/校验/commit/trial boot”已在 UART1 实物链路上闭环；下一步硬件验收重点转为真实 RS485 收发器 DE/RE 时序、总线电气、多从机寻址/重试、真实掉电中断和参数区 A/B 单页损坏恢复。
 
 第二阶段：ESP32 集成。
 
