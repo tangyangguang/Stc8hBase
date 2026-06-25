@@ -983,15 +983,16 @@ PlatformIO intel_mcs51 / SDCC 4.4.0
 
 设计取舍：
 
-- `util_crc` 第一版只处理 RAM 数据指针。
+- `util_crc16_modbus` 保持 DATA 输入指针 API。
+- `util_crc16_modbus_xdata` 为可选 XDATA 输入指针 API，由 `UTIL_CRC16_MODBUS_ENABLE_XDATA` 控制，默认关闭。
 - CRC16/MODBUS 使用逐位算法，不使用查表常量。
-- 不做 CRC 参数对象、运行期多项式选择或反射配置。
+- 不做 CRC 参数对象、泛型指针、函数指针、运行期多项式选择或反射配置。
 
 资源占用：
 
 | 项目 | 结果 |
 | --- | --- |
-| ROM/EPROM/FLASH | 646 bytes |
+| ROM/EPROM/FLASH | 652 bytes |
 | Stack start | 0x19 |
 | Internal RAM 边界 | 栈从 0x19 开始，当前静态/参数/overlay 占用到 0x18 |
 | DATA buffer | 示例使用 9 字节测试数据 |
@@ -1025,10 +1026,14 @@ _stc8h_uart_write_code
 未使用模块检查：
 
 - 已检查 PlatformIO 构建产物，未发现 Timer0、`stc8h_interrupt`、I2C、LCD1602、`drv_button`、`drv_ec11`、`stc8h_adc`、SPI、EEPROM、TM1637、IR、ring buffer、soft timer、filter 或除法/取模库符号。
+- `UTIL_CRC16_MODBUS_ENABLE_XDATA` 默认关闭时不导出 `util_crc16_modbus_xdata`，不引入 XDATA 版函数的 ROM/RAM 占用。
+- 开启 `UTIL_CRC16_MODBUS_ENABLE_XDATA` 时额外编译一个逐位 CRC16/MODBUS 函数；不使用查表常量，不分配全局 DATA/XDATA/PDATA，不占用外设、中断或定时器。
 
 验证状态：
 
-- 已完成宿主机标准向量测试：`"123456789"` 的 `checksum8=0xDD`，`crc16_modbus=0x4B37`。
+- 已完成宿主机标准向量测试：`"123456789"` 的 `checksum8=0xDD`，`crc16_modbus=0x4B37`，`crc16_modbus_xdata=0x4B37`；空数据 CRC16/MODBUS 为 `0xFFFF`。
+- 已完成默认关闭裁剪检查：未导出 `util_crc16_modbus_xdata`。
+- 已完成 SDCC XDATA API 编译检查：未发现 generic pointer helper。
 - 已完成 SDCC 编译和资源检查。
 - 已烧录实测通过：串口 115200 连续输出 `crc ok`。
 - 等待烧录实测。

@@ -36,3 +36,28 @@ stc8h_u16 util_crc16_modbus(const STC8H_DATA stc8h_u8 *data, stc8h_u16 len)
 
     return crc;
 }
+
+#if UTIL_CRC16_MODBUS_ENABLE_XDATA
+stc8h_u16 util_crc16_modbus_xdata(const STC8H_XDATA stc8h_u8 *data, stc8h_u16 len)
+{
+    stc8h_u16 crc;
+    stc8h_u8 i;
+
+    crc = 0xFFFFu;
+    while (len != 0u) {
+        crc ^= *data;
+        ++data;
+        --len;
+
+        for (i = 0u; i < 8u; ++i) {
+            if ((crc & 0x0001u) != 0u) {
+                crc = (stc8h_u16)((crc >> 1) ^ 0xA001u);
+            } else {
+                crc >>= 1;
+            }
+        }
+    }
+
+    return crc;
+}
+#endif

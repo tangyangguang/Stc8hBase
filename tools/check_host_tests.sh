@@ -31,6 +31,46 @@ run_c_test_h8k64u() {
     "${output_file}"
 }
 
+run_util_crc_compile_checks() {
+    tmp_dir="${BUILD_DIR}/util-crc-checks"
+
+    rm -rf "${tmp_dir}"
+    mkdir -p "${tmp_dir}"
+
+    echo "== trim: util crc default no xdata api"
+    cat > "${tmp_dir}/util_crc_default.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#include "${ROOT_DIR}/utils/util_crc.c"
+EOF
+    cc -std=c89 -Wall -Wextra -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/utils" \
+        -c "${tmp_dir}/util_crc_default.c" -o "${tmp_dir}/util_crc_default.o"
+    if nm "${tmp_dir}/util_crc_default.o" | grep -q 'util_crc16_modbus_xdata'; then
+        echo "util_crc16_modbus_xdata emitted when UTIL_CRC16_MODBUS_ENABLE_XDATA is off" >&2
+        exit 1
+    fi
+
+    echo "== sdcc: util crc xdata api"
+    cat > "${tmp_dir}/util_crc_xdata.c" <<EOF
+#define STC8H_CHIP_STC8H1K08 1
+#define STC8H_CHIP_STC8H8K64U 0
+#define UTIL_CRC16_MODBUS_ENABLE_XDATA 1
+#include "${ROOT_DIR}/utils/util_crc.c"
+static STC8H_XDATA stc8h_u8 bytes[2] = {0x12u, 0x34u};
+void main(void)
+{
+    (void)util_crc16_modbus_xdata(bytes, 2u);
+}
+EOF
+    sdcc -mmcs51 --std-sdcc11 \
+        -I"${ROOT_DIR}/core" -I"${ROOT_DIR}/utils" \
+        -c -o "${tmp_dir}/util_crc_xdata.rel" "${tmp_dir}/util_crc_xdata.c"
+    check_no_gptr_in_body \
+        "${tmp_dir}/util_crc_xdata.asm" \
+        "util_crc16_modbus_xdata" \
+        "${tmp_dir}/util_crc_xdata.body"
+}
+
 run_sdcc_compile_h8k64u() {
     source_file=$1
     output_file=${2:-"${BUILD_DIR}/$(basename "${source_file}" .c)-h8k64u.rel"}
@@ -675,7 +715,9 @@ run_c_test "tests/host/test_proto_rf_link_address_space.c"
 run_c_test_h8k64u "tests/host/test_stc8h_ota_core.c"
 run_c_test_h8k64u "tests/host/test_stc8h_ota_format.c"
 run_c_test_h8k64u "tests/host/test_stc8h_ota_params.c"
+run_c_test "tests/host/test_util_crc.c"
 run_c_test "tests/host/test_util_crc32.c"
+run_util_crc_compile_checks
 run_trim_compile_checks
 run_iap_program_compile_checks
 run_iap_ota_params_compile_checks
