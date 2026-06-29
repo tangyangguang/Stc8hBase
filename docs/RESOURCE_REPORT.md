@@ -6,7 +6,7 @@
 
 - 基础库按“只编译实际使用的 `.c` 文件”控制 ROM/RAM 占用。
 - 日常快检入口为 `tools/check_examples.sh`，覆盖 host 单元测试、代表性 PlatformIO 示例和 Makefile 示例。
-- 完整发布前验证入口为 `tools/check_examples_full.sh`，覆盖全部 PlatformIO 示例、专项编译/符号检查、OTA 链接布局检查和保留示例尺寸 guard。
+- 完整发布前验证入口为 `tools/check_examples_full.sh`，覆盖全部 PlatformIO 示例、少量高风险编译检查和 OTA 链接布局检查。
 - EEPROM/IAP 写擦示例默认只做安全构建；真实写擦必须先确认测试地址和硬件影响。
 
 ## 最近一次验证
@@ -28,6 +28,6 @@
 - ROM/RAM 关键数字。
 - 参与编译的核心 `.c` 文件。
 - 使用的外设、中断、Timer、GPIO。
-- 必须保留的 map/sym 检查。
+- 必须保留的布局或符号检查。
 
 不要把完整命令输出、临时失败过程、插件计划步骤或硬件调试流水账写入本文件。

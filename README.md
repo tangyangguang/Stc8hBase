@@ -82,7 +82,7 @@ Stc8hBase/
 tools/check_examples.sh
 ```
 
-发布前全量示例构建和关键符号检查：
+发布前全量示例构建和关键布局检查：
 
 ```sh
 tools/check_examples_full.sh
