@@ -8,9 +8,6 @@ static void safe_outputs_init(void)
 
 void main(void)
 {
-#if H8K64U_OTA_MIN_APP_EARLY_MARKER
-    stc8h_uart_write_code(STC8H_UART1, "APP-ENTRY\r\n");
-#endif
     safe_outputs_init();
     (void)stc8h_uart_init(STC8H_UART1);
     (void)stc8h_boot_mark_app_valid();

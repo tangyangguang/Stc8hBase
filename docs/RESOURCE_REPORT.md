@@ -19,6 +19,8 @@
 - `docs/11_TEST_PLAN.md` 和 `docs/13_RESOURCE_POLICY.md` 已压缩为入口、准入和资源原则；一次性 UART1 OTA fault 脚本已删除。
 - `nrf24_pair_diag` 自动 matrix 诊断示例和配套 host 测试已删除，保留 `nrf24_uart_diag`、`nrf24_fixed_ping`、`nrf24_ack_payload` 三个直接示例。
 - `tools/check_host_tests.sh` 改为日常快检集合；OTA 状态机、nRF24 ACK/dynamic payload 和 RF-link 地址空间测试转入 `tools/check_host_tests_full.sh`。
+- `delay_us_probe`、`h8k64u_soft_reset_probe`、`h8k64u_iap_exec_probe` 一次性 probe 示例已删除；长期硬件验证只保留文档清单和正式示例入口。
+- `h8k64u_ota_min_app` 删除内部 `entry_probe` 环境，默认只构建非写擦应用；mark-valid IAP 路径由 full 检查显式构建。
 
 ## 资源记录规则
 
