@@ -137,7 +137,7 @@ ESP32 云端下载/验签/暂存完整固件
 | Bootloader 区 | `0xB400..0xFBFF` | RS485 升级协议、IAP 写入、CRC、状态机 |
 | Boot 参数区 | `0xFC00..0xFFFF` | 双份升级状态、版本、长度、CRC、有效标志、失败原因 |
 
-以上地址为当前已编译验证的实现基线。最初评审曾尝试保留应用区到 `0xEFFF`，随后收敛到 `0xB7FF`；加入 bootloader 跳转前 CRC32 校验后，为避免代码逼近或进入 `0xFC00..0xFFFF` 参数区，当前基线进一步收缩到 `0xB3FF`。当前 `h8k64u_rs485_ota_bootloader` 通过 `--code-loc 0xB400` 链接，`tools/check_examples.sh` 会检查 reset stub 在 `0x0000`、bootloader `s_HOME` 在 `0xB400`，并禁止代码符号进入 `0xFC00..0xFFFF` 参数区。
+以上地址为当前已编译验证的实现基线。最初评审曾尝试保留应用区到 `0xEFFF`，随后收敛到 `0xB7FF`；加入 bootloader 跳转前 CRC32 校验后，为避免代码逼近或进入 `0xFC00..0xFFFF` 参数区，当前基线进一步收缩到 `0xB3FF`。当前 `h8k64u_rs485_ota_bootloader` 通过 `--code-loc 0xB400` 链接，`tools/check_examples_full.sh` 会检查 reset stub 在 `0x0000`、bootloader `s_HOME` 在 `0xB400`，并禁止代码符号进入 `0xFC00..0xFFFF` 参数区。
 
 注意：上述逻辑分区还必须和 STC ISP 下载时的 code/EEPROM split 兼容。若 split 仍为 `0xFE00`，则 IAP 只能覆盖顶部 512 字节，`Application 区` 不可由 bootloader 自写。后续如果将 split 下移到覆盖应用区，需要重新确认 bootloader 是否仍可执行、参数区是否仍可写、ISP 生产烧录是否能稳定写入 bootloader，以及官方/工具链对 code 区和 EEPROM/IAP 区的执行语义。
 

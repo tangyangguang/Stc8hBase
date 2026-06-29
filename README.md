@@ -76,10 +76,16 @@ Stc8hBase/
 - CRC/checksum 工具已完成编译和标准向量测试。
 - Filter 工具已完成编译和边界测试。
 
-全量示例构建和关键符号检查：
+日常快检：
 
 ```sh
 tools/check_examples.sh
+```
+
+发布前全量示例构建和关键符号检查：
+
+```sh
+tools/check_examples_full.sh
 ```
 
 ## 6. 文档索引

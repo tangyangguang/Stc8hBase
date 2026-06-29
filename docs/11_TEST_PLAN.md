@@ -138,7 +138,7 @@ Keil C51 验证按模块进行。每个已实现模块至少完成 Keil C51 编�
 docs/RESOURCE_REPORT.md
 ```
 
-`RESOURCE_REPORT.md` 由实现和实测阶段生成，不在文档设计阶段预填。
+`RESOURCE_REPORT.md` 只记录稳定资源结论，不记录逐次构建日志或调试流水账。
 
 ## 6. 量化验收标准
 
@@ -153,7 +153,8 @@ docs/RESOURCE_REPORT.md
 
 ### 6.2 资源验收
 
-- 自动化入口为 `tools/check_examples.sh`；脚本会构建全部 PlatformIO 示例、显式编译 EEPROM 写擦环境、构建 3 个 Makefile 示例，并检查关键示例中不应出现的符号前缀。
+- 日常自动化入口为 `tools/check_examples.sh`；脚本运行 host 测试、代表性 PlatformIO 示例和 Makefile 示例。
+- 发布前全量入口为 `tools/check_examples_full.sh`；脚本构建全部 PlatformIO 示例、显式编译 EEPROM 写擦环境、构建 Makefile 示例，并检查关键示例中不应出现的符号前缀。
 - STC8H8K64U 无硬件前置验证入口为 `tools/prepare_h8k64u_validation.sh`；脚本只构建 H8K64U 示例并输出后续硬件验证命令模板，不自动上传。
 - 每个示例记录 ROM/code 占用。
 - 每个示例记录 RAM/data/idata/xdata 占用。
