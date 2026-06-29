@@ -1,441 +1,109 @@
 # 测试计划
 
-## 1. 测试目标
+本文件只定义测试分层和准入标准，不记录调试过程、逐条硬件日志或一次性验证脚本。
 
-本基础库测试目标：
+## 目标
 
-- 确认每个模块能独立编译。
-- 确认未使用模块不占用资源。
-- 确认核心外设在 `STC8H1K08` 上可用。
-- 确认默认 `11.0592MHz` 下 UART、延时、红外等时序满足使用需求。
-- 确认新项目工作流和老 Keil C51 接入方式都可行。
+- 确认基础库源码可被 SDCC/PlatformIO 和 Makefile 构建。
+- 确认核心 host 单元测试通过。
+- 确认示例只编译实际使用的 `.c` 文件，未使用模块零占用。
+- 确认高风险能力有发布前专项检查，例如 EEPROM/IAP、OTA 链接布局、nRF24 尺寸边界。
 
-## 2. 测试环境
+测试不能把项目变成流程框架。新增测试必须服务于真实缺陷风险、资源边界或公共 API 行为。
 
-主芯片：
+## 分层入口
 
-```text
-STC8H1K08
+日常快检：
+
+```sh
+tools/check_host_tests.sh
+tools/check_examples.sh
 ```
 
-常用封装：
+发布前全量检查：
 
-```text
-TSSOP20
+```sh
+tools/check_host_tests_full.sh
+tools/check_examples_full.sh
 ```
 
-默认系统时钟：
+专项入口：
 
-```text
-11.0592MHz
+```sh
+tools/check_nrf24_examples.sh
+tools/prepare_h8k64u_validation.sh
 ```
 
-硬件测试工具：
-
-- 示波器。
-- USB 转串口。
-- 万用表。
-- 常见 NEC 红外遥控器。
-
-当前没有逻辑分析仪，因此时序测试优先使用示波器观察关键波形。
-
-## 3. 测试板建议
-
-建议固定一份测试板级配置：
-
-```text
-board/stc8h1k08_tssop20_demo/
-  board_config.h
-  board_pins.h
-  board_init.c
-```
-
-测试板建议连接：
-
-- 1 个 LED。
-- 1 个按键。
-- 1 个 EC11。
-- 1 个 I2C LCD1602。
-- 1 个 TM1637 数码管模块。
-- 1 个有源蜂鸣器。
-- 1 个继电器或继电器模拟 LED。
-- 1 个 VS1838B/HS0038 红外接收头。
-- 1 个红外发射管。
-- 1 路 UART 转 USB。
-
-## 4. 编译测试
-
-每个示例都需要支持 SDCC + Makefile 编译。
-
-第一版尽量提供 PlatformIO 示例。
-
-Keil C51 验证按模块进行。每个已实现模块至少完成 Keil C51 编译验证；无法自动化时，在资源报告或测试记录中标记人工验证状态。
-
-编译测试示例：
-
-| 示例 | 目的 |
-| --- | --- |
-| `gpio_blink` | GPIO 输出 |
-| `milestone1_demo` | GPIO、UART1、软件 I2C、I2C LCD1602 综合演示 |
-| `uart_echo_buffered` | UART 轮询接收、ring buffer、回显 |
-| `ring_buffer_demo` | 字节环形缓冲 |
-| `crc_demo` | CRC/校验 |
-| `filter_demo` | 限幅和平滑滤波 |
-| `timer_tick` | 定时器 tick |
-| `soft_timer_tick` | 非阻塞软件定时器 |
-| `i2c_scan` | I2C 基础通信 |
-| `spi_loopback` | SPI 基础收发 |
-| `nrf24_uart_diag` | ToyRemote PCB nRF24L01 单模块串口诊断 |
-| `nrf24_fixed_ping` | nRF24L01 固定 payload 发送和状态处理 |
-| `nrf24_ack_payload` | nRF24L01+ dynamic payload 与 ACK payload |
-| `rf_link_status_demo` | 通用 RF 链路层包格式、状态和状态回传编译验证 |
-| `rf_link_nrf24_small` | STC8H1K08 小内存目标上 nRF24L01 + RF 链路裁剪编译验证 |
-| `pwm_output` | PWM 输出 |
-| `delay_us_probe` | Timer0 1T 微秒级阻塞延时硬件测量 |
-| `adc_read` | ADC 采样 |
-| `eeprom_rw` | EEPROM/IAP 读写 |
-| `output_levels` | LED、蜂鸣器、继电器有效电平辅助 |
-| `button_event` | 按键短按/长按 |
-| `ec11_counter` | EC11 旋转计数 |
-| `lcd1602_i2c_text` | I2C LCD1602 文本显示 |
-| `tm1637_number` | TM1637 数码管显示 |
-| `ir_nec_demo` | NEC 红外协议编码/解码自检 |
-| `ir_nec_rx` | NEC 红外接收硬件验证 |
-| `ir_nec_rx_int_sleep` | NEC 红外中断接收和休眠唤醒验证 |
-| `ir_nec_tx` | NEC 红外发射硬件验证 |
-| `wdt_feed` | WDT 启用和周期喂狗编译验证 |
-| `wdt_reset_test` | WDT 复位标志和受控复位硬件验证 |
-| `h8k64u_uart2_hello` | STC8H8K64U UART2 编译和后续硬件验证 |
-| `h8k64u_uart3_hello` | STC8H8K64U UART3 编译和后续硬件验证 |
-| `h8k64u_gpio_blink` | STC8H8K64U GPIO 编译和后续硬件验证 |
-| `h8k64u_adc_read` | STC8H8K64U 12-bit ADC 编译和后续硬件验证 |
-| `h8k64u_eeprom_safe` | STC8H8K64U EEPROM 安全占位编译验证，不执行写擦 |
-| `h8k64u_eeprom_rw` | STC8H8K64U EEPROM 破坏性擦写读回验证，需确认测试页可擦后手动烧录 |
-| `h8k64u_wdt_feed` | STC8H8K64U WDT 编译和后续硬件验证 |
-| `h8k64u_ota_min_app` | STC8H8K64U OTA 应用链接基址 `0x0200`、启动后 mark-valid 调用位置，以及显式 mark-valid IAP 接入环境的编译验证 |
-| `h8k64u_rs485_ota_bootloader` | STC8H8K64U RS485 OTA bootloader 高地址链接、参数区不重叠和构建验证 |
-| `h8k64u_uart3_ota_passthrough` | STC8H8K64U UART3/433 透明串口 OTA frame 收发编译验证，不执行 IAP 写擦 |
-
-## 5. 资源占用测试
-
-每个示例编译后记录：
-
-- ROM/code 占用。
-- RAM/data/idata/xdata 占用。
-- 使用的定时器。
-- 使用的中断。
-- 使用的外设资源。
-
-需要验证：
-
-- 只编译某个示例时，未加入工程的模块不产生 ROM/RAM 占用。
-- 未使用模块不初始化外设。
-- 未使用模块不占用中断向量。
-
-资源报告建议记录到：
-
-```text
-docs/RESOURCE_REPORT.md
-```
-
-`RESOURCE_REPORT.md` 只记录稳定资源结论，不记录逐次构建日志或调试流水账。
-
-## 6. 量化验收标准
-
-第一版测试必须记录实际结果。以下为默认通过标准，实测发现不合理时可以调整，但必须在资源报告或测试记录中说明原因。
-
-### 6.1 编译验收
-
-- 每个示例可通过 SDCC + Makefile 编译。
-- 每个已实现模块可加入 Keil C51 工程编译，或在测试记录中明确尚未验证。
-- 示例只编译实际用到的 `.c` 文件。
-- 未使用模块不出现在链接产物中。
-
-### 6.2 资源验收
-
-- 日常自动化入口为 `tools/check_examples.sh`；脚本运行 host 单元测试、代表性 PlatformIO 示例和 Makefile 示例。
-- 发布前全量入口为 `tools/check_examples_full.sh`；脚本构建全部 PlatformIO 示例、显式编译 EEPROM 写擦环境、构建 Makefile 示例，并检查关键示例中不应出现的符号前缀。host 侧专项编译/裁剪/codegen 检查由 `tools/check_host_tests_full.sh` 承担。
-- STC8H8K64U 无硬件前置验证入口为 `tools/prepare_h8k64u_validation.sh`；脚本只构建 H8K64U 示例并输出后续硬件验证命令模板，不自动上传。
-- 每个示例记录 ROM/code 占用。
-- 每个示例记录 RAM/data/idata/xdata 占用。
-- 每个示例记录 Timer、PWM、UART、I2C、SPI、ADC、中断占用。
-- 每个示例记录参与编译的 `.c` 文件清单。
-- 每个示例检查 map 文件或符号表，未使用模块的符号前缀不应出现。
-- `h8k64u_ota_min_app` 默认环境和 `STC8H8K64U_mark_valid_iap` 环境都必须检查 map 文件中 `s_HOME` 位于 `0x0200`，且 `_main` 不得链接到 `0x0000..0x01FF`。
-- `h8k64u_ota_min_app` 的 PlatformIO flash 上限按当前 OTA 内存图限制为 `45568` 字节，对应应用区 `0x0200..0xB3FF`。
-- `h8k64u_ota_min_app` 默认环境只验证应用侧调用顺序：先完成安全输出初始化和 UART 初始化，再调用 mark-valid hook，不执行参数区写入。
-- `h8k64u_ota_min_app` 的 `STC8H8K64U_mark_valid_iap` 环境会编译真实 `0xFC00/0xFE00` 参数区 mark-valid IAP 接入路径；该环境仍只做构建验证，真实烧录运行前必须确认测试板参数区可写擦。
-- `h8k64u_rs485_ota_bootloader` 必须检查 map 文件中 reset stub 位于 `0x0000`，`s_HOME` 位于 `0xB400`，且代码符号不得落入 `0xFC00..0xFFFF` 参数区。
-- 单个简单示例不应因为引入基础库框架产生明显无关代码。
-
-### 6.3 UART 验收
-
-- `11.0592MHz` 下 `9600` 回显稳定。
-- `11.0592MHz` 下 `115200` 回显稳定。
-- 里程碑 1 的 UART 验收限定为阻塞发送和轮询回显，在人工输入或低速输入下稳定。
-- `uart_echo_buffered` 使用轮询接收 + `util_ring_buffer`，不启用 UART 中断。
-- 连续 1KB 接收验收放到启用 `util_ring_buffer` 的示例中执行。
-
-### 6.4 I2C 验收
-
-- I2C 地址扫描能识别 LCD1602 转接板地址。
-- 默认 `0x27` 可用；如果实际模块为 `0x3F`，通过配置切换可用。
-- 所有 I2C 示例使用 7-bit 未左移地址。
-- 示波器观察 SCL/SDA 电平和时序无明显异常。
-- 软件 I2C 默认目标速率不超过 100kHz。
-- 记录 SCL 高电平时间、低电平时间和实测频率。
-
-### 6.4.1 SPI 验收
-
-- `spi_loopback` 示例使用硬件 SPI 主机轮询模式。
-- 默认短接 P1.3/MOSI 和 P1.4/MISO 后，串口应输出 `spi loopback ok`。
-- 不短接或接线错误时，应输出 `spi loopback error`。
-- SPI 默认使用 P1.3/P1.4/P1.5，硬件 SS 被 `SSIG=1` 忽略；ToyRemote/nRF24 PCB 同时把 P1.2 用作 nRF CSN，因此 P1.2 LED/PWM 示例与 nRF24 示例互斥。
-- 示例不启用 SPI 中断，不使用 DMA，不保存 RX 缓冲。
-- 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、EEPROM、IR、utils 等未使用模块符号。
-
-### 6.4.2 nRF24L01 验收
-
-- `nrf24_uart_diag` 示例使用 ToyRemote PCB 引脚，且只依赖 UART1 输出，先验证单个 nRF24 模块的 SPI、寄存器读写和 FEATURE/DYNPD。
-- `nrf24_fixed_ping` 示例使用硬件 SPI、板级 CE/CSN 宏、固定 32 字节 payload，并等待 `TX_DONE/MAX_RT` 后调用 `drv_nrf24l01_complete_tx()`。
-- `nrf24_ack_payload` 示例启用 nRF24L01+ dynamic payload 和 ACK payload，并通过 `drv_nrf24l01_complete_tx()` 读取 ACK payload。
-- 所有 nRF24 PlatformIO 示例必须把 `drv_nrf24l01_init_pins()` 作为第一项硬件动作，并且必须早于 UART/SPI 初始化，防止 CE/CSN 在 STC8H 上电高阻阶段漂浮。
-- TX 端发送后应正确处理 `TX_DONE`、`MAX_RETRY` 和可能同时出现的 `RX_READY`。
-- `MAX_RETRY` 后必须清 IRQ，并 flush TX。
-- matrix 诊断中 ACK payload 阶段必须校验 ACK 长度、`ACK` header 和正式计数包的上一包 seq；错误 ACK 必须计入 `ack_bad`。
-- matrix 诊断必须输出 `MATRIX_WARMUP`，暴露正式计数前的 PTX `max_rt/ack_empty/ack_bad` 和 PRX `warmup_rx/ack_busy/ack_fail`。
-- RX 端 ACK payload 会占用 TX FIFO，实测时需要验证堵塞后 flush TX 可恢复。
-- IRQ ISR 只允许置位，SPI 收发必须放到主循环。
-- 模块旁边建议 10uF 或更大电容并联 100nF；异常时优先检查供电、线长和 SPI 速度。
-- 2.4GHz 穿墙和楼板能力有限，跨楼层项目必须单独做丢包率实测。
-
-### 6.4.3 RF Link 协议验收
-
-- `rf_link_status_demo` 示例能编译通过。
-- `rf_link_nrf24_small` 是 STC8H1K08 裁剪/尺寸示例，刻意关闭 nRF24 status/RX 相关 API；不要把它作为运行期 TX 完成流程参考。
-- `proto_rf_link` 固定生成 32 字节包，payload 最大 23 字节。
-- `magic`、`version`、`src_id`、`dst_id` 不匹配时必须丢包。
-- 收到 `HELLO` 或 `HELLO_ACK` 后进入 `CONNECTED`。
-- `tick` 超过默认超时时间后进入 `LOST`。
-- 协议层不包含电机、舵机、浇花、传感器或配置字段。
-
-### 6.4.4 PWM 验收
-
-- `pwm_output` 示例使用 `PWMA` channel 2 正向输出，即 P1.2/PWM2P。
-- P1.2 LED 应呈现周期性明暗变化。
-- PWM 基础验证不启用 PWM 中断，不使用互补输出、死区、刹车、捕获或同步；需要覆盖 `PWMA` 与 `PWMB` 独立周期同时输出。
-- 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、SPI、EEPROM、IR、utils 等未使用模块符号。
-
-### 6.5 LCD1602 验收
-
-- 能完成初始化。
-- 能显示两行固定文本。
-- 清屏、定位、连续写字符串正常。
-
-### 6.6 按键和 EC11 验收
-
-- 按键短按识别稳定。
-- 按键长按识别稳定。
-- 按键默认扫描周期为 10ms。
-- 按键默认消抖时间为 10ms，项目宏和运行时 API 均可覆盖。
-- EC11 默认扫描周期不大于 2ms。
-- EC11 顺时针和逆时针各连续旋转 20 格，方向不反、计数不明显丢失。
-- EC11 慢速旋转时每个定位格默认输出 `+1/-1`。
-- EC11 快速旋转时触发加速；默认两次有效定位格间隔小于等于 30ms 时，每格输出 `+10/-10`。阈值、快速步进值和方向必须可通过项目宏配置，并可通过 API 修改当前对象配置。
-- EC11 每定位格有效跳变数默认 `4`，可通过宏或 API 调整；实测如果漏格优先降低该值，如果重复计数优先提高该值。
-
-### 6.7 红外验收
-
-- `delay_us_probe` 在 P1.0 输出 562us、1687us、2250us、4500us、9000us 高脉冲，逻辑分析仪测得误差应在 NEC 接收可接受范围内。
-- `ir_nec_demo` 不接外部元件，使用 NEC TX 编码器生成 `mark/space` 时序，再送入 RX 解码器自检。
-- `ir_nec_demo` 应验证普通 NEC 帧、TX repeat 序列、重复码事件和异常脉宽错误事件。
-- `ir_nec_demo` 协议层不应占用 GPIO、Timer、PWM 或中断。
-- 红外接收连续识别常见 NEC 遥控器按键 20 次，不出现地址/命令误码。
-- 能识别 NEC 重复码事件。
-- 红外发射载波目标为 38kHz，示波器实测频率默认控制在 37kHz 到 39kHz。
-- 红外发射 `mark/space` 持续时间使用 Timer0 1T 硬件延时，不使用粗略 C 空循环。
-- NEC 脉宽解码默认允许约 25% 容差，实测后可收紧。
-- 红外发射码可被同板或另一接收头解码。
-
-### 6.8 ADC 验收
-
-- `adc_pot` 示例读取 P3.3/ADC11。
-- ADC 返回值应随 10K 电位器旋转单调变化。
-- 接近 GND 时读数接近 0，接近 VCC 时读数接近 1023。
-- 示例只启用单个 ADC 测试通道，不隐藏开启多个通道。
-- 记录 ADC 示例 ROM/RAM、是否使用中断、是否使用 XFR 寄存器。
-
-### 6.9 Timer 验收
-
-- `timer_tick` 示例使用 Timer0 产生 1ms tick。
-- Timer0 ISR 由示例文件显式绑定，不由 HAL 默认占用中断向量。
-- P1.2 LED 每约 500ms 翻转一次。
-- UART1 每约 1000ms 输出一次 `tick`。
-- Timer0 使用中断向量 1，资源报告记录 Timer0、Timer1、UART1 和全局中断占用。
-- 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、SPI、EEPROM、IR 等未使用模块符号。
-
-### 6.10 Soft Timer 验收
-
-- `soft_timer_tick` 示例只把 Timer0 作为 tick 来源。
-- LED 翻转和 UART 周期输出均通过 `util_soft_timer` 判断，不在 ISR 中直接做周期业务。
-- 单个 `util_soft_timer_t` 对象占 4 字节 RAM。
-- 验证 16-bit tick 回绕后仍能正确判断过期。
-- 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、SPI、EEPROM、IR 等未使用模块符号。
-
-### 6.11 Ring Buffer 验收
-
-- `ring_buffer_demo` 示例验证空读、满写拒绝、回绕写入和顺序读出。
-- `util_ring_buffer_t` 默认使用 internal DATA RAM 缓冲指针。
-- 缓冲采用保留一个空位的方式，实际可存字节数为 `size - 1`。
-- 编译产物不应出现除法/取模库符号。
-- 链接产物中不应出现 Timer、I2C、LCD1602、Button、EC11、ADC、SPI、EEPROM、IR 等未使用模块符号。
-
-### 6.12 CRC 验收
-
-- `crc_demo` 示例验证 `checksum8` 和 `crc16_modbus`。
-- 标准测试向量 `"123456789"` 的 `crc16_modbus` 结果应为 `0x4B37`。
-- `"123456789"` 的 `checksum8` 结果应为 `0xDD`。
-- 空数据 `checksum8` 结果应为 `0x00`，空数据 `crc16_modbus` 结果应为 `0xFFFF`。
-- CRC16/MODBUS 不使用查表常量，不应拉入除法/取模库。
-- 链接产物中不应出现 Timer、I2C、LCD1602、Button、EC11、ADC、SPI、EEPROM、IR 等未使用模块符号。
+`tools/prepare_h8k64u_validation.sh` 只构建 H8K64U 示例并输出人工硬件验证命令模板，不自动上传。
 
-### 6.13 Filter 验收
+## Host 单元测试
 
-- `filter_demo` 示例验证 `util_filter_limit_u16` 和 `util_filter_iir_u16`。
-- `util_filter_limit_u16` 应正确处理低于下限、高于上限和范围内数值。
-- `util_filter_iir_u16` 在 `shift=0` 时应立即返回输入值。
-- `util_filter_iir_u16` 在输入接近当前值时仍应至少移动 1，避免小误差永久不收敛。
-- 编译产物不应出现除法/取模库符号。
-- 链接产物中不应出现 Timer、I2C、LCD1602、Button、EC11、ADC、SPI、EEPROM、IR 等未使用模块符号。
-
-### 6.14 EEPROM/IAP 验收
+Host 测试只覆盖可在宿主机可靠判断的纯逻辑：
 
-- 示例明确擦写地址范围。
-- STC8H1K08 测试地址必须位于 `0x0000..0x0FFF`。
-- 擦除地址必须按 512 字节扇区对齐。
-- 默认构建不执行写擦；真实写擦测试必须显式选择写擦环境。
-- 写入、读回、擦除验证通过。
-- 示例不访问未声明地址范围。
-- 链接产物中不应出现 I2C、LCD1602、Button、EC11、ADC、SPI、IR、utils 等未使用模块符号。
+- 小工具算法，例如 CRC。
+- 协议编解码，例如 OTA frame、OTA manifest、RF link 包。
+- 驱动状态机或轻量逻辑，例如 EC11、RS485 UART wrapper、nRF24 核心错误路径。
 
-### 6.15 输出电平辅助验收
+Host 测试不模拟完整 MCU、寄存器时序或硬件物理现象。无法稳定模拟的内容放到示例构建或硬件验证。
 
-- `output_levels` 示例验证 LED、蜂鸣器、继电器 active-high 和 active-low 输出电平。
-- 驱动只计算有效电平，不直接操作 GPIO。
-- 链接产物中不应出现 GPIO、Timer、I2C、LCD1602、Button、EC11、ADC、SPI、EEPROM、IR、utils 等未使用模块符号。
+## 示例构建
 
-## 7. 硬件功能测试
+示例分为三类：
 
-### 7.1 GPIO/LED
+- 最小功能示例：GPIO、UART、I2C、SPI、PWM、ADC、EEPROM、WDT、CRC、filter、button、EC11、TM1637、IR。
+- 目标芯片示例：`STC8H1K08` 和 `STC8H8K64U-45I-LQFP48` 的代表性构建。
+- 专项示例：nRF24、RF link、OTA bootloader、H8K64U IAP/OTA 参数路径。
 
-- LED 按固定周期闪烁。
-- 使用示波器观察 GPIO 翻转周期。
+新增示例必须满足：
 
-### 7.2 UART
+- 入口明确，文件少，默认不执行破坏性写擦。
+- PlatformIO/Makefile 只编译该示例实际使用的源文件。
+- 不把一次性排查过程、串口日志解析或硬件矩阵测试固化成默认示例。
 
-- 串口回显。
-- 默认 `11.0592MHz` 下优先验证 9600 和 115200。
+## 发布前专项
 
-### 7.3 I2C LCD1602
+发布前才运行的检查可以覆盖：
 
-LCD1602 使用 I2C 转接板，常见 4 线连接：
+- 全部 PlatformIO 示例构建。
+- Makefile 示例构建。
+- EEPROM/IAP 写擦环境的显式构建。
+- OTA app `0x0200` 链接、bootloader `0xB400` 链接和 `0xFC00..0xFFFF` 参数区边界。
+- nRF24 关键尺寸 guard。
+- SDCC codegen 边界，例如不生成 generic pointer helper。
 
-```text
-VCC
-GND
-SDA
-SCL
-```
+专项检查不能替代代码设计。若一个功能必须靠大量脚本约束才不出错，优先简化实现或缩小功能范围。
 
-测试：
+## 硬件验证
 
-- I2C 地址扫描。
-- LCD1602 初始化。
-- 第一行、第二行文本显示。
-- 清屏和光标定位。
+硬件验证清单见 `docs/16_HARDWARE_TEST.md`。本文件不保存硬件日志。
 
-### 7.4 按键和 EC11
+高影响操作必须人工确认：
 
-- 按键短按。
-- 按键长按。
-- EC11 顺时针计数。
-- EC11 逆时针计数。
-- EC11 按键通过 `drv_button` 组合测试。
+- EEPROM/IAP 写擦。
+- OTA 参数区写擦。
+- bootloader 烧录和跳转。
+- 看门狗复位。
+- 修改 STC code/EEPROM split。
 
-### 7.5 TM1637
+硬件验证完成后，只记录稳定结论、日期、板卡/芯片型号、示例或环境名，以及对后续设计有影响的事实。
 
-- 显示固定数字。
-- 显示正负数。
-- 亮度设置。
-- 默认示例使用 P1.6/CLK 和 P1.5/DIO，可按实际接线修改板级宏。
-- TM1637 不是标准 I2C，测试时不接入 LCD1602 的 SDA/SCL 总线。
+## 准入规则
 
-### 7.6 红外接收
+新增测试或脚本必须满足至少一条：
 
-红外接收头：
+- 覆盖公共 API 行为。
+- 覆盖资源受限 MCU 上的尺寸、链接或地址空间风险。
+- 覆盖曾经真实发生且可能复发的缺陷。
+- 覆盖破坏性硬件操作的安全边界。
 
-```text
-VS1838B / HS0038
-```
+以下内容不进入长期测试体系：
 
-协议：
+- 一次性调试脚本。
+- 大量重复命令输出。
+- 只证明旧过程正确的流水账。
+- 与当前正式目标芯片无关的矩阵探索。
+- 为过度抽象或过度配置服务的测试。
 
-```text
-NEC
-```
+## 记录规则
 
-测试：
-
-- 先烧录 `ir_nec_demo`，确认协议编码/解码自检输出 `ir nec ok`。
-- 使用常见 NEC 遥控器发送按键。
-- UART 打印地址、命令和重复码事件。
-- 用示波器观察红外接收头输出脉冲。
-
-### 7.7 红外发射
-
-- 发射 NEC 地址和命令。
-- 使用另一个红外接收头或同一测试板接收验证。
-- 用示波器观察红外发射驱动信号。
-
-重点验证：
-
-- 38kHz 载波。
-- NEC 引导码。
-- 数据位时序。
-- 标准 NEC repeat：9ms mark、2.25ms space、562us mark。
-- 协议编码层和载波输出层资源记录分开：`drv_ir_tx` 只负责时序序列，PWM/Timer/GPIO 由板级发送层声明。
-- 重复码。
-
-## 8. EEPROM/IAP 测试
-
-本项目不保留老项目历史包袱。
-
-但 EEPROM/IAP 示例仍不能随意擦写未知区域。
-
-第一版要求：
-
-- 示例使用专门测试地址范围。
-- 测试前文档说明会擦写哪些地址。
-- 默认环境不得擦写 EEPROM。
-- 不做旧数据迁移。
-- 不为了兼容旧项目格式增加复杂逻辑。
-
-## 9. 红外扩展策略
-
-第一版只实现 NEC。
-
-为了以后扩展其他协议，红外模块保持独立：
-
-```text
-drivers/drv_ir_tx.*
-drivers/drv_ir_rx.*
-```
-
-如果以后支持其他协议，优先新增独立协议实现或在红外模块内部增加编译期开关。
-
-不允许因为未来协议扩展引入：
-
-- 运行期协议注册。
-- 多协议自动识别框架。
-- 大型码库。
-- 未使用协议的资源占用。
+`docs/RESOURCE_REPORT.md` 只记录稳定资源结论。测试计划只记录入口和准入标准。具体模块的设计原因放在对应模块文档，不在测试计划里堆清单。

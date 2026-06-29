@@ -1,19 +1,18 @@
 # 资源占用策略
 
-## 1. 目标
+本项目面向资源受限的 8051 类 MCU。资源策略必须简单、可执行，不能演变成宏和流程清单。
 
-本文件定义第一版模块对 MCU 资源的占用原则。
-
-目标：
+## 原则
 
 - 未使用模块零占用。
-- 已使用模块资源占用显式。
-- 避免外设之间隐式抢资源。
-- 优先保证 `STC8H1K08 TSSOP20` 小引脚项目可用。
+- 应用只编译实际使用的 `.c` 文件。
+- 模块不在未初始化时占用外设、中断、RAM 缓冲或板级资源。
+- 外设选择、引脚和危险写擦地址必须由板级配置或构建配置显式给出。
+- 高频路径优先使用编译期配置或小的 fixed-path API，避免运行期分派和函数指针表。
 
-## 2. 总原则
+## 资源声明
 
-每个模块必须说明可能占用：
+模块文档或头文件应说明会用到的资源：
 
 - GPIO。
 - UART。
@@ -22,384 +21,56 @@
 - I2C。
 - SPI。
 - ADC。
-- 外部中断。
-- RAM 缓冲区。
-
-模块不得在未被应用项目编译和初始化时占用任何资源。
-
-SDCC/8051 项目以“少编译源文件 + 编译期裁剪分支”为主要减小 ROM 的方式。通用 HAL 默认完整可用；小容量项目可通过显式宏限制端口、通道和 API 子集，但这些宏只裁剪芯片级能力，不承载应用业务逻辑。
-
-业务可能不用的可裁 API 必须独立源文件实现，避免 SDCC/sdld 以 `.rel` 粒度拉入同文件中的未调用函数。典型例子：`stc8h_gpio_toggle()`、`stc8h_exti_disable()`、`stc8h_exti_clear_flags()`、`stc8h_power_idle()`。示例或应用只在实际调用这些 API 时编译对应小文件。
-
-当前可裁剪项：
-
-| 模块 | 宏 | 默认 | 作用 |
-| --- | --- | --- | --- |
-| GPIO | `STC8H_GPIO_PORT_MASK` | `0x3F` | 限制 P0..P5 的 switch 分支 |
-| PWM | `STC8H_PWM_GROUP_MASK` | `0x03` | 限制 `PWMA/PWMB` 组分支 |
-| PWM | `STC8H_PWM_A_CHANNEL_MASK` | `0x0F` | 限制 `PWMA` channel 1..4 分支 |
-| PWM | `STC8H_PWM_B_CHANNEL_MASK` | `0x0F` | 限制 `PWMB` channel 5..8 分支，bit0 对应 channel 5 |
-| PWM | `STC8H_PWM_ENABLE_DISABLE` | `1` | 是否编译 PWM disable API |
-| PWM | `STC8H_PWM_ENABLE_SET_DUTY_CHANNEL_CHECK` | `1` | 是否在 `set_duty()` 入口校验 `(group, channel)` 通道掩码；fixed-channel 应用确认调用合法后可关闭 |
-| PWM | `STC8H_PWM_ENABLE_SET_DUTY_CLAMP` | `1` | 是否在 `set_duty()` 入口把 duty 钳到 period；调用方已保证 `duty <= period` 时可关闭 |
-| PWM | `STC8H_PWM_TRACK_PERIOD_PRESCALER` | `1` | 是否在 RAM 保留每组 period/prescaler 影子值；关闭后省 4–8 字节 RAM，但同步关掉 `set_period/set_prescaler` 的"运行中防改"运行期保护，且必须先关 `SET_DUTY_CLAMP` |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_ARG_CHECK` | `1` | 是否编译 public API 参数检查；关闭后调用方必须保证参数合法 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_ADDRESS_API` | `1` | 是否编译 address width / TX address / RX address / payload size 通用配置 API |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_PIPE0_FIXED_API` | `0` | 是否编译 `drv_nrf24l01_config_pipe0_fixed()` 固定 pipe0 配置 helper |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_CODE_ADDRESS_API` | `0` | 是否编译 `drv_nrf24l01_config_pipe0_fixed_code()`；固定 pipe0 地址放在 CODE/flash 时用它避免 generic pointer |
-| nRF24L01 | `DRV_NRF24L01_FIXED_ADDRESS_WIDTH` | `5` | fixed pipe0 helper 使用的地址宽度 |
-| nRF24L01 | `DRV_NRF24L01_FIXED_PAYLOAD_SIZE` | `32` | fixed pipe0 helper 使用的 pipe0 payload 长度 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_RAW_API` | `1` | 是否公开原始 register/buffer/command API；关闭后仅作为内部 static helper |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_READ_STATUS` | `1` | 是否编译独立 `read_status()` 诊断 API；不直接读取状态、且错误路径不依赖返回 status 时可关闭 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_READ_FIFO_STATUS` | `1` | 是否编译 FIFO status 诊断 API |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_READ_OBSERVE_TX` | `1` | 是否编译 OBSERVE_TX 诊断 API |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_POWER_DOWN` | `1` | 是否编译 `power_down()` 模式 API |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_ENTER_STANDBY` | `1` | 是否编译 `enter_standby()` 模式 API |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_ENTER_RX` | `1` | 是否编译 `enter_rx()` 模式 API；固定 TX-only 应用可关闭 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_READ_PAYLOAD` | `1` | 是否编译 RX payload 读取 API；固定 TX-only 或只做写 FIFO 的应用可关闭 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_XDATA_PAYLOAD_API` | `0` | 是否编译 `read/write_payload_fixed_xdata()`；packet/payload buffer 放在 XDATA 的 SDCC/8051 小固件优先使用 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD` | `1` | 是否编译独立 dynamic payload API |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_ACK_PAYLOAD` | `1` | 是否编译 ACK payload 启用 API |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_WRITE_ACK_PAYLOAD` | `ACK payload` | 是否编译写 ACK payload API |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_DISABLE_ACK_PAYLOAD` | `ACK payload` | 是否编译关闭 ACK payload API |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE` | `Dynamic/ACK payload` | 是否编译读取动态 payload 长度 API |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_RX_PIPE_API` | `1` | 是否编译独立 `EN_RXADDR` pipe 使能 API；需要把接收 pipe 与 auto-ack 解耦时保持开启 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_TX_RESULT_API` | `READ_PAYLOAD && READ_DYNAMIC_PAYLOAD_SIZE && READ_FIFO_STATUS` | 是否编译 PTX 完成分类 helper，会处理 ACK payload、MAX_RT flush、RX FIFO fallback 和 IRQ 清除 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_RX_PACKET_API` | `READ_STATUS && READ_PAYLOAD && READ_DYNAMIC_PAYLOAD_SIZE && READ_FIFO_STATUS` | 是否编译 dynamic RX payload 宽度校验读取 helper；依赖 FIFO status 以处理 `RX_DR` 落后但 RX FIFO 非空的边界 |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_ACK_PRELOAD_API` | `WRITE_ACK_PAYLOAD && READ_FIFO_STATUS` | 是否编译 PRX ACK payload 预装 helper |
-| nRF24L01 | `DRV_NRF24L01_ENABLE_RECOVER` | `ENTER_STANDBY && ENTER_RX` | 是否编译统一 CE/FIFO/IRQ 恢复 helper |
-| nRF24L01 | `DRV_NRF24L01_REQUIRES_ACTIVATE` | `1` | 老 nRF24L01（非 +）才需要 `0x50 0x73 ACTIVATE` 后才能写 FEATURE；硬件确认是 nRF24L01+ 后可关 |
-| proto_rf_link | `PROTO_RF_LINK_ENABLE_INIT` | `1` | 是否编译 generic `proto_rf_link_init()`；XDATA-only fixed 构建可关闭并使用 `proto_rf_link_init_xdata()` |
-| proto_rf_link | `PROTO_RF_LINK_ENABLE_SET_IDS` | `1` | 是否编译运行期设置 local/peer id API |
-| proto_rf_link | `PROTO_RF_LINK_ENABLE_PACKET_ARG_CHECK` | `1` | 是否编译 packet 构造和 fixed poll 的空指针/长度参数检查 |
-| proto_rf_link | `PROTO_RF_LINK_ENABLE_INIT_TIMEOUT_FIELDS` | `1` | `init()` 是否初始化 timeout/heartbeat 字段；关闭仅适合不使用 tick/lost/heartbeat 的固定链路 |
-| proto_rf_link | `PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS` | `1` | `proto_rf_link_t` 结构体是否包含 `timeout_ms`/`heartbeat_ms` 字段；关闭后省 4 字节 RAM，自动要求 `ENABLE_TICK=0`/`ENABLE_INIT_TIMEOUT_FIELDS=0`/`ENABLE_SEND_HEARTBEAT=0` |
-| proto_rf_link | `PROTO_RF_LINK_TRACK_STATE` | `1` | 是否在 `proto_rf_link_t` 中包含并维护 `state`；不调用 `get_state`/`tick` 且不读取 state 的 fixed-path 应用可关闭 |
-| proto_rf_link | `PROTO_RF_LINK_TRACK_SEQ_RX` | `1` | 是否在 `proto_rf_link_t` 中包含并维护 `seq_rx`；不需要把最近 RX 序号回填到发送包的应用可关闭 |
-| proto_rf_link | `PROTO_RF_LINK_TRACK_ACK_PENDING` | `1` | 是否在 `proto_rf_link_t` 中包含并维护 `ack_pending`；不读取 ACK pending 状态的 fixed-path 应用可关闭 |
-| proto_rf_link | `PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_TRACK_ACK` | `1` | fixed DATA 发送后是否把 `link->ack_pending=1`；不读取该字段的应用可关闭 |
-| proto_rf_link | `PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED_TRACK_LINK` | `1` | fixed DATA poll 收到后是否更新 `ack_pending`/`timeout_ms`/`state`；不读取这些字段的应用可关闭 |
-| proto_rf_link | `PROTO_RF_LINK_FIXED_PAYLOAD_LEN` | `11` | fixed DATA helper 使用的业务 payload 长度 |
-| proto_rf_link | `PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED` | `0` | 是否编译固定 DATA + ACK_REQUIRED + 固定 payload 长度发送 helper |
-| proto_rf_link | `PROTO_RF_LINK_ENABLE_POLL_DATA_FIXED` | `0` | 是否编译只接受 DATA + 固定 payload 长度的 poll helper |
-| proto_rf_link | `PROTO_RF_LINK_ENABLE_XDATA_FIXED_API` | `0` | 是否编译 XDATA link/packet/payload 专用 fixed API；STC8H/SDCC 小固件把 link 和 packet buffer 放 XDATA 时优先使用 |
-| TM1637 | `DRV_TM1637_ENABLE_DISPLAY_RAW` | `1` | 是否编译通用 `display_raw(segments, len)` API |
-| TM1637 | `DRV_TM1637_ENABLE_DISPLAY_RAW4` | `0` | 是否编译固定 4 位 raw 显示 API |
-| TM1637 | `DRV_TM1637_ENABLE_DISPLAY_RAW4_DATA` | `0` | 是否编译 `display_raw4_data()`；4 位段码 buffer 明确在 internal DATA 时用它避免 generic pointer |
-| TM1637 | `DRV_TM1637_ENABLE_SET_DISPLAY` | `1` | 是否编译动态显示开关 API 和 display_on 状态 |
-| TM1637 | `DRV_TM1637_ENABLE_BRIGHTNESS_STATE` | `1` | 是否保存运行期亮度状态；关闭后使用 `DRV_TM1637_FIXED_BRIGHTNESS` |
-| TM1637 | `DRV_TM1637_FIXED_BRIGHTNESS` | `7` | 关闭亮度状态后写显示控制命令使用的固定亮度 |
-| TM1637 | `DRV_TM1637_ENABLE_RAW_LEN_CHECK` | `1` | 是否检查 raw API 指针和长度；关闭后调用方必须保证合法 |
-| TM1637 | `DRV_TM1637_ENABLE_DISPLAY_DIGITS` | `1` | 是否编译数字数组格式化显示 API |
-| TM1637 | `DRV_TM1637_ENABLE_DISPLAY_NUMBER` | `1` | 是否编译有符号整数格式化显示 API |
-| TM1637 | `DRV_TM1637_ENABLE_ENCODE_DIGIT` | `1` | 是否编译单个数字段码转换 API |
-| TM1637 | `DRV_TM1637_ENABLE_CLEAR` | `1` | 是否编译清屏便捷 API |
-| EC11 | `DRV_EC11_ENABLE_FULL_API` | `1` | 是否编译完整对象 API：scan + get_delta + fast/reverse/steps 状态 |
-| EC11 | `DRV_EC11_ENABLE_SMALL_API` | `0` | 是否编译 small 状态 API：固定 steps、无 reverse runtime、无 fast、scan 直接返回 delta |
-| EC11 | `DRV_EC11_ENABLE_SMALL_ISR_API` | `0` | 是否编译可从 ISR 调用的 small 状态 API；要求状态对象放 internal data |
-| EC11 | `DRV_EC11_SMALL_STEPS_PER_DETENT` | `DRV_EC11_STEPS_PER_DETENT` | small API 每定位格有效跳变数，范围 1..4 |
-| EC11 | `DRV_EC11_SMALL_REVERSE` | `DRV_EC11_REVERSE` | small API 编译期方向反转 |
-| EC11 | `DRV_EC11_ENABLE_SET_FAST` | `1` | 是否编译快速步进运行期配置 API |
-| EC11 | `DRV_EC11_ENABLE_SET_REVERSE` | `1` | 是否编译反向运行期配置 API |
-| EC11 | `DRV_EC11_ENABLE_SET_STEPS_PER_DETENT` | `1` | 是否编译每格步数运行期配置 API |
-| EC11 | `DRV_EC11_ENABLE_NULL_CHECK` | `1` | 是否在 init/scan/get_delta 入口校验 `ec11 != NULL`；调用方使用静态对象时可关闭 |
-| Timer | `STC8H_TIMER_ENABLE_1MS` | `1` | 是否编译 Timer0 1ms 初始化 |
-| Timer | `STC8H_TIMER_ENABLE_TIMER0_FREE_RUN` | `1` | 是否编译 Timer0 12T free-run/read/us 换算 |
-| Timer | `STC8H_TIMER_ENABLE_TIMER0_RESET` | `1` | 是否编译 Timer0 reset |
-| Timer | `STC8H_TIMER_ENABLE_RUN_CONTROL` | `1` | 是否编译 Timer start/stop |
-| Timer | `STC8H_TIMER_ENABLE_INTERRUPT_CONTROL` | `1` | 是否编译 Timer 中断开关和清标志 |
-| Delay | `STC8H_DELAY_TIMER0_1T_CHUNK_US` | `5000` | Timer0 1T 微秒延时单次分片上限；过大会触发编译期溢出保护 |
-| SPI | `STC8H_SPI_ENABLE_WRITE` | `1` | 是否编译批量写 `stc8h_spi_write()`；只使用单字节 transfer 的 fixed-path 应用可关闭 |
-| SPI | `STC8H_SPI_CONFIGURE_PORT_MODE` | `1` | 初始化时是否把 MOSI/MISO/SCLK 设为准双向，匹配 STC 官方 SPI 示例和 legacy 用法 |
-| SPI | `STC8H_SPI_LATCH_MISO_HIGH` | `1` | 初始化时是否释放当前 SPI group 的 MISO 端口锁存；准双向输入读外部电平前必须为 1 |
-| SPI | `STC8H_SPI_ENABLE_MISO_INPUT` | `1` | 初始化时是否打开 `P_SW2.EAXFR` 并启用当前 SPI group 的 MISO `PxIE` 数字输入 |
-| nRF24L01 | `DRV_NRF24L01_CONFIGURE_PINS()` | 空操作 | `drv_nrf24l01_init_pins()` 驱动 CE/CSN 前调用的板级 hook，用于配置 CE/CSN 端口模式和锁存 |
-| UART | `STC8H_UART_ASSUME_UART1` | `0` | 只使用 UART1 时省去 id 检查 |
-| UART | `STC8H_UART_ENABLE_WRITE_RAM` | `1` | 是否编译 RAM 字符串输出 |
-| UART | `STC8H_UART_ENABLE_WRITE_CODE` | `1` | 是否编译 CODE/flash 字符串输出；无调试输出的 bootloader 可关闭 |
-| UART | `STC8H_UART_ENABLE_RX` | `1` | 是否编译轮询接收 |
-| UART | `STC8H_UART_ENABLE_UART2` | `0` | 是否编译 UART2 轮询路径；使用 UART2 时由板级或示例显式开启 |
-| UART | `STC8H_UART_ENABLE_UART3` | `0` | 是否编译 UART3 轮询路径；使用 UART3 时由板级或示例显式开启 |
-| UART | `STC8H_UART2_PIN_GROUP` | `0` | UART2 引脚组选择：0 为 P1.0/P1.1，1 为 P4.6/P4.7 |
-| UART | `STC8H_UART3_PIN_GROUP` | `0` | UART3 引脚组选择：0 为 P0.0/P0.1，1 为 P5.0/P5.1 |
-| UART | `STC8H_UART_CONFIGURE_PORT_MODE` | `1` | UART2/UART3 初始化时是否配置所选 RX/TX 引脚为准双向并释放锁存 |
-| IR RX | `DRV_IR_RX_ENABLE_PULSE` | `1` | 是否编译 NEC mark/space pulse 解码 |
-| IR RX | `DRV_IR_RX_ENABLE_FALLING` | `1` | 是否编译 falling interval 解码 |
-| OTA format | `STC8H_OTA_FORMAT_ENABLE_MANIFEST_ENCODE` | `1` | 是否编译 manifest encode；只接收 manifest 的 bootloader 可关闭 |
-| OTA format | `STC8H_OTA_FORMAT_ENABLE_PARAMS_ENCODE` | `1` | 是否编译参数记录 encode；写参数区的 bootloader/应用必须开启 |
-| OTA core | `STC8H_OTA_WORK_MEM` | 空 | OTA core 内部工作缓冲的内存限定；H8K64U bootloader 示例设为 `static STC8H_XDATA` 降低 DSEG 压力 |
-| OTA core | `STC8H_OTA_ENABLE_SHOULD_ENTER_BOOTLOADER` | `1` | 是否编译 `stc8h_ota_should_enter_bootloader()` 便捷 API |
-| OTA params store | `STC8H_OTA_PARAMS_STORE_WORK_MEM` | 空 | 参数 store 内部工作缓冲的内存限定；H8K64U bootloader 示例设为 `static STC8H_XDATA` |
-| OTA params store | `STC8H_OTA_PARAMS_STORE_ENABLE_MARK_APP_VALID` | `1` | bootloader 不调用 app-valid 标记时可关闭；应用侧需要标记 app valid 时必须开启 |
-| OTA min app | `H8K64U_OTA_MIN_APP_ENABLE_MARK_VALID_IAP` | `0` | `h8k64u_ota_min_app` 专用示例宏；设为 `1` 时 `stc8h_boot_mark_app_valid()` 接入真实参数区 IAP 写入路径 |
-| CRC16/MODBUS | `UTIL_CRC16_MODBUS_ENABLE_XDATA` | `0` | 是否编译 XDATA 输入指针版本；默认只保留 DATA 指针 API，避免未使用 XDATA 版本占用 ROM |
-| CRC32 | `UTIL_CRC32_ENABLE_ONESHOT` | `1` | 是否编译一次性 CRC32 API；只用 incremental update 的 bootloader 可关闭 |
+- 中断。
+- 固定 RAM 缓冲。
+- EEPROM/IAP 写擦范围。
 
-裁剪宏应放在板级配置或构建系统里，并随固件资源报告记录；基础库源码不应为某个应用硬编码固定端口或固定命令表。
+中央文档不维护完整宏表。可裁剪宏应靠近对应模块定义，避免一份大表和源码长期不同步。
 
-关闭 `*_ARG_CHECK`、`DRV_TM1637_ENABLE_RAW_LEN_CHECK` 或亮度/display 状态这类宏会把安全责任转移给应用固定路径。只在 payload 长度、显示位数、nRF24 pipe/address/payload size 等已经由协议或板级代码固定，并且 map/硬件测试覆盖到对应路径时使用。
+## 裁剪方式
 
-## 3. 资源声明
+首选方式：
 
-每个驱动头文件或模块文档应写明资源需求。
+- 示例或应用只编译实际需要的源文件。
+- 业务不用的便捷 API 拆到独立小源文件。
+- 对小容量目标，用明确的模块宏关闭不需要的通道、端口或便捷 API。
 
-示例：
+不推荐方式：
 
-```text
-drv_ir_tx:
-  必需：1 个 GPIO 输出
-  推荐：1 路 PWM 或 1 个定时器产生 38kHz 载波
-  RAM：无大型缓冲
-```
+- 运行期统一设备表。
+- 自动注册。
+- 隐藏调度器。
+- 大型通用外设对象模型。
+- 为未来未知项目预留复杂兼容层。
 
-## 4. 默认资源策略
+## 外设边界
 
-### 4.1 UART
+Timer 是紧张资源。Timer HAL 不默认占用中断向量，ISR 由示例或板级代码显式绑定。
 
-默认用于调试和示例输出。
+UART、SPI、I2C、PWM、ADC 初始化必须由应用主动调用。模块不得在头文件、全局初始化或未编译状态下配置外设。
 
-默认波特率：
+EEPROM/IAP、OTA 参数区和程序区写擦必须显式启用。默认示例不得执行破坏性写擦。
 
-```text
-115200
-```
+## 尺寸检查
 
-保留：
+尺寸检查只保留对项目有实际意义的边界：
 
-```text
-9600
-```
+- STC8H1K08 8KB code 空间内的代表性示例。
+- nRF24 小内存目标的尺寸 guard。
+- OTA bootloader 不进入参数区。
+- 关闭某模块后不产生对应符号。
 
-UART 接收缓冲只有在示例或应用显式启用 `util_ring_buffer` 时才占用 RAM。
+不要为每个宏组合建立矩阵。宏组合过多时，应优先减少功能面或拆小模块。
 
-### 4.2 Timer
+## 记录要求
 
-Timer 是紧张资源，必须谨慎分配。
+资源报告只记录稳定结论：
 
-默认资源分配建议：
+- 示例名称。
+- 目标芯片。
+- ROM/RAM 关键数字。
+- 参与编译的核心源文件。
+- 使用的外设、中断、Timer、GPIO。
+- 必须长期保留的 map/sym 检查。
 
-| 资源 | 默认用途 |
-| --- | --- |
-| Timer0 | 1ms 系统 tick、按键/EC11 扫描时间基准，或 12T free-run 红外接收脉宽计时 |
-| Timer2 | 红外发射备用载波或后续项目备用 |
-
-不允许每个模块私自占用一个 Timer。
-
-Timer 资源由板级配置决定，驱动只声明需求。
-
-UART 波特率相关资源由 UART 模块负责，是否占用 Timer 以 STC8H1K08 手册和具体实现为准，不在资源策略中预先绑定 Timer1。
-
-如果某个项目不使用软件定时器或红外模块，对应 Timer 不应被初始化。
-
-Timer ISR 默认由示例或板级文件绑定。Timer HAL 不默认占用中断向量。
-
-Timer0 free-run 只初始化硬件计数器，不占用 Timer0 中断；调用方在 GPIO/外部中断边沿中读取 `stc8h_timer0_read()` 并使用 16-bit 回绕差值。
-
-Timer0 1T 微秒级阻塞延时由 `stc8h_delay_timer0_1t_init()` 显式占用 Timer0，不启用中断，适合 NEC 红外发射这类协议时序。它不能和 Timer0 1ms tick、Timer0 free-run 红外接收同时使用。
-
-需要显式声明 Timer0 角色时，可在构建系统定义：
-
-- `STC8H_TIMER0_ROLE_FREE_RUN`：Timer0 由 `stc8h_timer0_init_free_run_12t()` 作为 12T free-run 使用。
-- `STC8H_TIMER0_ROLE_1T_DELAY`：Timer0 由 `stc8h_delay_timer0_1t_init()` 作为 1T 阻塞延时使用。
-
-如果同一固件同时编译冲突角色，基础库在编译期报错。使用 1T delay 且仍需编译 `hal/stc8h_timer.c` 的项目，应关闭 `STC8H_TIMER_ENABLE_TIMER0_FREE_RUN`，避免把 free-run API 暴露进同一固件。
-
-真实应用中的分配示例：红外接收夜灯使用 Timer0 12T free-run 测量接收头边沿脉宽；红外遥控器发送端使用 Timer0 1T 阻塞延时产生 NEC `mark/space` 时间。二者都合理，但不能在同一个固件里同时初始化 Timer0 为这两种模式。
-
-如果某示例提供 1ms 全局 tick，资源报告必须记录：
-
-- 使用的 Timer。
-- 使用的中断向量。
-- tick 全局变量的存储区和大小。
-
-### 4.3 PWM
-
-PWM 优先用于：
-
-- 红外发射 38kHz 载波。
-- 无源蜂鸣器。
-
-如果红外发射和无源蜂鸣器同时需要 PWM，应用项目必须明确选择资源分配。
-
-有源蜂鸣器不占 PWM。
-
-第一版默认红外发射优先使用 PWM 产生 38kHz 载波。
-
-如果硬件 PWM 引脚不适合 `TSSOP20` 测试板，允许改用 Timer 产生载波，但必须在板级配置和资源报告中记录。
-
-当前 `stc8h_pwm` 支持 `PWMA` channel 1..4 和 `PWMB` channel 5..8 的基础 PWM mode 1 输出。每组各有一个 ARR 周期和 prescaler，允许 `PWMA` 与 `PWMB` 同时使用不同频率；同一组内仍共享周期和 prescaler。
-
-`stc8h_pwm_set_period()` 和 `stc8h_pwm_set_prescaler()` 在对应组已有输出使能且新值会改变运行参数时返回 `STC8H_ERROR`，防止运行中静默改掉同组其他通道频率。需要切换同组周期或 prescaler 时，应用必须先禁用同组输出，再重新设置周期、prescaler 和通道。
-
-### 4.4 I2C
-
-I2C 用于：
-
-- I2C LCD1602。
-
-第一版优先保证 I2C LCD1602 可用。
-
-第一版默认软件 I2C 单总线，SDA/SCL 通过 `board_pins.h` 宏在编译期绑定。
-
-不提供运行期 I2C bus 对象。
-
-默认目标速率为标准模式 100kHz 以内，最终以示波器实测波形为准。
-
-### 4.5 SPI
-
-SPI 第一版提供基础能力。
-
-SPI 第一版已冻结为硬件 SPI 主机轮询实现。
-
-默认使用 P1.3/P1.4/P1.5 引脚组，硬件 SS 使用 `SSIG=1` 忽略；如果板级代码把 P1.2 作为外部片选，例如 ToyRemote/nRF24 的 CSN，则该引脚与 P1.2 LED/PWM 示例互斥。
-
-片选由板级或应用代码自行控制，HAL 不保存 CS 引脚，不做运行期引脚分派。
-
-初始化默认只配置 MOSI/MISO/SCLK 为准双向，释放所选引脚组的 MISO 端口锁存，并显式启用 MISO 数字输入：group 0 `P1IE.4`、group 1 `P2IE.4`、group 2 `P4IE.1`、group 3 `P3IE.3`。访问 `PxIE` 前必须先设置 `P_SW2.EAXFR=1`。
-
-第一版不同时维护硬件 SPI 和软件 SPI 两套实现。
-
-### 4.6 ADC
-
-ADC 示例只占用一个测试通道。
-
-ADC 模块不应隐藏开启多个通道。
-
-### 4.7 EEPROM/IAP
-
-EEPROM/IAP 示例必须指定测试地址范围。
-
-本项目不考虑老项目历史格式，不做旧数据迁移。
-
-但示例不能静默擦写未知区域。
-
-STC8H1K08 EEPROM/IAP 第一版按官方资料限定为 4KB，地址范围 `0x0000..0x0FFF`，512 字节扇区擦除。示例默认构建和上传不执行写擦；真实写擦测试必须显式选择写擦环境，并在资源报告中记录测试扇区。
-
-EEPROM/IAP HAL 的 `read`、`write`、`erase_sector` 必须支持按 API 关闭编译。固定小配置块应优先使用 `STC8H_EEPROM_ENABLE_FIXED_BLOCK`，避免应用项目复制 IAP 实现或承担未使用 public API 的 ROM/RAM 成本。
-
-EEPROM/IAP 触发窗口会临时关闭全局中断。写擦期间不得同时执行红外收发等严格时序任务。
-
-### 4.8 红外接收
-
-`drv_ir_rx` 是 NEC 解码状态机，不直接占用 GPIO、Timer 或中断。
-
-`drv_ir_rx` 只保留 1 个未读事件，不分配队列。应用未调用 `drv_ir_rx_get_event()` 前，新事件会被丢弃，避免已解出的 `FRAME` 被后续 `REPEAT` 或 `ERROR` 覆盖。
-
-真实硬件接收默认使用：
-
-```text
-VS1838B / HS0038
-```
-
-协议：
-
-```text
-NEC
-```
-
-资源需求：
-
-- 1 个 GPIO 输入。
-- 默认使用外部中断边沿触发 + Timer 脉宽计时。
-- 小状态机 RAM。
-- 不保存完整原始波形数组。
-
-GPIO、中断和 Timer 属于板级捕获层资源。板级捕获层可以测得 `level + width_us` 后调用 `drv_ir_rx_feed_pulse()`；如果 INT0 双边沿捕获在目标硬件上不稳定，也可以只捕获 NEC 下降沿间隔并调用 `drv_ir_rx_feed_nec_falling_interval()`。
-
-P3.2/INT0 红外低功耗示例默认使用下降沿中断 + Timer0 free-run：下降沿间隔约 13.5ms 为普通帧引导，约 1.125ms/2.25ms 为 bit0/bit1，约 11.25ms 为 repeat。10ms..12.5ms 首间隔不会立即发布 repeat；若后续出现 bit 间隔则优先解完整 frame，空闲超时调用 `drv_ir_rx_finish_nec_falling_interval()` 后才确认单独 repeat。该路径不保存原始波形数组，也不依赖 INT0 双边沿行为。
-
-如果实际引脚无法使用外部中断，允许使用固定周期采样，但必须说明采样周期、CPU 占用和可靠性限制。
-
-### 4.9 红外发射
-
-`drv_ir_tx` 是 NEC `mark/space` 时序编码器，不直接占用 GPIO、PWM、Timer 或中断。
-
-真实硬件发射默认使用：
-
-- 1 个 GPIO 输出。
-- 外部三极管或 MOS 管驱动红外 LED。
-- 38kHz 载波。
-
-优先使用 PWM 或 Timer 产生载波。
-
-如果使用 GPIO 软件调制，必须在文档中说明 CPU 占用。
-
-红外发射默认只在发送期间占用载波资源，发送结束后关闭 PWM/Timer 输出。NEC `mark/space` 持续时间使用 `stc8h_delay_timer0_1t_us()` 这类硬件计时延时，不使用粗略 C 空循环。
-
-协议编码层输出 `DRV_IR_TX_MARK` 时打开载波，输出 `DRV_IR_TX_SPACE` 时关闭载波。普通帧和标准 NEC repeat 帧都由同一个 `drv_ir_tx_nec_next()` 迭代输出；repeat 帧为 9ms mark、2.25ms space、562us mark。载波生成和红外 LED 驱动属于板级发送层资源，不能由协议层隐藏初始化。
-
-### 4.10 LCD1602
-
-LCD1602 第一版只支持 I2C 转接板。
-
-默认地址：
-
-```text
-0x27
-```
-
-备用地址：
-
-```text
-0x3F
-```
-
-必须提供 I2C 地址扫描示例。
-
-所有 I2C 地址文档和 API 均使用 7-bit 未左移地址。底层发送时内部左移并添加 R/W 位。
-
-第一版默认支持常见 PCF8574 背包映射，RS/RW/EN/BL/D4-D7 位通过编译期宏覆盖。
-
-LCD busy flag 默认不读，使用固定延时。
-
-## 5. 冲突处理
-
-如果多个模块需要同一资源，按以下顺序处理：
-
-1. 板级配置中显式分配。
-2. 示例中只启用必要模块。
-3. 不能隐式抢占资源。
-4. 如果资源冲突无法同时满足，示例或文档明确说明不能同时使用。
-
-### 5.1 默认资源冲突矩阵
-
-| 组合 | 第一版默认策略 |
-| --- | --- |
-| 1ms tick + UART | 允许同时使用。UART 波特率资源按芯片手册由 UART 模块实现决定。 |
-| 1ms tick + 按键/EC11 | 允许同时使用。按键/EC11 使用 tick 或主循环 elapsed 时间。 |
-| IR RX + IR TX | 默认不同时工作。IR RX 默认占边沿中断 + Timer2，IR TX 默认占 PWM；如果 IR TX fallback 到 Timer2，则与 IR RX 互斥。 |
-| IR TX + 无源蜂鸣器 | 默认互斥。二者都可能需要 PWM。 |
-| IR TX + 有源蜂鸣器 | 允许同时存在，但示例不要求同时鸣叫和发射红外。 |
-| 软件 I2C + TM1637 | 允许同时存在，但各自时序函数阻塞执行，不做并发调度。 |
-| EEPROM/IAP + 中断时序模块 | EEPROM/IAP 写擦期间应避免运行红外等时序敏感任务。 |
-
-### 5.2 默认不支持同时运行的组合
-
-第一版默认不支持以下组合同时运行：
-
-- 红外接收和使用 Timer2 fallback 载波的红外发射。
-- 红外发射和无源蜂鸣器同时占用同一路 PWM。
-- EEPROM/IAP 写擦期间同时执行红外收发。
-
-如果应用项目确实需要这些组合，必须在板级配置和资源报告中重新分配资源。
-
-## 6. 资源报告
-
-每个示例编译后，应记录：
-
-- 编译工具链。
-- 系统时钟。
-- 已编译模块。
-- 已编译 `.c` 文件清单。
-- ROM/code 占用。
-- RAM/data/idata/xdata 占用。
-- 外设和中断占用。
-- map 文件或符号表中未使用模块前缀是否缺失。
-
-资源报告文件：
-
-```text
-docs/RESOURCE_REPORT.md
-```
-
-该文件在实现和实测阶段生成。
+不记录完整构建日志、临时失败过程、一次性调试命令或硬件串口流水。

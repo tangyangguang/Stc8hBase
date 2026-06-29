@@ -17,6 +17,7 @@
 - `tools/check_host_tests.sh` 通过。
 - 原全量 `tools/check_examples.sh` 通过；清理后该重型入口改名为 `tools/check_examples_full.sh`。
 - `docs/25_H8K64U_OTA_DESIGN.md` 已压缩为当前设计基线；一次性 `tools/upload_delay_probe.sh` 已删除。
+- `docs/11_TEST_PLAN.md` 和 `docs/13_RESOURCE_POLICY.md` 已压缩为入口、准入和资源原则；一次性 UART1 OTA fault 脚本已删除。
 - `nrf24_pair_diag:ptx_matrix_fast` ROM guard 结果为 `7825/7900` 字节。
 - `nrf24_pair_diag:prx_matrix_fast` ROM guard 结果为 `7387/7600` 字节。
 

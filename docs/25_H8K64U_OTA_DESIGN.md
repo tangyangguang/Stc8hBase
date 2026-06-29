@@ -228,9 +228,8 @@ tools/prepare_h8k64u_validation.sh
 可选硬件脚本：
 
 - `tools/h8k64u_uart1_ota_smoke.py`：UART1 最小 OTA 闭环。
-- `tools/h8k64u_uart1_ota_faults.py`：UART1 故障和恢复场景。
 
-这些脚本会构建、上传或触发 IAP 写擦，必须在确认端口、芯片和测试板可接受风险后手动运行。
+该脚本会构建、上传或触发 IAP 写擦，必须在确认端口、芯片和测试板可接受风险后手动运行。
 
 ## 已验证结论
 
