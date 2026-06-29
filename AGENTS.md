@@ -14,7 +14,7 @@
 - 唯一项目配置入口为 `core/stc8h_config.h`；板级差异通过 `STC8H_CONFIG_INCLUDE` 和 `STC8H_PINS_INCLUDE` 间接进入模块。
 - 基础库源码必须同时兼容 SDCC 和 Keil C51；编译器差异集中在 `core/stc8h_compiler.h` 等 core 层，不扩散到业务模块。
 - macOS 日常验证优先使用 SDCC + PlatformIO/Makefile。日常快检运行：`tools/check_examples.sh`；发布前全量示例和关键符号检查运行：`tools/check_examples_full.sh`。
-- 宿主机单元/裁剪测试运行：`tools/check_host_tests.sh`。
+- 宿主机单元测试运行：`tools/check_host_tests.sh`；宿主机裁剪/codegen 专项检查运行：`tools/check_host_tests_full.sh`。
 - nRF24 相关示例专项检查运行：`tools/check_nrf24_examples.sh`。
 - STC8H8K64U 无硬件前置验证运行：`tools/prepare_h8k64u_validation.sh`。
 - Keil C51 验证入口在 `examples/keil_c51/module_compile_check/`；真实验证需在 Windows + Keil C51 环境运行 `build_c51.bat`。

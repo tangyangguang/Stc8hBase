@@ -19,6 +19,7 @@ tools/check_examples.sh
 
 ```sh
 tools/check_examples_full.sh
+tools/check_host_tests_full.sh
 tools/prepare_h8k64u_validation.sh
 ```
 

@@ -385,7 +385,7 @@ check_ec11_small_isr_api
 check_spi_miso_input_codegen
 check_pwm_xfr_codegen
 check_uart2_uart3_trim
-sh "${ROOT_DIR}/tools/check_host_tests.sh"
+sh "${ROOT_DIR}/tools/check_host_tests_full.sh"
 
 for ini in "${ROOT_DIR}"/examples/platformio/*/platformio.ini; do
     run_platformio_example "examples/platformio/$(basename "$(dirname "${ini}")")"
