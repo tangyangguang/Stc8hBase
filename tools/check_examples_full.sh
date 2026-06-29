@@ -494,7 +494,6 @@ check_ota_bootloader_layout \
 #   - PROTO_RF_LINK_INCLUDE_TIMEOUT_FIELDS
 #   - PROTO_RF_LINK_ENABLE_SEND_DATA_FIXED_TRACK_ACK / POLL_DATA_FIXED_TRACK_LINK
 #   - DRV_EC11_ENABLE_NULL_CHECK
-#   - nRF24 matrix diagnostics drifting back near the 8KB STC8H1K08 limit
 # Raise the ceiling deliberately if a real feature has been added.
 check_mem_rom_at_most \
     "examples/platformio/pwm_pwma_pwmb_small/.pio/build/STC8H1K08/firmware.mem" \
@@ -504,14 +503,6 @@ check_mem_rom_at_most \
     "examples/platformio/rf_link_nrf24_small/.pio/build/STC8H1K08/firmware.mem" \
     2080 \
     "rf_link_nrf24_small"
-check_mem_rom_at_most \
-    "examples/platformio/nrf24_pair_diag/.pio/build/ptx_matrix_fast/firmware.mem" \
-    7900 \
-    "nrf24_pair_diag:ptx_matrix_fast"
-check_mem_rom_at_most \
-    "examples/platformio/nrf24_pair_diag/.pio/build/prx_matrix_fast/firmware.mem" \
-    7600 \
-    "nrf24_pair_diag:prx_matrix_fast"
 
 if grep -Eq '\(stc8h_u32\)1u? *<< *rx->bit_index' "${ROOT_DIR}/drivers/drv_ir_rx.c"; then
     echo "forbidden variable u32 shift found in drivers/drv_ir_rx.c" >&2

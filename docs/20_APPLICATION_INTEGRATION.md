@@ -73,7 +73,7 @@ STC8H1K08 项目通过 PlatformIO wrapper 接入 `proto_rf_link` 时，不要在
 
 推荐做法是在 `platformio.ini` 里声明当前阶段实际需要的链路 API。阶段 2 只编译 radio 驱动和应用 radio 骨架时，可关闭全部 `PROTO_RF_LINK_ENABLE_*`；真实接入发送、接收、心跳或状态回传时，再逐项打开 `CONNECT`、`SEND_DATA`、`POLL`、`SEND_STATUS`、`SEND_HEARTBEAT`、`TICK`、`GET_STATE`。
 
-基础库示例 `examples/platformio/rf_link_nrf24_small` 只记录 `drv_nrf24l01 + stc8h_spi + proto_rf_link` 在 STC8H1K08 上的裁剪接入和资源边界；它不是链路可靠性运行参考。需要真实 nRF24 TX 完成、`MAX_RT` 恢复或 ACK payload 判定时，以 `nrf24_pair_diag`、`nrf24_fixed_ping` 和 `nrf24_ack_payload` 的 wait + `drv_nrf24l01_complete_tx()` 流程为准。
+基础库示例 `examples/platformio/rf_link_nrf24_small` 只记录 `drv_nrf24l01 + stc8h_spi + proto_rf_link` 在 STC8H1K08 上的裁剪接入和资源边界；它不是链路可靠性运行参考。需要真实 nRF24 TX 完成、`MAX_RT` 恢复或 ACK payload 判定时，以 `nrf24_fixed_ping` 和 `nrf24_ack_payload` 的 wait + `drv_nrf24l01_complete_tx()` 流程为准。
 
 ## 7. H8K64U OTA 接入边界
 

@@ -76,36 +76,7 @@ check_example() {
     check_pin_codegen "$example_name" "$example_dir/.pio/build/STC8H1K08/src/drv_nrf24l01_wrap.rst"
 }
 
-check_example_env() {
-    example_name=$1
-    env_name=$2
-    example_dir="$ROOT_DIR/examples/platformio/$example_name"
-
-    if [ ! -d "$example_dir" ]; then
-        echo "missing nRF24 example: $example_dir" >&2
-        exit 1
-    fi
-
-    if [ "${CHECK_NRF24_EXAMPLES_SKIP_BUILD:-0}" != "1" ]; then
-        (cd "$example_dir" && pio run -t clean -e "$env_name" && pio run -e "$env_name")
-    fi
-    check_early_init_order "$example_name:$env_name" "$example_dir/.pio/build/$env_name/src/main.rst"
-    check_pin_codegen "$example_name:$env_name" "$example_dir/.pio/build/$env_name/src/drv_nrf24l01_wrap.rst"
-}
-
 check_example nrf24_fixed_ping
 check_example nrf24_ack_payload
 check_example rf_link_nrf24_small
 check_example nrf24_uart_diag
-for env_name in \
-    ptx prx \
-    ptx_1m_no_ack prx_1m_no_ack \
-    ptx_250k_15ack prx_250k_15ack \
-    ptx_250k_32ack prx_250k_32ack \
-    ptx_250k_32ack_2ms prx_250k_32ack_2ms \
-    ptx_250k_32ack_2500us prx_250k_32ack_2500us \
-    ptx_2m_no_ack prx_2m_no_ack \
-    ptx_matrix_fast prx_matrix_fast
-do
-    check_example_env nrf24_pair_diag "$env_name"
-done

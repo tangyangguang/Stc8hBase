@@ -38,9 +38,7 @@ tools/prepare_h8k64u_validation.sh
 
 - `nrf24_fixed_ping`：基础固定 payload 发送。
 - `nrf24_ack_payload`：ACK payload 和 dynamic payload。
-- `nrf24_pair_diag`：双板链路、速率、ACK payload margin 和 matrix 诊断。
-
-`nrf24_pair_diag` 是专项诊断固件，接近 8KB 上限，不作为普通应用模板。
+- `nrf24_uart_diag`：单模块 SPI、寄存器和 FEATURE/DYNPD 验证。
 
 ## STC8H8K64U 专项硬件项
 
