@@ -54,7 +54,7 @@ void stc8h_uart_write(stc8h_uart_id_t uart, const char *data)
     (void)data;
 }
 
-void stc8h_uart_write_code(stc8h_uart_id_t uart, STC8H_CODE char *data)
+void stc8h_uart_write_code(stc8h_uart_id_t uart, const STC8H_CODE char *data)
 {
     (void)uart;
     (void)data;

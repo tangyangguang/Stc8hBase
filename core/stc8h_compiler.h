@@ -53,7 +53,7 @@
 #define STC8H_IDATA
 #define STC8H_PDATA
 #define STC8H_XDATA
-#define STC8H_CODE const
+#define STC8H_CODE
 #define STC8H_BIT unsigned char
 
 #define STC8H_SFR(name, addr) extern volatile unsigned char name

@@ -143,11 +143,7 @@
 #define DRV_NRF24L01_ENABLE_RECOVER (DRV_NRF24L01_ENABLE_ENTER_STANDBY && DRV_NRF24L01_ENABLE_ENTER_RX)
 #endif
 
-#if defined(STC8H_HOSTED)
-#define DRV_NRF24L01_CODE_CONST STC8H_CODE
-#else
 #define DRV_NRF24L01_CODE_CONST const STC8H_CODE
-#endif
 
 /* The original nRF24L01 (non +) requires sending the ACTIVATE 0x73
  * command before FEATURE bits become writable. nRF24L01+ accepts
