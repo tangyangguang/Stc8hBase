@@ -290,9 +290,7 @@ def main():
         seq += 1
 
         print("ota commit")
-        commit_status = send_command(ser, seq, CMD_COMMIT, timeout=8.0, rx_buf=rx_buf)
-        if len(commit_status) >= 8:
-            print(f"commit code probe: {commit_status[4:8].hex()}")
+        send_command(ser, seq, CMD_COMMIT, timeout=8.0, rx_buf=rx_buf)
 
         end = time.time() + 6.0
         text = bytearray(rx_buf)
@@ -301,11 +299,11 @@ def main():
             data = ser.read(256)
             if data:
                 text.extend(data)
-                if (b"H8K64U OTA app" in text) or (b"APP-ENTRY" in text):
+                if b"H8K64U OTA app" in text:
                     break
         decoded = text.decode("ascii", errors="replace")
         print(decoded)
-        if ("H8K64U OTA app" not in decoded) and ("APP-ENTRY" not in decoded):
+        if "H8K64U OTA app" not in decoded:
             raise RuntimeError("app did not print expected validation banner")
 
     print("UART1 OTA smoke passed")

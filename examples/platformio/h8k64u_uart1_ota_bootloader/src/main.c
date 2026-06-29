@@ -12,7 +12,7 @@
 #define H8K64U_OTA_LOCAL_ADDR 0x22u
 #endif
 
-#define H8K64U_OTA_STATUS_PAYLOAD_LEN 8u
+#define H8K64U_OTA_STATUS_PAYLOAD_LEN 4u
 #define H8K64U_OTA_IAP_CONTR_SWRST 0x20u
 #define H8K64U_OTA_READ_CHUNK_SIZE 16u
 
@@ -139,14 +139,6 @@ static void boot_uart1_write_banner(void)
     stc8h_uart_putc(STC8H_UART1, '\n');
 }
 
-static stc8h_u8 boot_read_code_byte(stc8h_u16 addr)
-{
-    const STC8H_CODE stc8h_u8 *ptr;
-
-    ptr = (const STC8H_CODE stc8h_u8 *)addr;
-    return *ptr;
-}
-
 static stc8h_status_t boot_send_status(const proto_ota_frame_t *request, stc8h_u8 status)
 {
     static STC8H_XDATA stc8h_u8 payload[H8K64U_OTA_STATUS_PAYLOAD_LEN];
@@ -160,17 +152,6 @@ static stc8h_status_t boot_send_status(const proto_ota_frame_t *request, stc8h_u
     payload[1] = status;
     payload[2] = (stc8h_u8)stc8h_ota_get_status(&ota_ctx);
     payload[3] = ota_ctx.fail_reason;
-    if (request->cmd == PROTO_OTA_FRAME_CMD_COMMIT) {
-        payload[4] = boot_read_code_byte(STC8H_BOOT_APP_BASE);
-        payload[5] = boot_read_code_byte((stc8h_u16)(STC8H_BOOT_APP_BASE + 1u));
-        payload[6] = boot_read_code_byte((stc8h_u16)(STC8H_BOOT_APP_BASE + 2u));
-        payload[7] = boot_read_code_byte((stc8h_u16)(STC8H_BOOT_APP_BASE + 3u));
-    } else {
-        payload[4] = (stc8h_u8)(ota_ctx.manifest.app_size & 0xFFUL);
-        payload[5] = (stc8h_u8)((ota_ctx.manifest.app_size >> 8) & 0xFFUL);
-        payload[6] = (stc8h_u8)(request->len & 0xFFu);
-        payload[7] = (stc8h_u8)((request->len >> 8) & 0xFFu);
-    }
 
     if (proto_ota_frame_build(tx_frame,
                               sizeof(tx_frame),
