@@ -5,7 +5,7 @@
 ## 目标
 
 - 确认基础库源码可被 SDCC/PlatformIO 和 Makefile 构建。
-- 确认核心 host 单元测试通过。
+- 确认代表性 host 单元快检通过。
 - 确认示例只编译实际使用的 `.c` 文件，未使用模块零占用。
 - 确认高风险能力有发布前专项检查，例如 EEPROM/IAP、OTA 链接布局、nRF24 尺寸边界。
 
@@ -46,6 +46,8 @@ Host 测试只覆盖可在宿主机可靠判断的纯逻辑：
 
 Host 测试不模拟完整 MCU、寄存器时序或硬件物理现象。无法稳定模拟的内容放到示例构建或硬件验证。
 
+`tools/check_host_tests.sh` 只保留日常快检集合：小工具、基础协议编解码和少量轻量驱动逻辑。较重的 OTA 状态机、nRF24 ACK/dynamic payload 路径、RF-link 地址空间路径放在 `tools/check_host_tests_full.sh`。
+
 ## 示例构建
 
 示例分为三类：
@@ -66,6 +68,7 @@ Host 测试不模拟完整 MCU、寄存器时序或硬件物理现象。无法�
 
 - 全部 PlatformIO 示例构建。
 - Makefile 示例构建。
+- 重型 OTA/nRF24/RF-link host 行为测试。
 - EEPROM/IAP 写擦环境的显式构建。
 - OTA app `0x0200` 链接、bootloader `0xB400` 链接和 `0xFC00..0xFFFF` 参数区边界。
 - 少量高风险 IAP/地址空间编译检查。

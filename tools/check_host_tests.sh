@@ -32,17 +32,10 @@ run_c_test_h8k64u() {
 }
 
 run_c_test "tests/host/test_drv_ec11_small.c"
-run_c_test "tests/host/test_drv_ec11_small_full_detent.c"
-run_c_test "tests/host/test_drv_ec11_small_isr.c"
-run_c_test "tests/host/test_drv_nrf24l01_core.c"
-run_c_test "tests/host/test_drv_nrf24l01_timing.c"
 run_c_test "tests/host/test_drv_tm1637_address_space.c"
 run_c_test "tests/host/test_drv_rs485_uart.c"
 run_c_test "tests/host/test_proto_ota_frame.c"
-run_c_test "tests/host/test_proto_rf_link_address_space.c"
-run_c_test_h8k64u "tests/host/test_stc8h_ota_core.c"
 run_c_test_h8k64u "tests/host/test_stc8h_ota_format.c"
-run_c_test_h8k64u "tests/host/test_stc8h_ota_params.c"
 run_c_test "tests/host/test_util_crc.c"
 run_c_test "tests/host/test_util_crc32.c"
 
