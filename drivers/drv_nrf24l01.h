@@ -31,10 +31,6 @@
 #define DRV_NRF24L01_ENABLE_ADDRESS_API 1
 #endif
 
-#ifndef DRV_NRF24L01_ENABLE_PIPE0_FIXED_API
-#define DRV_NRF24L01_ENABLE_PIPE0_FIXED_API 0
-#endif
-
 #ifndef DRV_NRF24L01_FIXED_ADDRESS_WIDTH
 #define DRV_NRF24L01_FIXED_ADDRESS_WIDTH 5u
 #endif
@@ -99,10 +95,6 @@
 #define DRV_NRF24L01_ENABLE_CODE_ADDRESS_API 0
 #endif
 
-#ifndef DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD
-#define DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD 1
-#endif
-
 #ifndef DRV_NRF24L01_ENABLE_ACK_PAYLOAD
 #define DRV_NRF24L01_ENABLE_ACK_PAYLOAD 1
 #endif
@@ -111,12 +103,8 @@
 #define DRV_NRF24L01_ENABLE_WRITE_ACK_PAYLOAD DRV_NRF24L01_ENABLE_ACK_PAYLOAD
 #endif
 
-#ifndef DRV_NRF24L01_ENABLE_DISABLE_ACK_PAYLOAD
-#define DRV_NRF24L01_ENABLE_DISABLE_ACK_PAYLOAD DRV_NRF24L01_ENABLE_ACK_PAYLOAD
-#endif
-
 #ifndef DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE
-#define DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE (DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD || DRV_NRF24L01_ENABLE_ACK_PAYLOAD)
+#define DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE DRV_NRF24L01_ENABLE_ACK_PAYLOAD
 #endif
 
 #ifndef DRV_NRF24L01_ENABLE_RX_PIPE_API
@@ -149,9 +137,8 @@
  * command before FEATURE bits become writable. nRF24L01+ accepts
  * FEATURE writes directly. Apps that have positively identified the
  * chip as nRF24L01+ can set this to 0 to drop the second-attempt
- * ACTIVATE fallback inside enable_dynamic_payload /
- * enable_ack_payload. Default 1 preserves the legacy-compatible
- * path. */
+ * ACTIVATE fallback inside enable_ack_payload. Default 1 preserves
+ * the legacy-compatible path. */
 #ifndef DRV_NRF24L01_REQUIRES_ACTIVATE
 #define DRV_NRF24L01_REQUIRES_ACTIVATE 1
 #endif
@@ -250,9 +237,6 @@ stc8h_status_t drv_nrf24l01_set_tx_address(const stc8h_u8 *addr, stc8h_u8 len);
 stc8h_status_t drv_nrf24l01_set_rx_address(stc8h_u8 pipe, const stc8h_u8 *addr, stc8h_u8 len);
 stc8h_status_t drv_nrf24l01_set_payload_size(stc8h_u8 pipe, stc8h_u8 len);
 #endif
-#if DRV_NRF24L01_ENABLE_PIPE0_FIXED_API
-stc8h_status_t drv_nrf24l01_config_pipe0_fixed(const stc8h_u8 *addr);
-#endif
 #if DRV_NRF24L01_ENABLE_CODE_ADDRESS_API
 stc8h_status_t drv_nrf24l01_config_pipe0_fixed_code(DRV_NRF24L01_CODE_CONST stc8h_u8 *addr);
 #endif
@@ -283,18 +267,11 @@ void drv_nrf24l01_clear_irq(stc8h_u8 flags);
 void drv_nrf24l01_flush_tx(void);
 void drv_nrf24l01_flush_rx(void);
 
-#if DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD
-stc8h_status_t drv_nrf24l01_enable_dynamic_payload(stc8h_u8 pipe_mask);
-void drv_nrf24l01_disable_dynamic_payload(void);
-#endif
 #if DRV_NRF24L01_ENABLE_ACK_PAYLOAD
 stc8h_status_t drv_nrf24l01_enable_ack_payload(stc8h_u8 pipe_mask);
 #endif
 #if DRV_NRF24L01_ENABLE_WRITE_ACK_PAYLOAD
 stc8h_u8 drv_nrf24l01_write_ack_payload(stc8h_u8 pipe, const stc8h_u8 *data, stc8h_u8 len);
-#endif
-#if DRV_NRF24L01_ENABLE_DISABLE_ACK_PAYLOAD
-void drv_nrf24l01_disable_ack_payload(void);
 #endif
 #if DRV_NRF24L01_ENABLE_READ_DYNAMIC_PAYLOAD_SIZE
 stc8h_u8 drv_nrf24l01_read_dynamic_payload_size(void);

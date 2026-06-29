@@ -81,7 +81,7 @@
 #define DRV_NRF24L01_NEED_GENERIC_READ_BUF 0
 #endif
 
-#if DRV_NRF24L01_ENABLE_RAW_API || DRV_NRF24L01_ENABLE_ADDRESS_API || DRV_NRF24L01_ENABLE_PIPE0_FIXED_API || DRV_NRF24L01_ENABLE_WRITE_PAYLOAD || DRV_NRF24L01_ENABLE_FIXED_PAYLOAD_API || DRV_NRF24L01_ENABLE_WRITE_ACK_PAYLOAD
+#if DRV_NRF24L01_ENABLE_RAW_API || DRV_NRF24L01_ENABLE_ADDRESS_API || DRV_NRF24L01_ENABLE_WRITE_PAYLOAD || DRV_NRF24L01_ENABLE_FIXED_PAYLOAD_API || DRV_NRF24L01_ENABLE_WRITE_ACK_PAYLOAD
 #define DRV_NRF24L01_NEED_GENERIC_WRITE_BUF 1
 #else
 #define DRV_NRF24L01_NEED_GENERIC_WRITE_BUF 0
@@ -413,22 +413,6 @@ stc8h_status_t drv_nrf24l01_set_payload_size(stc8h_u8 pipe, stc8h_u8 len)
 }
 #endif
 
-#if DRV_NRF24L01_ENABLE_PIPE0_FIXED_API
-stc8h_status_t drv_nrf24l01_config_pipe0_fixed(const stc8h_u8 *addr)
-{
-#if DRV_NRF24L01_ENABLE_ARG_CHECK
-    if (addr == 0) {
-        return STC8H_ERROR;
-    }
-#endif
-    (void)drv_nrf24l01_write_reg(NRF24_REG_SETUP_AW, (stc8h_u8)(DRV_NRF24L01_FIXED_ADDRESS_WIDTH - 2u));
-    (void)drv_nrf24l01_write_buf((stc8h_u8)(NRF24_CMD_W_REGISTER | 0x10u), addr, DRV_NRF24L01_FIXED_ADDRESS_WIDTH);
-    (void)drv_nrf24l01_write_buf((stc8h_u8)(NRF24_CMD_W_REGISTER | NRF24_REG_RX_ADDR_P0), addr, DRV_NRF24L01_FIXED_ADDRESS_WIDTH);
-    (void)drv_nrf24l01_write_reg(NRF24_REG_RX_PW_P0, DRV_NRF24L01_FIXED_PAYLOAD_SIZE);
-    return STC8H_OK;
-}
-#endif
-
 #if DRV_NRF24L01_ENABLE_CODE_ADDRESS_API
 stc8h_status_t drv_nrf24l01_config_pipe0_fixed_code(DRV_NRF24L01_CODE_CONST stc8h_u8 *addr)
 {
@@ -607,7 +591,7 @@ void drv_nrf24l01_flush_rx(void)
     (void)drv_nrf24l01_command(NRF24_CMD_FLUSH_RX);
 }
 
-#if DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD || DRV_NRF24L01_ENABLE_ACK_PAYLOAD
+#if DRV_NRF24L01_ENABLE_ACK_PAYLOAD
 static stc8h_status_t drv_nrf24l01_enable_feature_bits(stc8h_u8 bits)
 {
 #if DRV_NRF24L01_FEATURE_ENABLE_DIRECT_WRITE
@@ -638,28 +622,6 @@ static stc8h_status_t drv_nrf24l01_enable_feature_bits(stc8h_u8 bits)
 #endif
     return STC8H_ERROR;
 #endif
-}
-#endif
-
-#if DRV_NRF24L01_ENABLE_DYNAMIC_PAYLOAD
-stc8h_status_t drv_nrf24l01_enable_dynamic_payload(stc8h_u8 pipe_mask)
-{
-    pipe_mask &= DRV_NRF24L01_PIPE_MASK_ALL;
-    if (drv_nrf24l01_enable_feature_bits(NRF24_FEATURE_EN_DPL) != STC8H_OK) {
-        return STC8H_ERROR;
-    }
-    (void)drv_nrf24l01_write_reg(NRF24_REG_DYNPD, pipe_mask);
-    return STC8H_OK;
-}
-
-void drv_nrf24l01_disable_dynamic_payload(void)
-{
-    stc8h_u8 feature;
-
-    (void)drv_nrf24l01_write_reg(NRF24_REG_DYNPD, 0u);
-    feature = drv_nrf24l01_read_reg(NRF24_REG_FEATURE);
-    feature &= (stc8h_u8)~(NRF24_FEATURE_EN_DPL | NRF24_FEATURE_EN_ACK_PAY);
-    (void)drv_nrf24l01_write_reg(NRF24_REG_FEATURE, feature);
 }
 #endif
 
@@ -694,17 +656,6 @@ stc8h_u8 drv_nrf24l01_write_ack_payload(stc8h_u8 pipe, const stc8h_u8 *data, stc
     }
 #endif
     return drv_nrf24l01_write_buf((stc8h_u8)(NRF24_CMD_W_ACK_PAYLOAD | pipe), data, len);
-}
-#endif
-
-#if DRV_NRF24L01_ENABLE_DISABLE_ACK_PAYLOAD
-void drv_nrf24l01_disable_ack_payload(void)
-{
-    stc8h_u8 feature;
-
-    feature = drv_nrf24l01_read_reg(NRF24_REG_FEATURE);
-    feature &= (stc8h_u8)~NRF24_FEATURE_EN_ACK_PAY;
-    (void)drv_nrf24l01_write_reg(NRF24_REG_FEATURE, feature);
 }
 #endif
 

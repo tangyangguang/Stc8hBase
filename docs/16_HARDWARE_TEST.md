@@ -38,7 +38,7 @@ tools/prepare_h8k64u_validation.sh
 
 - `nrf24_fixed_ping`：基础固定 payload 发送。
 - `nrf24_ack_payload`：ACK payload 和 dynamic payload。
-- `nrf24_uart_diag`：单模块 SPI、寄存器和 FEATURE/DYNPD 验证。
+- `rf_link_nrf24_small`：小内存 RF link 裁剪构建与基础链路接入。
 
 ## STC8H8K64U 专项硬件项
 

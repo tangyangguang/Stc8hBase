@@ -79,4 +79,3 @@ check_example() {
 check_example nrf24_fixed_ping
 check_example nrf24_ack_payload
 check_example rf_link_nrf24_small
-check_example nrf24_uart_diag

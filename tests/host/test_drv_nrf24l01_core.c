@@ -406,24 +406,6 @@ static int test_read_rx_packet_reads_when_status_rx_ready_lags_fifo(void)
     return failures;
 }
 
-static int test_disable_dynamic_payload_clears_ack_payload_feature(void)
-{
-    int failures;
-
-    failures = 0;
-    fake_reset();
-    regs[TEST_REG_DYNPD] = DRV_NRF24L01_PIPE0;
-    regs[TEST_REG_FEATURE] = TEST_FEATURE_EN_DPL | TEST_FEATURE_EN_ACK_PAY;
-
-    drv_nrf24l01_disable_dynamic_payload();
-
-    failures += require(regs[TEST_REG_DYNPD] == 0u,
-                        "disable_dynamic_payload must clear DYNPD");
-    failures += require((regs[TEST_REG_FEATURE] & (TEST_FEATURE_EN_DPL | TEST_FEATURE_EN_ACK_PAY)) == 0u,
-                        "disable_dynamic_payload must clear both EN_DPL and dependent EN_ACK_PAY");
-    return failures;
-}
-
 static int test_xdata_fixed_payload_write_and_read_use_fixed_width(void)
 {
     int failures;
@@ -494,7 +476,6 @@ int main(void)
     failures += test_read_rx_packet_flushes_invalid_dynamic_width();
     failures += test_read_rx_packet_reads_when_status_rx_ready_lags_fifo();
     failures += test_preload_ack_payload_replace_policy();
-    failures += test_disable_dynamic_payload_clears_ack_payload_feature();
     failures += test_xdata_fixed_payload_write_and_read_use_fixed_width();
     failures += test_code_pipe0_fixed_config_writes_address_from_code_space();
 

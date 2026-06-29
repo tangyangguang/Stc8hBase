@@ -89,12 +89,11 @@ ACK payload 只作为短状态回传优化，不作为完整双向协议。
 
 ## 保留示例
 
-- `examples/platformio/nrf24_uart_diag`：单模块 SPI、寄存器、FEATURE/DYNPD 验证。
 - `examples/platformio/nrf24_fixed_ping`：固定 payload 发送和 TX 结果处理。
 - `examples/platformio/nrf24_ack_payload`：dynamic payload 与 ACK payload 最小验证。
 - `examples/platformio/rf_link_nrf24_small`：小内存目标上的 RF link 裁剪构建示例，不作为完整运行期链路参考。
 
-已删除的双板自动 matrix 诊断不再作为长期维护对象。真实项目需要链路 margin 时，应在应用项目中按目标硬件、供电、天线、距离和干扰环境做专项测试，不把大矩阵固化进基础库。
+已删除的 UART 寄存器 dump、双板自动 matrix 诊断等硬件排查程序不再作为长期维护对象。真实项目需要链路 margin 或模块寄存器排查时，应在应用项目中按目标硬件、供电、天线、距离和干扰环境做专项测试，不把大矩阵或调试串口流水固化进基础库。
 
 ## 硬件注意事项
 
