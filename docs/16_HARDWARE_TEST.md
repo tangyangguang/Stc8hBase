@@ -43,6 +43,7 @@ tools/prepare_h8k64u_validation.sh
 ## STC8H8K64U 专项硬件项
 
 - `h8k64u_gpio_blink`：基础 GPIO。
+- `h8k64u_pwm_8ch_validate`：STC8H8K64U-LQFP48 8 路基础 PWM 验证。PWMA1..4 使用 P1.0/P1.2/P1.4/P1.6，PWMB5..8 使用 P2.0..P2.3；确认 8 路初始化、`set_duty` 占空比变化、`enable` 输出、`disable` 关闭、再次使能和全关闭阶段。PWMA1..4 共用 PWMA 周期/预分频，PWMB5..8 共用 PWMB 周期/预分频；两个组可明确配置为不同周期，但同组内不能独立频率。
 - `h8k64u_uart2_hello` / `h8k64u_uart3_hello`：UART2/UART3 引脚组。
 - `h8k64u_adc_read`：12-bit ADC。
 - `h8k64u_eeprom_safe`：安全占位构建。

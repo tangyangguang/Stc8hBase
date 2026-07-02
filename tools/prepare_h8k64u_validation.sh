@@ -96,6 +96,12 @@ pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
 pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
 # Confirm P1.3 toggles externally only if a probe or LED is wired.
 
+(cd examples/platformio/h8k64u_pwm_8ch_validate && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
+# Probe PWMA1..4 on P1.0/P1.2/P1.4/P1.6 and PWMB5..8 on P2.0..P2.3.
+# Confirm all 8 channels output, duty changes, alternate disable, re-enable,
+# and all-disable phases. PWMA channels share one period; PWMB channels share
+# one period; this example intentionally sets different periods per group.
+
 (cd examples/platformio/h8k64u_adc_read && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
 pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
 
@@ -116,6 +122,7 @@ EOF
 build_example examples/platformio/h8k64u_uart2_hello
 build_example examples/platformio/h8k64u_uart3_hello
 build_example examples/platformio/h8k64u_gpio_blink
+build_example examples/platformio/h8k64u_pwm_8ch_validate
 build_example examples/platformio/h8k64u_adc_read
 build_example examples/platformio/h8k64u_eeprom_safe
 build_example examples/platformio/h8k64u_eeprom_rw
