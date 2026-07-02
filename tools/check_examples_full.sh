@@ -144,6 +144,7 @@ done
 
 run_platformio_env "examples/platformio/h8k64u_ota_min_app" "STC8H8K64U_mark_valid_iap"
 run_platformio_env "examples/platformio/eeprom_rw" "STC8H1K08_write_test"
+run_platformio_env "examples/platformio/h8k64u_uart2_hello" "STC8H8K64U_uart1_pin_group1"
 
 sh "${ROOT_DIR}/tools/check_nrf24_examples.sh"
 

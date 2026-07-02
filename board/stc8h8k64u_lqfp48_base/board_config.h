@@ -20,6 +20,10 @@
 #define STC8H_UART3_BAUD 9600UL
 #endif
 
+#ifndef STC8H_UART1_PIN_GROUP
+#define STC8H_UART1_PIN_GROUP 0u
+#endif
+
 #ifndef STC8H_UART_ENABLE_UART2
 #define STC8H_UART_ENABLE_UART2 0
 #endif

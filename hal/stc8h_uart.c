@@ -67,6 +67,10 @@
 #define STC8H_UART_ENABLE_UART3 0
 #endif
 
+#ifndef STC8H_UART1_PIN_GROUP
+#define STC8H_UART1_PIN_GROUP 0u
+#endif
+
 #ifndef STC8H_UART2_PIN_GROUP
 #define STC8H_UART2_PIN_GROUP 0u
 #endif
@@ -81,6 +85,10 @@
 
 #if (STC8H_UART_ENABLE_UART2 || STC8H_UART_ENABLE_UART3) && STC8H_UART_ASSUME_UART1
 #error "STC8H_UART_ASSUME_UART1 cannot be used when UART2 or UART3 is enabled."
+#endif
+
+#if STC8H_UART1_PIN_GROUP > 1u
+#error "STC8H_UART1_PIN_GROUP must be 0 or 1."
 #endif
 
 #define STC8H_UART_RELOAD_VALUE(sysclk, baud) (65536UL - ((sysclk) / (baud) / 4UL))
@@ -173,9 +181,19 @@ static stc8h_status_t stc8h_uart1_init(void)
     TH1 = (stc8h_u8)(STC8H_UART1_RELOAD >> 8);
     ET1 = 0;
     INTCLKO &= (stc8h_u8)~STC8H_INTCLKO_T1CLKO;
-    P_SW1 &= (stc8h_u8)~STC8H_P_SW1_UART1_MASK;
+    P_SW1 = (stc8h_u8)((P_SW1 & (stc8h_u8)~STC8H_P_SW1_UART1_MASK) |
+                       (stc8h_u8)(STC8H_UART1_PIN_GROUP << 6));
+#if STC8H_UART_CONFIGURE_PORT_MODE
+#if STC8H_UART1_PIN_GROUP == 0u
     P3M0 &= (stc8h_u8)~0x03u;
     P3M1 &= (stc8h_u8)~0x03u;
+    P3 |= 0x03u;
+#else
+    P3M0 &= (stc8h_u8)~0xC0u;
+    P3M1 &= (stc8h_u8)~0xC0u;
+    P3 |= 0xC0u;
+#endif
+#endif
     TR1 = 1;
     TI = 0;
     RI = 0;

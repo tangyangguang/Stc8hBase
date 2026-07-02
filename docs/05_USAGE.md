@@ -159,6 +159,14 @@ PlatformIO 项目管理更完整，适合多个示例、多个板级配置和自
 
 6MHz 可用于低功耗调试配置。UART1 使用 Timer1 1T 波特率发生器时，`STC8H_UART1_BAUD` 可选 9600、19200、38400、57600、115200；这些配置的理论误差约 +0.1603%。
 
+UART1 默认使用 `P3.0/RxD`、`P3.1/TxD`。需要切到第二组引脚时，在板级配置或构建参数中设置：
+
+```c
+#define STC8H_UART1_PIN_GROUP 1u
+```
+
+`STC8H_UART1_PIN_GROUP=0` 对应 `P3.0/P3.1`，`STC8H_UART1_PIN_GROUP=1` 对应 `P3.6/RxD_2`、`P3.7/TxD_2`。默认值为 `0`，UART1 初始化会同步配置 `P_SW1[7:6]` 和所选 P3 引脚的准双向 GPIO 模式。当前只开放这两组；其他 UART1 复用组需要基于目标芯片封装和实际硬件验证后再加入。
+
 ## 8. Timer0 free-run 最小用法
 
 红外接收这类边沿脉宽测量可以使用 Timer0 12T 16-bit free-run：
