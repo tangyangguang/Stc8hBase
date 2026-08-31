@@ -57,6 +57,8 @@ HAL API 避免大型结构体，除非它能明显减少重复代码。
 
 `stc8h_qei` 第一版只封装 `STC8H8K64U` 的 PWMB5/PWMB6 16 位硬件正交计数，配置从编译期进入，不启用中断或维护软件累计位置。该模块独占整个 PWMB 计数器，不能与 PWMB5..8 PWM 输出并用；具体边界见 `docs/26_H8K64U_QEI_DESIGN.md`。
 
+`stc8h_uart` 的可选 ISR API 只提供中断使能、单字节 try-get 和 TX flag 清理，不安装 ISR 或分配 ring buffer；可选 bounded putc 给可靠半双工驱动提供有限 polling。H8K64U UART2 的具体边界见 `docs/27_H8K64U_UART2_RS485_DESIGN.md`。
+
 WDT、外部中断和低功耗模块只封装已核实的 MCU 基础能力，不做任务健康监控、电源管理框架或中断注册表。ISR 仍由板级或应用代码显式绑定。
 
 第一版 I2C 明确采用软件 I2C 单总线，SDA/SCL 通过板级宏绑定。
@@ -79,6 +81,7 @@ nRF24L01 驱动只封装芯片 SPI 协议和 CE/CSN 时序；CE/CSN 端口模式
 | `drv_led` | LED 有效电平和状态辅助 |
 | `drv_buzzer` | 有源蜂鸣器有效电平辅助 |
 | `drv_relay` | 继电器有效电平辅助 |
+| `drv_rs485_uart` | UART 半双工方向控制、可选 RX interrupt 协同和有界发送 |
 | `drv_tm1637` | 常见四位数码管模块 |
 | `drv_ir_tx` | NEC 红外遥控发射协议编码 |
 | `drv_ir_rx` | NEC 红外遥控接收协议解码 |

@@ -13,6 +13,9 @@
 
 2026-08-31：
 
+- `h8k64u_rs485_uart2_irq_echo` 在 PlatformIO SDCC 4.4.0 下构建通过：1570 bytes ROM、32 bytes XDATA、223 bytes 可用栈；vector 8 的 `0x0043` 跳转到应用 UART2 ISR。
+- UART2/RS485 HAL 与 Driver 不分配固定缓冲；示例自有 32-byte XDATA ring，使用 UART2、Timer2、P1.0/P1.1、P4.4 和 vector 8。
+- host test 覆盖 RX interrupt 初始化、bounded putc 成功顺序和失败释放总线；9600 示例最终停止位保守等待 150µs，真实时序仍须示波器验收。
 - `h8k64u_qei_pwmb_validate` 在 PlatformIO SDCC 4.4.0 下构建通过：894 bytes ROM。
 - 示例只编译 `main.c`、`stc8h_gpio.c` 和 `stc8h_qei.c`；QEI HAL 没有固定全局 RAM、缓冲或中断向量，占用整个 PWMB 计数器及通道 5/6。
 - 不引用 QEI 的代表性 `gpio_blink` map 保持无 `_stc8h_qei` 符号检查。

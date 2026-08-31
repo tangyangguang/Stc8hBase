@@ -1,6 +1,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#define STC8H_UART_ENABLE_ISR_API 1
+#define STC8H_UART_ENABLE_BOUNDED_PUTC 1
+#define DRV_RS485_UART_ENABLE_RX_INTERRUPT 1
+#define DRV_RS485_UART_TX_POLL_LIMIT 100u
+#define DRV_RS485_UART_TX_COMPLETE_DELAY_US 100u
+
 #include "stc8h_config.h"
 #include "stc8h_uart.h"
 
@@ -17,6 +23,8 @@ static char events[64];
 static unsigned int event_count;
 static stc8h_u8 readable_value;
 static char getc_value;
+static unsigned int bounded_putc_count;
+static unsigned int bounded_putc_fail_at;
 
 static void event_append(char event)
 {
@@ -48,6 +56,51 @@ void stc8h_uart_putc(stc8h_uart_id_t uart, char ch)
     event_append(ch);
 }
 
+stc8h_status_t stc8h_uart_putc_bounded(stc8h_uart_id_t uart, char ch, stc8h_u16 poll_limit)
+{
+    (void)uart;
+    if (poll_limit != DRV_RS485_UART_TX_POLL_LIMIT) {
+        event_append('?');
+        return STC8H_ERROR;
+    }
+    ++bounded_putc_count;
+    if (bounded_putc_fail_at != 0u && bounded_putc_count == bounded_putc_fail_at) {
+        event_append('!');
+        return STC8H_ERROR;
+    }
+    event_append(ch);
+    return STC8H_OK;
+}
+
+stc8h_status_t stc8h_uart_interrupt_enable(stc8h_uart_id_t uart)
+{
+    event_append((uart == STC8H_UART2) ? 'E' : '?');
+    return STC8H_OK;
+}
+
+stc8h_status_t stc8h_uart_interrupt_disable(stc8h_uart_id_t uart)
+{
+    event_append((uart == STC8H_UART2) ? 'D' : '?');
+    return STC8H_OK;
+}
+
+stc8h_u8 stc8h_uart_try_getc(stc8h_uart_id_t uart, stc8h_u8 *value)
+{
+    (void)uart;
+    (void)value;
+    return 0u;
+}
+
+void stc8h_uart_clear_tx_flag(stc8h_uart_id_t uart)
+{
+    event_append((uart == STC8H_UART2) ? 'C' : '?');
+}
+
+void stc8h_delay_us(stc8h_u16 us)
+{
+    event_append((us == DRV_RS485_UART_TX_COMPLETE_DELAY_US) ? 'U' : '?');
+}
+
 void stc8h_uart_write(stc8h_uart_id_t uart, const char *data)
 {
     (void)uart;
@@ -76,6 +129,8 @@ static void reset_events(void)
 {
     memset(events, 0, sizeof(events));
     event_count = 0u;
+    bounded_putc_count = 0u;
+    bounded_putc_fail_at = 0u;
 }
 
 static int require(int condition, const char *message)
@@ -105,7 +160,8 @@ static int test_init_sets_receive_mode(void)
 
     failures += require(drv_rs485_uart_init(STC8H_UART2) == STC8H_OK,
                         "RS485 init must return UART init status");
-    failures += require_events("2R", "RS485 init must initialize UART then enable RX");
+    failures += require_events("2RCE",
+                               "RS485 init must enter RX, clear TX, then enable UART interrupt");
 
     return failures;
 }
@@ -122,7 +178,27 @@ static int test_write_switches_tx_then_rx(void)
 
     failures += require(drv_rs485_uart_write(STC8H_UART2, bytes, sizeof(bytes)) == STC8H_OK,
                         "RS485 write must succeed for valid byte buffer");
-    failures += require_events("TABR", "RS485 write must enable TX, send bytes, then enable RX");
+    failures += require_events("DTABURCE",
+                               "RS485 write must mask IRQ, send bounded bytes, wait stop bit, then restore RX IRQ");
+
+    return failures;
+}
+
+static int test_write_failure_releases_bus(void)
+{
+    stc8h_u8 bytes[2];
+    int failures;
+
+    failures = 0;
+    bytes[0] = 'A';
+    bytes[1] = 'B';
+    reset_events();
+    bounded_putc_fail_at = 2u;
+
+    failures += require(drv_rs485_uart_write(STC8H_UART2, bytes, sizeof(bytes)) == STC8H_ERROR,
+                        "RS485 write must report bounded UART failure");
+    failures += require_events("DTA!RCE",
+                               "RS485 write failure must release bus and restore RX interrupt");
 
     return failures;
 }
@@ -166,6 +242,7 @@ int main(void)
     failures = 0;
     failures += test_init_sets_receive_mode();
     failures += test_write_switches_tx_then_rx();
+    failures += test_write_failure_releases_bus();
     failures += test_empty_write_does_not_toggle_direction();
     failures += test_read_passthrough_uses_uart();
 

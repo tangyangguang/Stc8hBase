@@ -41,7 +41,7 @@
 
 当前支持覆盖 core 配置、GPIO、UART1、UART2、UART3、这些 UART 所需的 Timer 资源、ADC、EEPROM/IAP、WDT 和最小示例。
 
-USB、DMA、RTC、LCM、UART4、完整 I/O 中断支持、RS485 协议和 433MHz 模块驱动不在当前已实现支持范围内。OTA 设计中计划复用 UART2/UART3 做 RS485 和 433 串口透传适配；具体 RS485 半双工控制和 433 串口透传可靠性仍需单独实现和验证。SPI/寄存器型 433 射频芯片不在当前支持范围，也不列入 OTA 基础能力计划。
+USB、DMA、RTC、LCM、UART4、完整 I/O 中断支持、Modbus 等 RS485 上层协议和 433MHz 模块驱动不在当前已实现支持范围内。UART2 已提供可选 ISR-safe 单字节 API，`drv_rs485_uart` 已提供显式方向、有界 polling TX 和 RX interrupt 协同；应用仍负责 ISR、缓冲、帧、超时和协议。UART3 可用于后续 433 串口透传，但可靠性仍需单独实现和验证。SPI/寄存器型 433 射频芯片不在当前支持范围，也不列入 OTA 基础能力计划。
 
 ### 2.4 暂不承诺支持的芯片
 

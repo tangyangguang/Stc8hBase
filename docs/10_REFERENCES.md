@@ -72,6 +72,7 @@ docs/vendor/titan/TM1637_TitanMicro.pdf
 - UART1 默认实现按官方 STC8H 串口示例校准：Timer1 作为波特率发生器，`AUXR.S1ST2=0`，Timer1 1T，Timer1 mode0 16 位自动重装，`BRT = 65536 - FOSC / baud / 4`。
 - UART1 6MHz 调试波特率按同一公式补表：9600 reload `0xFF64`、19200 `0xFFB2`、38400 `0xFFD9`、57600 `0xFFE6`、115200 `0xFFF3`，理论误差均约 +0.1603%。
 - UART1 引脚组按官方 STC8H 手册和 STC8H8K64U 资料校准：`P_SW1[7:6]` 选择 UART1 复用组，`0x00` 为 `P3.0/P3.1`，`0x40` 为 `P3.6/P3.7`，H8K64U LQFP48 引脚表列出 `P3.6/RxD_2` 和 `P3.7/TxD_2`。
+- H8K64U UART2 interrupt 按官方手册校准：vector 8/入口 `0x0043`，`IE2.ES2` 为 bit0，RX/TX 共用 `S2RI || S2TI` 请求；`S2RI` 在接收停止位中部置位，`S2TI` 在发送停止位开始时置位，因此半双工驱动看到最终 TI 后仍须等待停止位和收发器裕量再撤销 DE。
 - Timer0 1ms tick 按官方 STC8H Timer0 mode0 16-bit auto-reload 示例校准：11.0592MHz/12T/1ms reload 为 `0xFC66`，中断向量为 1。
 - Timer0 free-run 按官方 STC8H Timer0 mode1 16-bit non-auto-reload 示例方向实现：`TMOD[1:0]=01`、12T、关闭时钟输出，调用方用 16-bit 回绕差值测量边沿间隔。
 - I2C 当前板级配置按官方 STC8H GPIO 资料校准：开漏输出需要上拉；`P1PU/P3PU` 内部 4.1K 上拉和 `P1IE/P3IE` 数字输入使能均属于 XFR 扩展寄存器，访问前必须设置 `P_SW2.EAXFR=1`。

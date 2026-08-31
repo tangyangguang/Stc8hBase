@@ -87,6 +87,14 @@
 #error "STC8H_UART_ASSUME_UART1 cannot be used when UART2 or UART3 is enabled."
 #endif
 
+#if STC8H_UART_ENABLE_ISR_API && !STC8H_UART_ENABLE_RX
+#error "STC8H_UART_ENABLE_ISR_API requires STC8H_UART_ENABLE_RX."
+#endif
+
+#if STC8H_UART_ENABLE_ISR_API && STC8H_UART_ASSUME_UART1
+#error "STC8H_UART_ENABLE_ISR_API requires explicit UART dispatch."
+#endif
+
 #if STC8H_UART1_PIN_GROUP > 1u
 #error "STC8H_UART1_PIN_GROUP must be 0 or 1."
 #endif
@@ -124,6 +132,8 @@
 #define STC8H_UART2_REN  0x10u
 #define STC8H_UART2_TI   0x02u
 #define STC8H_UART2_RI   0x01u
+#define STC8H_IE2_ES2    0x01u
+#define STC8H_IE2_ES3    0x08u
 #define STC8H_T4T3M_T3R    0x08u
 #define STC8H_T4T3M_T3_CT  0x04u
 #define STC8H_T4T3M_T3X12  0x02u
@@ -309,6 +319,57 @@ void stc8h_uart_putc(stc8h_uart_id_t uart, char ch)
 #endif
 }
 
+#if STC8H_UART_ENABLE_BOUNDED_PUTC
+stc8h_status_t stc8h_uart_putc_bounded(stc8h_uart_id_t uart, char ch, stc8h_u16 poll_limit)
+{
+    if (poll_limit == 0u) {
+        return STC8H_ERROR;
+    }
+
+    switch (uart) {
+    case STC8H_UART1:
+        TI = 0;
+        SBUF = (stc8h_u8)ch;
+        while (poll_limit != 0u) {
+            if (TI != 0) {
+                TI = 0;
+                return STC8H_OK;
+            }
+            --poll_limit;
+        }
+        return STC8H_ERROR;
+#if STC8H_UART_ENABLE_UART2
+    case STC8H_UART2:
+        S2CON &= (stc8h_u8)~STC8H_UART2_TI;
+        S2BUF = (stc8h_u8)ch;
+        while (poll_limit != 0u) {
+            if ((S2CON & STC8H_UART2_TI) != 0u) {
+                S2CON &= (stc8h_u8)~STC8H_UART2_TI;
+                return STC8H_OK;
+            }
+            --poll_limit;
+        }
+        return STC8H_ERROR;
+#endif
+#if STC8H_UART_ENABLE_UART3
+    case STC8H_UART3:
+        S3CON &= (stc8h_u8)~STC8H_UART3_TI;
+        S3BUF = (stc8h_u8)ch;
+        while (poll_limit != 0u) {
+            if ((S3CON & STC8H_UART3_TI) != 0u) {
+                S3CON &= (stc8h_u8)~STC8H_UART3_TI;
+                return STC8H_OK;
+            }
+            --poll_limit;
+        }
+        return STC8H_ERROR;
+#endif
+    default:
+        return STC8H_ERROR;
+    }
+}
+#endif
+
 #if STC8H_UART_ENABLE_WRITE_RAM
 void stc8h_uart_write(stc8h_uart_id_t uart, const char *data)
 {
@@ -403,5 +464,107 @@ char stc8h_uart_getc(stc8h_uart_id_t uart)
         return '\0';
     }
 #endif
+}
+#endif
+
+#if STC8H_UART_ENABLE_ISR_API
+stc8h_status_t stc8h_uart_interrupt_enable(stc8h_uart_id_t uart)
+{
+    switch (uart) {
+    case STC8H_UART1:
+        ES = 1;
+        return STC8H_OK;
+#if STC8H_UART_ENABLE_UART2
+    case STC8H_UART2:
+        IE2 |= STC8H_IE2_ES2;
+        return STC8H_OK;
+#endif
+#if STC8H_UART_ENABLE_UART3
+    case STC8H_UART3:
+        IE2 |= STC8H_IE2_ES3;
+        return STC8H_OK;
+#endif
+    default:
+        return STC8H_ERROR;
+    }
+}
+
+stc8h_status_t stc8h_uart_interrupt_disable(stc8h_uart_id_t uart)
+{
+    switch (uart) {
+    case STC8H_UART1:
+        ES = 0;
+        return STC8H_OK;
+#if STC8H_UART_ENABLE_UART2
+    case STC8H_UART2:
+        IE2 &= (stc8h_u8)~STC8H_IE2_ES2;
+        return STC8H_OK;
+#endif
+#if STC8H_UART_ENABLE_UART3
+    case STC8H_UART3:
+        IE2 &= (stc8h_u8)~STC8H_IE2_ES3;
+        return STC8H_OK;
+#endif
+    default:
+        return STC8H_ERROR;
+    }
+}
+
+stc8h_u8 stc8h_uart_try_getc(stc8h_uart_id_t uart, stc8h_u8 *value)
+{
+    if (value == 0) {
+        return 0u;
+    }
+
+    switch (uart) {
+    case STC8H_UART1:
+        if (RI == 0) {
+            return 0u;
+        }
+        *value = SBUF;
+        RI = 0;
+        return 1u;
+#if STC8H_UART_ENABLE_UART2
+    case STC8H_UART2:
+        if ((S2CON & STC8H_UART2_RI) == 0u) {
+            return 0u;
+        }
+        *value = S2BUF;
+        S2CON &= (stc8h_u8)~STC8H_UART2_RI;
+        return 1u;
+#endif
+#if STC8H_UART_ENABLE_UART3
+    case STC8H_UART3:
+        if ((S3CON & STC8H_UART3_RI) == 0u) {
+            return 0u;
+        }
+        *value = S3BUF;
+        S3CON &= (stc8h_u8)~STC8H_UART3_RI;
+        return 1u;
+#endif
+    default:
+        return 0u;
+    }
+}
+
+void stc8h_uart_clear_tx_flag(stc8h_uart_id_t uart)
+{
+    switch (uart) {
+    case STC8H_UART1:
+        TI = 0;
+        break;
+#if STC8H_UART_ENABLE_UART2
+    case STC8H_UART2:
+        S2CON &= (stc8h_u8)~STC8H_UART2_TI;
+        break;
+#endif
+#if STC8H_UART_ENABLE_UART3
+    case STC8H_UART3:
+        S3CON &= (stc8h_u8)~STC8H_UART3_TI;
+        break;
+#endif
+    default:
+        break;
+    }
 }
 #endif

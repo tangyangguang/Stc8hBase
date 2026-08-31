@@ -100,4 +100,13 @@ RS485 项目使用 `drivers/drv_rs485_uart` 时，需要在板级定义：
 #define BOARD_RS485_RX_ENABLE()  /* DE/RE 切到接收 */
 ```
 
-基础库不实现 Modbus 或灌溉业务寄存器；业务层收到升级命令后应关闭所有输出、拒绝普通业务命令，并让 ESP32 通过 OTA 帧协议驱动 bootloader。
+可靠 RS485 write 还必须启用 bounded putc 并为最后停止位提供显式等待；若接收使用 UART interrupt，则同时启用 ISR API：
+
+```c
+#define STC8H_UART_ENABLE_BOUNDED_PUTC 1
+#define DRV_RS485_UART_TX_COMPLETE_DELAY_US 150u /* 9600 8N1 示例 */
+#define STC8H_UART_ENABLE_ISR_API 1              /* 仅 interrupt RX 项目 */
+#define DRV_RS485_UART_ENABLE_RX_INTERRUPT 1     /* 仅 interrupt RX 项目 */
+```
+
+interrupt RX 项目的 ISR 由应用绑定并持有缓冲，具体见 `docs/27_H8K64U_UART2_RS485_DESIGN.md`。基础库不实现 Modbus 或灌溉业务寄存器；业务层收到升级命令后应关闭所有输出、拒绝普通业务命令，并让 ESP32 通过 OTA 帧协议驱动 bootloader。

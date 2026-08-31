@@ -87,6 +87,10 @@ pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
 # Optional real UART2 TX monitor if wired:
 # pio device monitor --port "${UART2_MONITOR_PORT}" --baud 9600
 
+(cd examples/platformio/h8k64u_rs485_uart2_irq_echo && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
+# Wire UART2 P1.0/P1.1 and P4.4 DE+/RE to a half-duplex transceiver.
+# Send continuous 9600 8N1 bytes and confirm byte echo plus final-stop-bit DE timing.
+
 (cd examples/platformio/h8k64u_uart3_hello && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
 pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
 # Optional real UART3 TX monitor if wired:
@@ -125,6 +129,7 @@ EOF
 }
 
 build_example examples/platformio/h8k64u_uart2_hello
+build_example examples/platformio/h8k64u_rs485_uart2_irq_echo
 build_example examples/platformio/h8k64u_uart3_hello
 build_example examples/platformio/h8k64u_gpio_blink
 build_example examples/platformio/h8k64u_pwm_8ch_validate

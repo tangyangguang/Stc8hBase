@@ -113,4 +113,5 @@ tools/check_examples_full.sh
 - [24 显式芯片配置迁移](docs/24_EXPLICIT_CHIP_PROFILE_MIGRATION.md)
 - [25 H8K64U OTA 设计](docs/25_H8K64U_OTA_DESIGN.md)
 - [26 H8K64U PWMB 正交编码器 HAL 设计](docs/26_H8K64U_QEI_DESIGN.md)
+- [27 H8K64U UART2 中断与 RS485 有界发送设计](docs/27_H8K64U_UART2_RS485_DESIGN.md)
 - [资源报告](docs/RESOURCE_REPORT.md)

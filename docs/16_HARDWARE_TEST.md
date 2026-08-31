@@ -46,6 +46,7 @@ tools/prepare_h8k64u_validation.sh
 - `h8k64u_pwm_8ch_validate`：STC8H8K64U-LQFP48 8 路基础 PWM 验证。PWMA1..4 使用 P1.0/P1.2/P1.4/P1.6，PWMB5..8 使用 P2.0..P2.3；确认 8 路初始化、`set_duty` 占空比变化、`enable` 输出、`disable` 关闭、再次使能和全关闭阶段。PWMA1..4 共用 PWMA 周期/预分频，PWMB5..8 共用 PWMB 周期/预分频；两个组可明确配置为不同周期，但同组内不能独立频率。
 - `h8k64u_qei_pwmb_validate`：P2.0/PWMB5/TI5 与 P2.1/PWMB6/TI6 硬件正交计数。确认静止稳定、正反转方向相反、16 位回绕差连续以及最高计划转速不漏计；该示例独占 PWMB，不能与 PWMB5..8 PWM 输出同时运行。mode 3 的实际倍率和最高输入频率必须经真实编码器冻结。
 - `h8k64u_uart2_hello` / `h8k64u_uart3_hello`：UART2/UART3 引脚组。
+- `h8k64u_rs485_uart2_irq_echo`：UART2 vector 8 中断接收、应用自有 XDATA ring、轮询 TX 时临时屏蔽共用中断，以及最终停止位后撤销 DE；用连续字节和示波器验证。
 - `h8k64u_adc_read`：12-bit ADC。
 - `h8k64u_eeprom_safe`：安全占位构建。
 - `h8k64u_eeprom_rw`：破坏性 EEPROM/IAP 写擦读回，必须确认测试页。

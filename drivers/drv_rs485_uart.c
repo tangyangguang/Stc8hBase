@@ -1,6 +1,6 @@
 #include "drv_rs485_uart.h"
 
-#if DRV_RS485_UART_TURNAROUND_DELAY_US != 0u
+#if DRV_RS485_UART_ENABLE_WRITE
 #include "stc8h_delay.h"
 #endif
 
@@ -32,6 +32,12 @@ stc8h_status_t drv_rs485_uart_init(stc8h_uart_id_t uart)
     }
 
     drv_rs485_uart_enter_rx();
+#if DRV_RS485_UART_ENABLE_RX_INTERRUPT
+    stc8h_uart_clear_tx_flag(uart);
+    if (stc8h_uart_interrupt_enable(uart) != STC8H_OK) {
+        return STC8H_ERROR;
+    }
+#endif
     return STC8H_OK;
 }
 
@@ -47,14 +53,33 @@ stc8h_status_t drv_rs485_uart_write(stc8h_uart_id_t uart, const stc8h_u8 *data, 
         return STC8H_ERROR;
     }
 
+#if DRV_RS485_UART_ENABLE_RX_INTERRUPT
+    if (stc8h_uart_interrupt_disable(uart) != STC8H_OK) {
+        return STC8H_ERROR;
+    }
+#endif
+
     drv_rs485_uart_enter_tx();
     for (i = 0u; i < len; ++i) {
-        stc8h_uart_putc(uart, (char)data[i]);
-    }
-#if DRV_RS485_UART_TURNAROUND_DELAY_US != 0u
-    stc8h_delay_us(DRV_RS485_UART_TURNAROUND_DELAY_US);
+        if (stc8h_uart_putc_bounded(uart,
+                                    (char)data[i],
+                                    (stc8h_u16)DRV_RS485_UART_TX_POLL_LIMIT) != STC8H_OK) {
+            drv_rs485_uart_enter_rx();
+#if DRV_RS485_UART_ENABLE_RX_INTERRUPT
+            stc8h_uart_clear_tx_flag(uart);
+            (void)stc8h_uart_interrupt_enable(uart);
 #endif
+            return STC8H_ERROR;
+        }
+    }
+    stc8h_delay_us((stc8h_u16)DRV_RS485_UART_TX_COMPLETE_DELAY_US);
     drv_rs485_uart_enter_rx();
+#if DRV_RS485_UART_ENABLE_RX_INTERRUPT
+    stc8h_uart_clear_tx_flag(uart);
+    if (stc8h_uart_interrupt_enable(uart) != STC8H_OK) {
+        return STC8H_ERROR;
+    }
+#endif
 
     return STC8H_OK;
 }
