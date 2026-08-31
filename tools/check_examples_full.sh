@@ -156,7 +156,8 @@ check_map_absent \
     "examples/platformio/gpio_blink/.pio/build/STC8H1K08/firmware.map" \
     "_stc8h_uart" "_stc8h_i2c" "_drv_lcd1602" "_drv_button" "_drv_ec11" \
     "_drv_ir" "_drv_tm1637" "_stc8h_spi" "_stc8h_adc" "_stc8h_eeprom" "_util_" \
-    "_stc8h_wdt" "_stc8h_power" "_stc8h_exti" "_drv_nrf24l01" "_proto_rf_link"
+    "_stc8h_wdt" "_stc8h_power" "_stc8h_exti" "_stc8h_qei" \
+    "_drv_nrf24l01" "_proto_rf_link"
 
 check_ota_app_base \
     "examples/platformio/h8k64u_ota_min_app/.pio/build/STC8H8K64U/firmware.map"

@@ -25,7 +25,7 @@ Stc8hBase 用来沉淀 STC8H 项目中反复出现的基础能力和外设驱动
 基础库应该包含：
 
 - 芯片基础支持：通用类型、编译器兼容、时钟相关辅助、延时辅助、中断辅助。
-- HAL 模块：GPIO、定时器、UART、软件 I2C、SPI 基础收发、PWM、ADC、EEPROM/IAP、看门狗、外部中断和低功耗入口。
+- HAL 模块：GPIO、定时器、UART、软件 I2C、SPI 基础收发、PWM、H8K64U PWMB 正交计数、ADC、EEPROM/IAP、看门狗、外部中断和低功耗入口。
 - 外设驱动：按钮、EC11 编码器、I2C LCD1602、LED、蜂鸣器、继电器、TM1637、红外遥控发射/接收。
 - 工具模块：环形缓冲、软件定时器、CRC/校验、简单滤波。
 - 每个稳定模块对应一个最小示例。
@@ -68,6 +68,7 @@ Stc8hBase/
 - ADC。
 - Timer0 1ms tick 和 12T 16-bit free-run 计时。
 - PWMA 1..4 基础 PWM 输出已完成编译、资源检查和 P1.2 LED 呼吸实测。
+- STC8H8K64U PWMB5/PWMB6 硬件正交计数 HAL 已完成 PlatformIO/SDCC 构建和资源检查；真实编码器倍率、方向和最高频率仍待板级实测。
 - SPI 硬件主机轮询基础收发已完成编译、资源检查和回环实测。
 - EEPROM/IAP 基础读写擦除已完成编译、资源检查和受控写擦实测；默认 PlatformIO 环境不执行写擦。
 - WDT 看门狗最小封装、INT0/INT1 外部中断辅助、idle/power-down 低功耗入口已完成 SDCC 编译、资源检查和 WDT 复位实测。
@@ -110,4 +111,6 @@ tools/check_examples_full.sh
 - [21 nRF24L01 驱动设计](docs/21_NRF24L01_DESIGN.md)
 - [22 RF Link 协议设计](docs/22_RF_LINK_PROTOCOL.md)
 - [24 显式芯片配置迁移](docs/24_EXPLICIT_CHIP_PROFILE_MIGRATION.md)
+- [25 H8K64U OTA 设计](docs/25_H8K64U_OTA_DESIGN.md)
+- [26 H8K64U PWMB 正交编码器 HAL 设计](docs/26_H8K64U_QEI_DESIGN.md)
 - [资源报告](docs/RESOURCE_REPORT.md)

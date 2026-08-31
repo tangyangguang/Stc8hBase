@@ -44,6 +44,7 @@ HAL 模块封装常见硬件操作，同时保留 STC8H 的硬件概念。
 | `stc8h_i2c` | 软件 I2C 单总线 |
 | `stc8h_spi` | SPI 基础收发 |
 | `stc8h_pwm` | PWM 输出配置 |
+| `stc8h_qei` | STC8H8K64U PWMB5/PWMB6 硬件正交计数 |
 | `stc8h_adc` | ADC 采样辅助 |
 | `stc8h_eeprom` | 持久化参数存储支持 |
 | `stc8h_wdt` | 看门狗启用、喂狗和复位标志辅助 |
@@ -53,6 +54,8 @@ HAL 模块封装常见硬件操作，同时保留 STC8H 的硬件概念。
 HAL API 避免大型结构体，除非它能明显减少重复代码。
 
 `stc8h_gpio_xfr.c` 是 GPIO 的可选扩展源文件，只封装 `P1/P3/P5` 上拉和数字输入使能这类 XFR mask 操作。普通 GPIO 项目只编译 `stc8h_gpio.c` 即可，不为 XFR 辅助函数付出 ROM 成本。
+
+`stc8h_qei` 第一版只封装 `STC8H8K64U` 的 PWMB5/PWMB6 16 位硬件正交计数，配置从编译期进入，不启用中断或维护软件累计位置。该模块独占整个 PWMB 计数器，不能与 PWMB5..8 PWM 输出并用；具体边界见 `docs/26_H8K64U_QEI_DESIGN.md`。
 
 WDT、外部中断和低功耗模块只封装已核实的 MCU 基础能力，不做任务健康监控、电源管理框架或中断注册表。ISR 仍由板级或应用代码显式绑定。
 

@@ -102,6 +102,11 @@ pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
 # and all-disable phases. PWMA channels share one period; PWMB channels share
 # one period; this example intentionally sets different periods per group.
 
+(cd examples/platformio/h8k64u_qei_pwmb_validate && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
+# Connect quadrature A/B to P2.0/TI5 and P2.1/TI6. Inspect qei_sample with
+# a debugger or board-level telemetry. Confirm idle stability, opposite count
+# directions, 16-bit wrap handling and operation at the planned maximum rate.
+
 (cd examples/platformio/h8k64u_adc_read && pio run -t upload --upload-port "${DOWNLOAD_PORT}")
 pio device monitor --port "${UART1_MONITOR_PORT}" --baud 115200
 
@@ -123,6 +128,7 @@ build_example examples/platformio/h8k64u_uart2_hello
 build_example examples/platformio/h8k64u_uart3_hello
 build_example examples/platformio/h8k64u_gpio_blink
 build_example examples/platformio/h8k64u_pwm_8ch_validate
+build_example examples/platformio/h8k64u_qei_pwmb_validate
 build_example examples/platformio/h8k64u_adc_read
 build_example examples/platformio/h8k64u_eeprom_safe
 build_example examples/platformio/h8k64u_eeprom_rw

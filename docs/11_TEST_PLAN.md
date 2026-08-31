@@ -54,7 +54,7 @@ Host 测试不模拟完整 MCU、寄存器时序或硬件物理现象。无法�
 
 - 最小功能示例：GPIO、UART、I2C、SPI、PWM、ADC、EEPROM、WDT、CRC、filter、button、EC11、TM1637、IR。
 - 目标芯片示例：`STC8H1K08` 和 `STC8H8K64U-45I-LQFP48` 的代表性构建。
-- 专项示例：nRF24、RF link、OTA bootloader、H8K64U IAP/OTA 参数路径、H8K64U 8 路 PWM 能力验证。
+- 专项示例：nRF24、RF link、OTA bootloader、H8K64U IAP/OTA 参数路径、H8K64U 8 路 PWM 能力验证、H8K64U PWMB 硬件正交计数验证。
 
 新增示例必须满足：
 
