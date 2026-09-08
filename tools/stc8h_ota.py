@@ -473,7 +473,7 @@ def build_parser():
     for name in ("info", "probe", "update", "resume"):
         item = sub.add_parser(name)
         item.add_argument("--port", required=True)
-        item.add_argument("--baud", type=int, default=19200)
+        item.add_argument("--baud", type=int, default=9600)
         item.add_argument("--address", type=int, required=True)
         if name not in ("info", "probe"):
             item.add_argument("--file", required=True)
