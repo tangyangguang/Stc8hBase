@@ -406,6 +406,11 @@ def select_transfer_session(current, resume, restart, random_session=None):
     return random_session if random_session is not None else (secrets.randbits(32) or 1)
 
 
+def require_downgrade_authorization(current_build, package_build, allowed):
+    if package_build < current_build and not allowed:
+        raise RuntimeError("package build is older; repeat with explicit --allow-downgrade")
+
+
 def command_info(args):
     with open_serial(args) as port:
         print_device(probe(port, bytearray(), args.address))
@@ -426,9 +431,8 @@ def command_transfer(args, resume):
         if resume:
             if current["manifest_crc"] != expected_crc:
                 raise RuntimeError("target session belongs to a different package")
-        if (current["state"] == 2 and info["build"] < current["build"] and
-                not args.allow_downgrade):
-            raise RuntimeError("package build is older; repeat with explicit --allow-downgrade")
+        require_downgrade_authorization(current["build"], info["build"],
+                                        args.allow_downgrade)
         print(f"package version={'.'.join(map(str, info['version']))}+{info['build']} size={len(image)} sha256={digest}")
         if not args.yes:
             answer = input(f"Type UPDATE {args.address} to continue: ").strip()

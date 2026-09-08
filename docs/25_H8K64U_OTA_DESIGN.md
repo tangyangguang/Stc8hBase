@@ -24,7 +24,7 @@
 
 STC ISP 的 `program_eeprom_split` 必须为十进制 `27648`（`0x6C00`）；示例上传脚本通过 `custom_stcgal_eeprom_split = 27648` 显式传给 stcgal。Bootloader 从 `0x0200` 链接；`0x0000` 固定 `LJMP 0x0200`。低地址中断槽 0..44 固定转发到 `0x6C00 + vector_offset`（SDCC 对大于 31 的 ISR 仍需按芯片手册使用汇编入口）。Application 同样以 `--code-loc 0x6C00` 链接，SDCC 会把应用向量放到相同偏移。
 
-Bootloader 当前 SDCC 构建为 `25951 / 27648 bytes`（93.9%，余 1697 bytes）；带显式 UART1 lab request 的 mark-valid IAP 最小 Application 为 `9789 / 33792 bytes`。后续新增能力必须重新检查两边余量，不得侵占 `0xF000..0xFFFF`。
+Bootloader 当前 SDCC 构建为 `25954 / 27648 bytes`（93.9%，余 1694 bytes）；带显式 UART1 lab request 的 mark-valid IAP 最小 Application 为 `9789 / 33792 bytes`。后续新增能力必须重新检查两边余量，不得侵占 `0xF000..0xFFFF`。
 
 ## 3. 分层
 
@@ -135,7 +135,7 @@ stcgal.py -P stc8g -p /dev/cu.usbserial-X -t 11059.2 -a -b 19200 \
 
 第二次启动时，芯片当前选项必须已经是 `program_eeprom_split=27648`、`eeprom_erase_enabled=true`；命令行的 `false` 是在本次完整写入结束后生效。不得把 `factory.hex` 作为 stcgal 的单一 code image。其他烧录器只有在明确支持独立 code/IAP EEPROM 地址空间时才可直接使用组合 HEX。
 
-Bootloader 已在总线上等待时：
+Bootloader 已在总线上等待时，PC 工具只要求一个可双向传递原始字节的串口；可直接连接 USB-RS485，也可使用无日志、无帧解释的 ESP32 USB-UART↔UART2/RS485 透明中转。中转两侧必须使用相同 baud，且不能与其他主站并存：
 
 ```sh
 python3 tools/stc8h_ota.py probe --port /dev/cu.usbserial-X --address 34
@@ -160,4 +160,4 @@ tools/check_examples_full.sh
 
 Gate 覆盖 frame/collector、Manifest/Params、双槽 torn write、generation wrap/歧义、显式请求、checkpoint/resume、重复块、readback、CRC 失败、restart/abort、UID 绑定、工具包/工厂镜像，以及 Bootloader reset/vector/分区边界。SDCC 全示例已通过；Keil C51 仅保持源码语法边界，仍需 Windows+Keil 真编译。
 
-当前明确标记的实验台架写擦按仓库 `AGENTS.md` 已获持续授权；生产设备仍须单独授权并记录。首次 ISP 工厂安装、正常 update、断电 resume、错误 UID/包、重复块、CRC 失败、trial 未确认和 mark-valid 全部完成前，不宣称生产闭环。ESP32 Sender 和 433 Adapter 不在本阶段。
+当前明确标记的实验台架写擦按仓库 `AGENTS.md` 已获持续授权；生产设备仍须单独授权并记录。2026-09-08 已在 STC 核心板 + 自动收发 RS485 + ESP32 透明串口中转上完成首次 ISP 工厂安装、正常 update、断电 resume、错误 UID/目标、重复块、CRC 失败、FAILED restart、trial 未确认和 mark-valid 闭环，详见 `docs/16_HARDWARE_TEST.md`。这证明 Foundation 的实验台架闭环，不替代代表性产品 PCB、电源/brownout、手动 DE/RE 和 EMC 验收。产品 ESP32 Sender/固件托管和 433 Adapter 仍不在本阶段。

@@ -90,6 +90,13 @@ def test_transfer_session_selection():
     current = {"state": 9, "session": 0x44556677}
     require(TOOL.select_transfer_session(current, False, True) == 0x44556677,
             "recovery from FAILED must preserve the target session")
+    TOOL.require_downgrade_authorization(3, 2, True)
+    try:
+        TOOL.require_downgrade_authorization(3, 2, False)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("downgrade from any target state must require authorization")
 
 
 def test_frame_round_trip():
