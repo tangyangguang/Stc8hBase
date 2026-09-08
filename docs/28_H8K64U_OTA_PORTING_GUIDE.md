@@ -71,23 +71,24 @@ OTA 的 BEGIN/DATA/VERIFY/ACTIVATE 流程可以在操作者确认后自动执行
 
 ## 5. 推荐目录和引用方式
 
-不要复制或维护 OTA 核心私有副本。应用仓库应固定一个经过验证的 `Stc8hBase` commit，并只创建薄 wrapper：
+不要复制或维护 OTA 核心私有副本。应用项目应引用独立、唯一的 `Stc8hBase` Git 工作区，并只创建薄 wrapper；正式构建在应用项目自己的记录中写明实际使用的提交：
 
 ```text
-project/
-  third_party/Stc8hBase/       # Git submodule/固定依赖
-  firmware/bootloader/
-    platformio.ini
-    link_bootloader.py
-    src/boot_config.h
-    src/vector_table.c
-    src/*_wrap.c
-    src/main.c                 # 板级 Transport Adapter
-  firmware/application/
-    platformio.ini
-    link_app_base.py
-    src/base/*_wrap.c
-    src/main.c
+workspace/
+  foundation/Stc8hBase/
+  devices/project/
+    firmware/bootloader/
+      platformio.ini
+      link_bootloader.py
+      src/boot_config.h
+      src/vector_table.c
+      src/*_wrap.c
+      src/main.c                 # 板级 Transport Adapter
+    firmware/application/
+      platformio.ini
+      link_app_base.py
+      src/base/*_wrap.c
+      src/main.c
 ```
 
 可直接对照：

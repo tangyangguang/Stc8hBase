@@ -2,6 +2,8 @@
 
 本文记录真实应用项目接入 `Stc8hBase` 的推荐方式。基础库只提供芯片级能力、薄 HAL、可复用外设协议和工具；应用项目继续负责板级接线、电平、低功耗前后 IO 状态、业务命令映射和产品状态机。
 
+应用项目强烈建议始终从独立、唯一的 Stc8hBase Git 工作区引用源码，不在应用仓库内复制、vendor、维护 submodule 或私有修改版。更新项目时使用基础库当前最新提交；正式构建由应用项目记录实际提交，历史复现时临时检出该提交。已知项目状态见[使用项目清单](../CONSUMERS.md)。
+
 ## 1. Makefile 直接编译源文件
 
 适合小型 SDCC/Make 项目。应用项目在 `CFLAGS` 中加入基础库 `core/hal/drivers/utils` include path，并只把实际使用的 `.c` 文件放入 `SRCS`。
@@ -103,4 +105,4 @@ Bootloader BSP 必须提供 `H8K64U_OTA_SAFE_OUTPUTS_OFF()`。核心板示例明
 
 RS485 自动收发模块可以把 `BOARD_RS485_TX_ENABLE()` / `BOARD_RS485_RX_ENABLE()` 定义为空操作；手动 DE/RE 板必须实现它们。发送路径仍需 bounded putc 和最后停止位延时。UART2 Bootloader 使用 polling，不占用中断；低地址表会把应用中断槽 0..44 转发到 `0x6C00 + vector_offset`；大于 31 的 SDCC ISR 入口需按芯片手册使用汇编适配。
 
-新项目的完整复制清单、配置、代码骨架、工厂安装、Sender 运维和验收流程见 `docs/28_H8K64U_OTA_PORTING_GUIDE.md`；协议、状态机和布局原理见 `docs/25_H8K64U_OTA_DESIGN.md`。
+新项目的完整接入清单、配置、代码骨架、工厂安装、Sender 运维和验收流程见 `docs/28_H8K64U_OTA_PORTING_GUIDE.md`；协议、状态机和布局原理见 `docs/25_H8K64U_OTA_DESIGN.md`。
