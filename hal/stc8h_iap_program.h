@@ -8,11 +8,11 @@
 #endif
 
 #ifndef STC8H_IAP_PROGRAM_APP_BASE
-#define STC8H_IAP_PROGRAM_APP_BASE 0x0200u
+#define STC8H_IAP_PROGRAM_APP_BASE 0x6C00u
 #endif
 
 #ifndef STC8H_IAP_PROGRAM_FLASH_BASE
-#define STC8H_IAP_PROGRAM_FLASH_BASE STC8H_IAP_PROGRAM_APP_BASE
+#define STC8H_IAP_PROGRAM_FLASH_BASE 0x6C00u
 #endif
 
 #ifndef STC8H_IAP_PROGRAM_APP_LIMIT
@@ -29,8 +29,8 @@
 #error "STC8H IAP program backend supports only STC8H8K64U."
 #endif
 
-#if STC8H_IAP_PROGRAM_APP_BASE < 0x0200u
-#error "STC8H_IAP_PROGRAM_APP_BASE must not overlap the boot stub."
+#if STC8H_IAP_PROGRAM_APP_BASE < 0x6C00u
+#error "STC8H_IAP_PROGRAM_APP_BASE must not overlap the protected bootloader."
 #endif
 
 #if STC8H_IAP_PROGRAM_FLASH_BASE > STC8H_IAP_PROGRAM_APP_BASE

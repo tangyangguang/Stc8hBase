@@ -6,11 +6,12 @@
 #include "../../protocols/stc8h_ota.c"
 #include "../../hal/stc8h_ota_params_store.c"
 
-#define FAKE_FLASH_SIZE 65536UL
-#define PARAM_SECTOR_SIZE 512u
+#define FLASH_SIZE 65536UL
+#define SECTOR_SIZE 512u
 
-static stc8h_u8 fake_flash[FAKE_FLASH_SIZE];
-static stc8h_u16 fake_fail_write_after;
+static stc8h_u8 flash_bytes[FLASH_SIZE];
+static stc8h_u16 fail_write_after;
+static stc8h_u8 fail_commit_marker;
 
 static int require(int condition, const char *message)
 {
@@ -21,80 +22,44 @@ static int require(int condition, const char *message)
     return 0;
 }
 
-static void fake_flash_reset(void)
+static void flash_reset(void)
 {
-    stc8h_u32 i;
-
-    for (i = 0UL; i < FAKE_FLASH_SIZE; ++i) {
-        fake_flash[i] = 0xFFu;
-    }
-    fake_fail_write_after = 0u;
+    memset(flash_bytes, 0xFF, sizeof(flash_bytes));
+    fail_write_after = 0u;
+    fail_commit_marker = 0u;
 }
 
 static stc8h_status_t fake_erase(stc8h_u16 addr) STC8H_REENTRANT
 {
-    stc8h_u16 i;
-
-    for (i = 0u; i < PARAM_SECTOR_SIZE; ++i) {
-        fake_flash[(stc8h_u32)addr + i] = 0xFFu;
-    }
+    memset(&flash_bytes[addr], 0xFF, SECTOR_SIZE);
     return STC8H_OK;
 }
 
-static stc8h_status_t fake_write(stc8h_u16 addr, const stc8h_u8 *data, stc8h_u16 len) STC8H_REENTRANT
+static stc8h_status_t fake_write(stc8h_u16 addr,
+                                 const stc8h_u8 *data,
+                                 stc8h_u16 len) STC8H_REENTRANT
 {
-    stc8h_u16 i;
-    stc8h_u16 limit;
+    stc8h_u16 count;
 
-    limit = len;
-    if ((fake_fail_write_after != 0u) && (fake_fail_write_after < len)) {
-        limit = fake_fail_write_after;
+    if ((fail_commit_marker != 0u) &&
+        ((addr & (SECTOR_SIZE - 1u)) ==
+         (STC8H_OTA_PARAMS_WIRE_SIZE - 2u))) {
+        return STC8H_ERROR;
     }
-
-    for (i = 0u; i < limit; ++i) {
-        fake_flash[(stc8h_u32)addr + i] = data[i];
+    count = len;
+    if ((fail_write_after != 0u) && (fail_write_after < len)) {
+        count = fail_write_after;
     }
-
-    return (limit == len) ? STC8H_OK : STC8H_ERROR;
+    memcpy(&flash_bytes[addr], data, count);
+    return count == len ? STC8H_OK : STC8H_ERROR;
 }
 
-static stc8h_status_t fake_read(stc8h_u16 addr, stc8h_u8 *data, stc8h_u16 len) STC8H_REENTRANT
+static stc8h_status_t fake_read(stc8h_u16 addr,
+                                stc8h_u8 *data,
+                                stc8h_u16 len) STC8H_REENTRANT
 {
-    stc8h_u16 i;
-
-    for (i = 0u; i < len; ++i) {
-        data[i] = fake_flash[(stc8h_u32)addr + i];
-    }
+    memcpy(data, &flash_bytes[addr], len);
     return STC8H_OK;
-}
-
-static void make_params(stc8h_ota_params_t *params, stc8h_u16 sequence)
-{
-    memset(params, 0, sizeof(*params));
-    params->param_magic = STC8H_OTA_PARAM_MAGIC;
-    params->param_version = STC8H_OTA_PARAM_VERSION;
-    params->sequence = sequence;
-    params->state = STC8H_OTA_STATE_COMMITTED;
-    params->app_valid = 1u;
-    params->update_pending = 0u;
-    params->boot_attempted = 0u;
-    params->app_base = STC8H_OTA_APP_BASE;
-    params->app_size = 0x0100UL;
-    params->app_crc32 = 0x12345678UL;
-    params->version_major = 1u;
-    params->version_minor = 2u;
-    params->version_patch = 3u;
-    params->write_offset = 0UL;
-    params->fail_reason = 0u;
-}
-
-static void write_raw_record(stc8h_u16 addr, const stc8h_ota_params_t *params)
-{
-    stc8h_u8 bytes[STC8H_OTA_PARAMS_WIRE_SIZE];
-
-    (void)stc8h_ota_params_encode(params, bytes, sizeof(bytes));
-    (void)fake_erase(addr);
-    (void)fake_write(addr, bytes, sizeof(bytes));
 }
 
 static void init_store(stc8h_ota_params_store_t *store)
@@ -102,18 +67,26 @@ static void init_store(stc8h_ota_params_store_t *store)
     stc8h_ota_params_store_init(store, fake_erase, fake_write, fake_read);
 }
 
-static int test_empty_records_force_bootloader(void)
+static void make_params(stc8h_ota_params_t *params,
+                        stc8h_u16 generation,
+                        stc8h_u8 state)
 {
-    stc8h_ota_params_store_t store;
-    stc8h_ota_params_t active;
-
-    fake_flash_reset();
-    init_store(&store);
-    return require(stc8h_ota_params_store_load_active(&store, &active) == STC8H_ERROR,
-                   "empty parameter records must not select an application");
+    memset(params, 0, sizeof(*params));
+    params->param_magic = STC8H_OTA_PARAM_MAGIC;
+    params->param_version = STC8H_OTA_PARAM_VERSION;
+    params->state = state;
+    params->flags = state == STC8H_OTA_STATE_APP_VALID ?
+                    STC8H_OTA_PARAM_FLAG_APP_VALID : 0u;
+    params->generation = generation;
+    params->app_base = STC8H_OTA_APP_BASE;
+    params->app_size = 256u;
+    params->app_crc32 = 0x12345678UL;
+    params->version_major = 1u;
+    params->build_number = 4u;
+    params->commit_marker = STC8H_OTA_PARAM_COMMIT_MARKER;
 }
 
-static int test_valid_app_record_allows_jump(void)
+static int test_empty_and_two_slot_selection(void)
 {
     stc8h_ota_params_store_t store;
     stc8h_ota_params_t params;
@@ -121,29 +94,28 @@ static int test_valid_app_record_allows_jump(void)
     int failures;
 
     failures = 0;
-    fake_flash_reset();
+    flash_reset();
     init_store(&store);
-    make_params(&params, 1u);
-    write_raw_record(STC8H_OTA_PARAM_A_BASE, &params);
-
-    failures += require(stc8h_ota_params_store_load_active(&store, &active) == STC8H_OK,
-                        "one valid parameter record must load");
-    failures += require(stc8h_ota_get_boot_action(&active) == STC8H_OTA_BOOT_ACTION_JUMP_APP,
-                        "valid app record must allow app jump");
+    failures += require(stc8h_ota_params_store_load_active(
+                            &store, &active) == STC8H_ERROR,
+                        "empty slots must force recovery");
+    make_params(&params, 1u, STC8H_OTA_STATE_APP_VALID);
+    failures += require(stc8h_ota_params_store_write_next(
+                            &store, &params) == STC8H_OK,
+                        "first record must commit");
+    params.generation = 2u;
+    params.build_number = 5u;
+    failures += require(stc8h_ota_params_store_write_next(
+                            &store, &params) == STC8H_OK,
+                        "second record must commit");
+    failures += require(stc8h_ota_params_store_load_active(
+                            &store, &active) == STC8H_OK &&
+                        active.generation == 2u && active.build_number == 5u,
+                        "newer committed generation must win");
     return failures;
 }
 
-static int test_update_pending_forces_bootloader(void)
-{
-    stc8h_ota_params_t params;
-
-    make_params(&params, 1u);
-    params.update_pending = 1u;
-    return require(stc8h_ota_get_boot_action(&params) == STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER,
-                   "update_pending must force bootloader");
-}
-
-static int test_two_valid_records_choose_higher_sequence(void)
+static int test_torn_body_and_marker_keep_old_record(void)
 {
     stc8h_ota_params_store_t store;
     stc8h_ota_params_t params;
@@ -151,83 +123,85 @@ static int test_two_valid_records_choose_higher_sequence(void)
     int failures;
 
     failures = 0;
-    fake_flash_reset();
+    flash_reset();
     init_store(&store);
-    make_params(&params, 4u);
-    write_raw_record(STC8H_OTA_PARAM_A_BASE, &params);
-    make_params(&params, 5u);
-    params.version_patch = 9u;
-    write_raw_record(STC8H_OTA_PARAM_B_BASE, &params);
+    make_params(&params, 10u, STC8H_OTA_STATE_APP_VALID);
+    (void)stc8h_ota_params_store_write_next(&store, &params);
+    params.generation = 11u;
+    fail_write_after = 8u;
+    failures += require(stc8h_ota_params_store_write_next(
+                            &store, &params) == STC8H_ERROR,
+                        "torn body must fail");
+    fail_write_after = 0u;
+    failures += require(stc8h_ota_params_store_load_active(
+                            &store, &active) == STC8H_OK &&
+                        active.generation == 10u,
+                        "old record must survive torn body");
 
-    failures += require(stc8h_ota_params_store_load_active(&store, &active) == STC8H_OK,
-                        "two valid parameter records must load");
-    failures += require(active.sequence == 5u, "higher sequence record must be selected");
-    failures += require(active.version_patch == 9u, "selected record must come from higher sequence slot");
+    params.generation = 11u;
+    fail_commit_marker = 1u;
+    failures += require(stc8h_ota_params_store_write_next(
+                            &store, &params) == STC8H_ERROR,
+                        "missing commit marker must fail");
+    fail_commit_marker = 0u;
+    failures += require(stc8h_ota_params_store_load_active(
+                            &store, &active) == STC8H_OK &&
+                        active.generation == 10u,
+                        "old record must survive missing marker");
     return failures;
 }
 
-static int test_corrupted_higher_sequence_is_ignored(void)
+static int test_equal_generation_and_corrupt_newer_are_bounded(void)
 {
     stc8h_ota_params_store_t store;
     stc8h_ota_params_t params;
     stc8h_ota_params_t active;
+    stc8h_u8 wire[STC8H_OTA_PARAMS_WIRE_SIZE];
     int failures;
 
     failures = 0;
-    fake_flash_reset();
+    flash_reset();
     init_store(&store);
-    make_params(&params, 4u);
-    write_raw_record(STC8H_OTA_PARAM_A_BASE, &params);
-    make_params(&params, 5u);
-    write_raw_record(STC8H_OTA_PARAM_B_BASE, &params);
-    fake_flash[STC8H_OTA_PARAM_B_BASE + 13u] ^= 0x01u;
+    make_params(&params, 7u, STC8H_OTA_STATE_APP_VALID);
+    (void)stc8h_ota_params_encode(&params, wire, sizeof(wire));
+    memcpy(&flash_bytes[STC8H_OTA_PARAM_A_BASE], wire, sizeof(wire));
+    memcpy(&flash_bytes[STC8H_OTA_PARAM_B_BASE], wire, sizeof(wire));
+    failures += require(stc8h_ota_params_store_load_active(&store, &active) ==
+                        STC8H_ERROR,
+                        "equal generations must be treated as ambiguous");
 
-    failures += require(stc8h_ota_params_store_load_active(&store, &active) == STC8H_OK,
-                        "corrupted higher record must not block older valid record");
-    failures += require(active.sequence == 4u, "older valid record must be selected");
+    flash_reset();
+    make_params(&params, 8u, STC8H_OTA_STATE_APP_VALID);
+    (void)stc8h_ota_params_store_write_next(&store, &params);
+    params.generation = 9u;
+    (void)stc8h_ota_params_store_write_next(&store, &params);
+    flash_bytes[STC8H_OTA_PARAM_B_BASE + 20u] ^= 1u;
+    failures += require(stc8h_ota_params_store_load_active(&store, &active) ==
+                        STC8H_OK && active.generation == 8u,
+                        "corrupt newer record must fall back to older commit");
     return failures;
 }
 
-static int test_equal_sequence_forces_recovery(void)
+static int test_generation_wrap(void)
 {
     stc8h_ota_params_store_t store;
     stc8h_ota_params_t params;
     stc8h_ota_params_t active;
 
-    fake_flash_reset();
+    flash_reset();
     init_store(&store);
-    make_params(&params, 4u);
-    write_raw_record(STC8H_OTA_PARAM_A_BASE, &params);
-    params.version_patch = 9u;
-    write_raw_record(STC8H_OTA_PARAM_B_BASE, &params);
-
-    return require(stc8h_ota_params_store_load_active(&store, &active) == STC8H_ERROR,
-                   "equal valid sequences must force recovery");
+    make_params(&params, 0xFFFFu, STC8H_OTA_STATE_APP_VALID);
+    (void)stc8h_ota_params_store_write_next(&store, &params);
+    params.generation = 0u;
+    params.build_number = 9u;
+    (void)stc8h_ota_params_store_write_next(&store, &params);
+    return require(stc8h_ota_params_store_load_active(&store, &active) ==
+                   STC8H_OK && active.generation == 0u &&
+                   active.build_number == 9u,
+                   "generation wrap must select modularly newer record");
 }
 
-static int test_committed_record_allows_one_trial_boot(void)
-{
-    stc8h_ota_params_t params;
-
-    make_params(&params, 1u);
-    params.app_valid = 0u;
-    params.boot_attempted = 0u;
-    return require(stc8h_ota_get_boot_action(&params) == STC8H_OTA_BOOT_ACTION_TRIAL_APP,
-                   "committed unvalidated app must allow one trial boot");
-}
-
-static int test_boot_attempted_forces_recovery(void)
-{
-    stc8h_ota_params_t params;
-
-    make_params(&params, 1u);
-    params.app_valid = 0u;
-    params.boot_attempted = 1u;
-    return require(stc8h_ota_get_boot_action(&params) == STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER,
-                   "attempted unvalidated app must force recovery");
-}
-
-static int test_interrupted_write_leaves_old_record_selected(void)
+static int test_explicit_request_cancel_and_trial_confirmation(void)
 {
     stc8h_ota_params_store_t store;
     stc8h_ota_params_t params;
@@ -235,70 +209,54 @@ static int test_interrupted_write_leaves_old_record_selected(void)
     int failures;
 
     failures = 0;
-    fake_flash_reset();
+    flash_reset();
     init_store(&store);
-    make_params(&params, 4u);
-    write_raw_record(STC8H_OTA_PARAM_A_BASE, &params);
-    make_params(&params, 5u);
-    params.version_patch = 9u;
-    fake_fail_write_after = 8u;
-    failures += require(stc8h_ota_params_store_write_next(&store, &params) == STC8H_ERROR,
-                        "interrupted write must return error");
-    fake_fail_write_after = 0u;
-    failures += require(stc8h_ota_params_store_load_active(&store, &active) == STC8H_OK,
-                        "old record must remain selectable after interrupted write");
-    failures += require(active.sequence == 4u, "old sequence must remain active after interrupted write");
-    return failures;
-}
+    make_params(&params, 1u, STC8H_OTA_STATE_APP_VALID);
+    (void)stc8h_ota_params_store_write_next(&store, &params);
+    failures += require(stc8h_ota_params_store_request_update(
+                            &store, 0x11223344UL) == STC8H_OK,
+                        "explicit update request must persist");
+    (void)stc8h_ota_params_store_load_active(&store, &active);
+    failures += require(active.state == STC8H_OTA_STATE_UPDATE_REQUESTED &&
+                        active.session_id == 0x11223344UL &&
+                        stc8h_ota_get_boot_action(&active) ==
+                        STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER,
+                        "requested update must keep bootloader active");
+    failures += require(stc8h_ota_params_store_cancel_update_request(
+                            &store, 0x55667788UL) == STC8H_ERROR,
+                        "wrong session must not cancel request");
+    failures += require(stc8h_ota_params_store_cancel_update_request(
+                            &store, 0x11223344UL) == STC8H_OK,
+                        "matching session may cancel before erase");
+    (void)stc8h_ota_params_store_load_active(&store, &active);
+    failures += require(stc8h_ota_get_boot_action(&active) ==
+                        STC8H_OTA_BOOT_ACTION_JUMP_APP,
+                        "canceled request must restore valid app");
 
-static int test_mark_boot_attempted_writes_next_record(void)
-{
-    stc8h_ota_params_store_t store;
-    stc8h_ota_params_t params;
-    stc8h_ota_params_t active;
-    int failures;
-
-    failures = 0;
-    fake_flash_reset();
-    init_store(&store);
-    make_params(&params, 4u);
-    params.app_valid = 0u;
-    params.boot_attempted = 0u;
-    write_raw_record(STC8H_OTA_PARAM_A_BASE, &params);
-
-    failures += require(stc8h_ota_params_store_mark_boot_attempted(&store) == STC8H_OK,
-                        "mark boot attempted must write next record");
-    failures += require(stc8h_ota_params_store_load_active(&store, &active) == STC8H_OK,
-                        "active record must load after mark boot attempted");
-    failures += require(active.sequence == 5u, "mark boot attempted must increment sequence");
-    failures += require(active.boot_attempted == 1u, "mark boot attempted must set flag");
-    return failures;
-}
-
-static int test_mark_app_valid_writes_next_record(void)
-{
-    stc8h_ota_params_store_t store;
-    stc8h_ota_params_t params;
-    stc8h_ota_params_t active;
-    int failures;
-
-    failures = 0;
-    fake_flash_reset();
-    init_store(&store);
-    make_params(&params, 4u);
-    params.app_valid = 0u;
-    params.update_pending = 1u;
-    params.boot_attempted = 1u;
-    write_raw_record(STC8H_OTA_PARAM_A_BASE, &params);
-
-    failures += require(stc8h_ota_params_store_mark_app_valid(&store) == STC8H_OK,
-                        "mark app valid must write next record");
-    failures += require(stc8h_ota_params_store_load_active(&store, &active) == STC8H_OK,
-                        "active record must load after mark app valid");
-    failures += require(active.sequence == 5u, "mark app valid must increment sequence");
-    failures += require(active.app_valid == 1u, "mark app valid must set app_valid");
-    failures += require(active.update_pending == 0u, "mark app valid must clear update_pending");
-    failures += require(active.boot_attempted == 0u, "mark app valid must clear boot_attempted");
+    active.generation = (stc8h_u16)(active.generation + 1u);
+    active.state = STC8H_OTA_STATE_TRIAL_PENDING;
+    active.flags = 0u;
+    active.session_id = 0x11223344UL;
+    (void)stc8h_ota_params_store_write_next(&store, &active);
+    failures += require(stc8h_ota_get_boot_action(&active) ==
+                        STC8H_OTA_BOOT_ACTION_TRIAL_APP,
+                        "pending image must get one trial");
+    failures += require(stc8h_ota_params_store_mark_trial_started(
+                            &store) == STC8H_OK,
+                        "trial start must persist before jump");
+    (void)stc8h_ota_params_store_load_active(&store, &active);
+    failures += require(stc8h_ota_get_boot_action(&active) ==
+                        STC8H_OTA_BOOT_ACTION_STAY_BOOTLOADER &&
+                        active.session_id == 0x11223344UL,
+                        "unconfirmed trial reset must recover with session evidence");
+    failures += require(stc8h_ota_params_store_mark_app_valid(
+                            &store) == STC8H_OK,
+                        "healthy trial app must confirm itself");
+    (void)stc8h_ota_params_store_load_active(&store, &active);
+    failures += require(stc8h_ota_get_boot_action(&active) ==
+                        STC8H_OTA_BOOT_ACTION_JUMP_APP &&
+                        active.session_id == 0UL,
+                        "confirmed app must boot normally and clear session");
     return failures;
 }
 
@@ -307,17 +265,10 @@ int main(void)
     int failures;
 
     failures = 0;
-    failures += test_empty_records_force_bootloader();
-    failures += test_valid_app_record_allows_jump();
-    failures += test_update_pending_forces_bootloader();
-    failures += test_two_valid_records_choose_higher_sequence();
-    failures += test_corrupted_higher_sequence_is_ignored();
-    failures += test_equal_sequence_forces_recovery();
-    failures += test_committed_record_allows_one_trial_boot();
-    failures += test_boot_attempted_forces_recovery();
-    failures += test_interrupted_write_leaves_old_record_selected();
-    failures += test_mark_boot_attempted_writes_next_record();
-    failures += test_mark_app_valid_writes_next_record();
-
+    failures += test_empty_and_two_slot_selection();
+    failures += test_torn_body_and_marker_keep_old_record();
+    failures += test_equal_generation_and_corrupt_newer_are_bounded();
+    failures += test_generation_wrap();
+    failures += test_explicit_request_cancel_and_trial_confirmation();
     return failures == 0 ? 0 : 1;
 }

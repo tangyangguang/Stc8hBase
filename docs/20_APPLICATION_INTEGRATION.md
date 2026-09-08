@@ -75,38 +75,32 @@ STC8H1K08 项目通过 PlatformIO wrapper 接入 `proto_rf_link` 时，不要在
 
 基础库示例 `examples/platformio/rf_link_nrf24_small` 只记录 `drv_nrf24l01 + stc8h_spi + proto_rf_link` 在 STC8H1K08 上的裁剪接入和资源边界；它不是链路可靠性运行参考。需要真实 nRF24 TX 完成、`MAX_RT` 恢复或 ACK payload 判定时，以 `nrf24_fixed_ping` 和 `nrf24_ack_payload` 的 wait + `drv_nrf24l01_complete_tx()` 流程为准。
 
-## 7. H8K64U OTA 接入边界
+## 7. H8K64U Remote OTA 接入边界
 
-当前 `STC8H8K64U` OTA 示例采用单应用区布局：
+生产布局固定为：
 
 ```text
-0x0000..0x01FF  boot stub / reset vector
-0x0200..0xB3FF  OTA application
-0xB400..0xFBFF  bootloader
-0xFC00..0xFFFF  dual OTA parameter records
+0x0000..0x6BFF  常驻 Bootloader（低地址 reset + 全中断向量转发）
+0x6C00..0xEFFF  单 Application，最大 33792 bytes
+0xF000..0xFBFF  产品持久化数据，OTA 不访问
+0xFC00..0xFDFF  OTA Params A
+0xFE00..0xFFFF  OTA Params B
 ```
 
-应用项目生成 OTA 镜像时必须从 `0x0200` 链接，且 manifest 的 `app_size` 不能超过 `0xB200` 字节。ESP32 侧负责云端下载、验签、暂存完整镜像、总线重试和业务升级窗口；基础库侧提供 manifest/frame/params 编解码、状态机、IAP backend、RS485 bootloader 示例和边界检查。
+Application 必须以 `--code-loc 0x6C00` 链接。普通远程更新只允许擦写 `0x6C00..0xEFFF` 与两个 Params 扇区；Bootloader 的首次安装、更新和救援只走 UART1/STC ISP。64 KiB 无外部 Flash 时没有本地 A/B 回滚，失败后常驻 Bootloader，必须由 PC 或未来 Sender 重传镜像。
 
-OTA 应用启动后必须先把业务输出初始化到安全态，再标记 app valid。基础库提供两类参考构建：
+应用接入顺序：
 
-- `h8k64u_ota_min_app` 默认环境只保留 `stc8h_boot_mark_app_valid()` 调用点，不写参数区，适合做链接和调用顺序验证。
-- `h8k64u_ota_min_app` 的 `STC8H8K64U_mark_valid_iap` 环境会把 `stc8h_boot_mark_app_valid()` 接到 `hal/stc8h_ota_params_store` 和 `hal/stc8h_iap_ota_params`，用于编译验证真实参数区 mark-valid 路径。实际烧录运行前必须确认允许写擦 `0xFC00/0xFE00` 参数扇区。
+1. 最早阶段把全部板级输出置为安全态，并接管 Bootloader 留下的 Watchdog。
+2. 仅在 trial 自检完成后调用 `stc8h_boot_mark_app_valid()`；该 API 只接受 `TRIAL_STARTED`。
+3. 收到经过产品协议授权的升级请求后生成非零 `session_id`，调用 `stc8h_boot_request_update(session_id)`。
+4. 持久化成功后先向上位机发送 ACK，再调用 `stc8h_boot_controlled_reset()`。不得因上电、串口流量、广播或发现新版本自动进入升级。
+5. 若 ACK 无法发送且尚未复位，可调用 `stc8h_boot_cancel_update_request(session_id)`；一旦擦除开始，只能 resume 或显式 restart。
 
-RS485 项目使用 `drivers/drv_rs485_uart` 时，需要在板级定义：
+Application 侧只在启用 OTA 时编译 `hal/stc8h_boot_control_iap.c`、`hal/stc8h_iap_ota_params.c`、`hal/stc8h_ota_params_store.c` 和 `protocols/stc8h_ota_format.c`。未启用时不要创建 wrapper，从而保持零 OTA ROM/RAM、零外设和零中断占用。`h8k64u_ota_min_app` 的 `STC8H8K64U_mark_valid_iap` 环境编译验证真实 request/cancel/mark-valid/reset API；实际运行会写擦 `0xFC00/0xFE00`。
 
-```c
-#define BOARD_RS485_TX_ENABLE()  /* DE/RE 切到发送 */
-#define BOARD_RS485_RX_ENABLE()  /* DE/RE 切到接收 */
-```
+Bootloader BSP 必须提供 `H8K64U_OTA_SAFE_OUTPUTS_OFF()`。核心板示例明确使用 no-op，因为没有受控负载；产品板不得沿用 no-op。Bootloader 全程关闭中断、开启 Watchdog，并在擦除、写后读回和整镜像 CRC 循环中喂狗。进入 trial 前先持久化 `TRIAL_STARTED`；trial 若未 mark-valid 就复位，下一次启动停留 Bootloader。
 
-可靠 RS485 write 还必须启用 bounded putc 并为最后停止位提供显式等待；若接收使用 UART interrupt，则同时启用 ISR API：
+RS485 自动收发模块可以把 `BOARD_RS485_TX_ENABLE()` / `BOARD_RS485_RX_ENABLE()` 定义为空操作；手动 DE/RE 板必须实现它们。发送路径仍需 bounded putc 和最后停止位延时。UART2 Bootloader 使用 polling，不占用中断；低地址表会把应用中断槽 0..44 转发到 `0x6C00 + vector_offset`；大于 31 的 SDCC ISR 入口需按芯片手册使用汇编适配。
 
-```c
-#define STC8H_UART_ENABLE_BOUNDED_PUTC 1
-#define DRV_RS485_UART_TX_COMPLETE_DELAY_US 150u /* 9600 8N1 示例 */
-#define STC8H_UART_ENABLE_ISR_API 1              /* 仅 interrupt RX 项目 */
-#define DRV_RS485_UART_ENABLE_RX_INTERRUPT 1     /* 仅 interrupt RX 项目 */
-```
-
-interrupt RX 项目的 ISR 由应用绑定并持有缓冲，具体见 `docs/27_H8K64U_UART2_RS485_DESIGN.md`。基础库不实现 Modbus 或灌溉业务寄存器；业务层收到升级命令后应关闭所有输出、拒绝普通业务命令，并让 ESP32 通过 OTA 帧协议驱动 bootloader。
+打包、布局检查、初始工厂镜像和 PC→USB-RS485 操作见 `docs/25_H8K64U_OTA_DESIGN.md`。

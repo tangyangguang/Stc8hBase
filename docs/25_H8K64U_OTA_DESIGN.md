@@ -1,251 +1,147 @@
-# STC8H8K64U OTA/IAP Bootloader 设计
+# STC8H8K64U Remote OTA Foundation
 
-本文只记录当前设计基线、边界和验证入口，不记录逐次调试日志。
+## 1. 范围与安全声明
 
-## 目标
+本设计只覆盖 STC8H8K64U 的可复用单 Application OTA 核心和第一阶段 PC→USB-RS485→UART2 Sender。它不包含云下载、ESP32 暂存/发送、业务升级窗口、433 模块适配、签名验签或 Bootloader 远程更新。
 
-目标场景：
+关键约束：
 
-- ESP32 负责联网下载、验签或 hash 校验、暂存完整 STC 固件。
-- ESP32 通过 RS485 或串口透传链路把 OTA payload 分块发送给 `STC8H8K64U-45I-LQFP48`。
-- STC8H8K64U 专用 bootloader 使用 IAP 擦写单应用区。
-- 写入完成后由 STC 侧做整包 CRC32 校验，commit 后试启动新应用。
+- 操作者先获得完整 `.stcota` 包并完成本机检查，再用明确命令启动更新。
+- 上电、联网、串口活动、广播、探测和发现新版本都不得自动擦写。
+- Application 有效时，Bootloader 只接受 Application 已持久化的同一非零 `session_id`；Recovery/空参数状态下仍需 PC 明确执行 `update` 或 `resume`。
+- `--restart` 会丢弃当前断点并重新擦除 Application；无该参数时，不允许其他 session 接管。
+- 第一阶段 CRC/UID/目标字段防误传和损坏，不抵御总线主动攻击者，不宣称安全启动。
 
-本能力只面向 `STC8H8K64U-45I-LQFP48`。不做 STC8H 全系列自动适配，不支持 `STC8H1K08` 程序 OTA。
+## 2. 固定 Flash 契约
 
-## 资料依据
+| 区域 | 地址 | 大小 | 远程可写 |
+|---|---:|---:|---|
+| Bootloader | `0x0000..0x6BFF` | 27 KiB | 否 |
+| Application | `0x6C00..0xEFFF` | 33 KiB | 是 |
+| 产品数据 | `0xF000..0xFBFF` | 3 KiB | 否 |
+| OTA Params A | `0xFC00..0xFDFF` | 512 B | 是 |
+| OTA Params B | `0xFE00..0xFFFF` | 512 B | 是 |
 
-依据记录见 `docs/10_REFERENCES.md`。当前设计依赖以下事实：
+STC ISP 的 `program_eeprom_split` 必须为十进制 `27648`（`0x6C00`）；示例上传脚本通过 `custom_stcgal_eeprom_split = 27648` 显式传给 stcgal。Bootloader 从 `0x0200` 链接；`0x0000` 固定 `LJMP 0x0200`。低地址中断槽 0..44 固定转发到 `0x6C00 + vector_offset`（SDCC 对大于 31 的 ISR 仍需按芯片手册使用汇编入口）。Application 同样以 `--code-loc 0x6C00` 链接，SDCC 会把应用向量放到相同偏移。
 
-- STC8H8K64U 有最多 64KB Flash，擦除页为 512 字节，IAP/EEPROM 边界可在生产烧录配置中改变。
-- 若要由用户 bootloader IAP 改写应用程序区，生产烧录时必须把可 IAP 改写区域规划为覆盖应用区。
-- STC 内置 ISP/BSL 更适合生产烧录和救援，不适合作为产品 OTA 主协议。
-- bootloader 与应用必须分区，metadata/参数区必须可恢复，普通应用不得擦写 bootloader 区。
+Bootloader 当前 SDCC 构建为 `25951 / 27648 bytes`（93.9%，余 1697 bytes）；mark-valid IAP 最小 Application 为 `9599 / 33792 bytes`。后续新增能力必须重新检查两边余量，不得侵占 `0xF000..0xFFFF`。
 
-## 推荐方案
+## 3. 分层
 
-```text
-ESP32 下载/验签/暂存完整固件
-  -> RS485 或串口透传分块发送 OTA frame
-    -> STC8H8K64U bootloader 接收 payload
-      -> IAP 擦写应用区
-        -> CRC32 校验
-          -> COMMIT 写参数区
-            -> 试启动应用
-              -> 应用自检后 mark_app_valid
-```
+- `proto_ota_frame`：Transport-neutral 帧、CRC16、collector。
+- `stc8h_ota_format`：固定 31-byte Manifest 和 36-byte Params wire format。
+- `stc8h_ota`：顺序写入、断点、读回、整镜像 CRC32、状态机。
+- `stc8h_ota_receiver`：将已解析的单播命令映射到 OTA Core，并校验目标 UID；不拥有串口。
+- `stc8h_ota_params_store`：双 512-byte 槽、generation、CRC、最后提交标记。
+- `stc8h_iap_program` / `stc8h_iap_ota_params`：受编译期边界约束的 IAP backend。
+- `stc8h_chip_identity`：读取 7-byte CHIPID 并生成 16-byte canonical UID。
+- `h8k64u_rs485_ota_bootloader`：UART2 polling Transport Adapter、Watchdog、safe-output hook、ACK 后复位。
+- `tools/stc8h_ota.py`：pack、inspect、factory、info、update、resume。
 
-ESP32 不应在产品升级流程中模拟 STC-ISP 协议。原因是 STC ISP 协议公开资料不足，且产品 OTA 需要地址、版本、CRC、重试、commit 和恢复状态机。
+其他可靠双向 Transport 可复用 Receiver/Core，但必须自己提供单播、ACK、超时、重试、去重和分包。只有单向 433 发射模块不能承载本协议。
 
-## 范围
+## 4. Wire protocol v1
 
-基础库负责：
-
-- H8K64U 程序区 IAP 擦页、写入、读回和边界检查。
-- OTA manifest、frame、参数区记录的规范化编解码。
-- 单应用区写入状态机、CRC32 校验、commit、trial boot、mark-valid 和 recovery。
-- boot stub、应用链接基址、bootloader 高地址布局和最小示例。
-- RS485/UART 参考适配，不绑定业务协议。
-
-ESP32 或应用项目负责：
-
-- 云端版本查询、固件下载、验签或 hash 校验。
-- 完整固件暂存、重试、超时、升级窗口、结果上报。
-- RS485 地址分配、总线仲裁和业务协议封装。
-- 升级前停止业务命令并关闭危险输出。
-- 生产烧录时固定正确的 code/EEPROM split。
-
-明确不支持：
-
-- STC 内部 A/B 双应用区和真正 rollback。
-- bootloader 自升级。
-- STC 侧 HTTPS、证书、JSON、压缩或复杂签名验签。
-- SPI/寄存器型 433 模块配置。
-- Modbus 或灌溉业务协议。
-- 未编译 OTA 模块时产生任何 ROM/RAM/外设占用。
-
-## Flash 布局
-
-当前实现基线：
-
-| 区域 | 范围 | 用途 |
-|---|---:|---|
-| Boot stub / 向量区 | `0x0000..0x01FF` | 复位入口和中断跳转表 |
-| Application | `0x0200..0xB3FF` | OTA 应用镜像 |
-| Bootloader | `0xB400..0xFBFF` | 接收、IAP、CRC、状态机 |
-| Boot 参数区 | `0xFC00..0xFFFF` | 双份参数记录 |
-
-应用镜像大小上限为 `0xB200` 字节。应用必须从 `0x0200` 链接；默认从 `0x0000` 链接的固件不能作为 OTA 镜像。
-
-生产前必须确认 STC8H8K64U 的 IAP/EEPROM split 允许 bootloader IAP 覆盖应用区。若仍只保留顶部 512 字节 EEPROM/IAP 区，OTA 会在擦写应用区时失败。
-
-`tools/check_examples_full.sh` 会检查 bootloader reset stub、`0xB400` 高地址入口和 `0xFC00..0xFFFF` 参数区边界。
-
-## 启动流程
+每帧：
 
 ```text
-上电/复位
-  -> boot stub
-  -> bootloader 读取参数区
-    -> update_pending=1：留在 bootloader
-    -> app_valid=1 且 CRC32 匹配：跳转应用
-    -> BOOT_COMMITTED 且 boot_attempted=0 且 CRC32 匹配：记录 boot_attempted=1 后试启动应用
-    -> 其他情况：留在 bootloader 等待重新升级
+SOF[2]="OT", version, command, flags, dst, src, reserved,
+session_id:u32le, sequence:u16le, offset:u16le, length:u16le,
+payload[0..128], crc16_modbus:u16le
 ```
 
-COMMIT 不直接设置 `app_valid=1`。新应用完成早期自检并把输出初始化到安全态后，才调用 mark-valid 能力。
+命令：`INFO`、`BEGIN`、`DATA`、`VERIFY`、`ACTIVATE`、`ABORT`、`STATUS`。响应统一为 `STATUS`。普通状态 payload 20 bytes，`INFO` 为 36 bytes并附完整 16-byte UID。`BEGIN` payload 固定为 31-byte Manifest + 从 INFO 原样回送的 16-byte UID；目标 UID 不匹配时，在任何擦除之前拒绝。
 
-若试启动后复位但 `app_valid` 仍为 0，bootloader 不再继续跳转该应用，而是进入 recovery 等待 ESP32 重新下发固件。
+Host 使用 window=1、128-byte 顺序块和有限重试。同一 `session/sequence/command` 的重发返回 DUPLICATE ACK；已提交区域的数据重发只有逐字节一致时才成功。
 
-## OTA Frame
+## 5. Manifest 和包
 
-OTA frame 是传输无关协议，可运行在 RS485、普通 UART 或透明串口 433 模块上。推荐帧格式：
+Manifest 固定字段包括：magic/format、chip、board/hardware/app ID、`app_base`、`app_size`、CRC32、语义版本、最低 Bootloader 版本、build、flags 和 CRC16。Bootloader 要求：
+
+- chip=`STC8H8K64U`，base=`0x6C00`；
+- size 非零且不越过 `0xEFFF`；
+- board/hardware/app ID 与构建期目标一致（产品集成必须配置）；
+- 最低 Bootloader 版本可满足；
+- Manifest CRC16 有效。
+
+`.stcota` 包含 package header、canonical Manifest、连续 Application bytes 和 SHA-256。SHA-256 在 PC 侧检查；STC 侧执行 Manifest CRC16、每帧 CRC16、每块写后读回和整镜像 CRC32。
+
+## 6. Params 和掉电恢复
+
+Params 状态：
 
 ```text
-SOF | proto_ver | dst_addr | src_addr | cmd | seq | offset | len | payload | crc16
+EMPTY -> APP_VALID -> UPDATE_REQUESTED -> PREPARING -> RECEIVING
+RECEIVING -> VERIFIED -> TRIAL_PENDING -> TRIAL_STARTED -> APP_VALID
+PREPARING/RECEIVING/FAILED -> RECOVERY
 ```
 
-第一版 payload 建议为 64 或 128 字节。STC 侧不得依赖大缓冲。
+每次更新写入非活动槽：擦除目标槽、写前 34 bytes、读回比较、最后写 2-byte commit marker、再完整解码确认。选择规则：
 
-最小命令集：
+- 仅一个有效槽时选它；
+- 两槽有效时按 16-bit modular generation 选择较新者；
+- generation 相同视为歧义，停留 Recovery；
+- 新槽 torn write/CRC/marker 损坏时保留旧槽；
+- generation 从 `0xFFFF` 回绕到 `0x0000`。
 
-| 命令 | 作用 |
-|---|---|
-| `BEGIN` | 下发 manifest 并准备擦写 |
-| `WRITE_BLOCK` | 顺序写入应用镜像块 |
-| `VERIFY` | 计算应用区 CRC32 |
-| `COMMIT` | CRC 通过后提交 trial boot |
-| `ABORT` | 取消当前升级 |
-| `STATUS` | 回报状态、offset 和错误原因 |
+每 2048 bytes 和镜像末尾持久化 `committed_offset`。掉电后只信任该断点；未持久化尾部允许 Host 重发并逐字节比较。单 Application 无法在本地保存上一版，Recovery 只保证 Bootloader 可继续接收。
 
-写入策略：
+## 7. Trial、Watchdog 与输出安全
 
-- 只支持顺序写入。
-- `offset` 必须等于当前 `write_offset`。
-- 允许重复发送上一块已接受 chunk，但内容必须与 flash 读回一致。
-- 未来 offset、乱序 chunk、内容不一致的重复 chunk 都拒绝。
-- 断点恢复由 ESP32 根据 STATUS 中的 `write_offset` 决定是否重发。
+每次 reset 先执行 Bootloader：
 
-## Manifest
+- `APP_VALID` 且整镜像 CRC32 正确：跳转 Application。
+- `TRIAL_PENDING` 且 CRC32 正确：先持久化 `TRIAL_STARTED`，再跳转。
+- `TRIAL_STARTED`、损坏镜像、更新中或失败：停留 Bootloader。
 
-manifest 在线上传输时必须使用固定 little-endian 字节序，不允许直接发送 C struct 内存。
+Bootloader 开启 Watchdog，并在 erase/write/read/CRC 长循环喂狗。Application 接管时 Watchdog 仍在运行；它必须先建立安全输出、完成最小健康检查、调用 `stc8h_boot_mark_app_valid()`，随后持续喂狗。trial 未确认前复位不会自动再试。
 
-STC 侧检查字段：
+产品 Bootloader 必须实现 `H8K64U_OTA_SAFE_OUTPUTS_OFF()`，且不得分配资源或开启中断。核心板示例因无受控负载明确使用 no-op。
 
-- `magic`
-- `format_version`
-- `target_chip`
-- `board_id`
-- `hw_revision`
-- `app_id`
-- `app_base`
-- `app_size`
-- `app_crc32`
-- `min_bootloader_version`
-- `flags`
-- `manifest_crc`
+## 8. PC 工具
 
-固件签名、hash、灰度策略和云端认证由 ESP32 负责。STC 侧只做资源可承受的目标、范围、版本和 CRC 检查。
-
-## 参数区
-
-参数区使用 A/B 双记录，每条记录占用一个 512 字节擦除页：
-
-| 记录 | 范围 |
-|---|---:|
-| Param A | `0xFC00..0xFDFF` |
-| Param B | `0xFE00..0xFFFF` |
-
-记录必须包含：
-
-- 参数 magic、版本、sequence。
-- OTA state、`app_valid`、`update_pending`、`boot_attempted`。
-- `app_base`、`app_size`、`app_crc32`、版本号、`write_offset`。
-- 最近失败原因。
-- 参数记录 CRC。
-
-写入规则：
-
-- 写新状态时选择非当前记录页。
-- 先擦除，再写完整规范化记录，再读回校验。
-- A/B 都有效时选择 sequence 更新的一条。
-- sequence 相同或 CRC 错误时进入 recovery。
-- 参数区写入失败不得跳转应用。
-
-## 状态机
-
-核心状态：
-
-```text
-BOOT_IDLE
-BOOT_WAIT_BEGIN
-BOOT_ERASING
-BOOT_RECEIVING
-BOOT_VERIFYING
-BOOT_COMMITTED
-BOOT_ERROR
-```
-
-关键规则：
-
-- `BEGIN` 校验 manifest 后才允许擦除应用区。
-- `WRITE_BLOCK` 只能写应用区范围内的顺序 chunk。
-- `VERIFY` 必须读取应用区并计算 CRC32。
-- `COMMIT` 只能在 CRC32 匹配后成功。
-- `ABORT` 只清理接收状态，不擦写 bootloader、boot stub 或参数保留区。
-- 单应用区方案不承诺回滚旧应用，只承诺停留 bootloader 后重新升级。
-
-## 硬件边界
-
-硬件设计必须满足：
-
-- ESP32 能控制 STC reset，或能通过业务协议让 STC 软件复位。
-- RS485 DE/RE 方向可由固件控制。
-- 多从机总线必须有唯一地址。
-- 升级期间普通业务通信暂停。
-- 电源不稳或低电压时不得执行 IAP 写擦。
-- ISP 下载通道必须保留为生产和救援通道。
-
-真实项目必须实测 RS485 DE/RE 时序、总线冲突、断电中断、参数区 A/B 恢复和不同镜像大小边界。
-
-## 验证入口
-
-日常快检：
+构建包：
 
 ```sh
-tools/check_host_tests.sh
-tools/check_examples.sh
+python3 tools/stc8h_ota.py pack \
+  --hex path/to/application.hex \
+  --output build/app.stcota \
+  --board-id 1 --hardware-revision 1 --app-id 1 \
+  --version 1.2.3 --build 42
+python3 tools/stc8h_ota.py inspect build/app.stcota
 ```
 
-发布前完整验证：
+生成首次 UART1/STC ISP 工厂镜像（Bootloader + APP_VALID Application + Params A）：
+
+```sh
+python3 tools/stc8h_ota.py factory \
+  --boot-hex examples/platformio/h8k64u_rs485_ota_bootloader/.pio/build/STC8H8K64U/firmware.hex \
+  --package build/app.stcota --output build/factory.hex
+```
+
+Bootloader 已在总线上等待时：
+
+```sh
+python3 tools/stc8h_ota.py probe --port /dev/cu.usbserial-X --address 34
+python3 tools/stc8h_ota.py update --port /dev/cu.usbserial-X --address 34 \
+  --file build/app.stcota
+python3 tools/stc8h_ota.py resume --port /dev/cu.usbserial-X --address 34 \
+  --file build/app.stcota
+```
+
+交互命令要求输入 `UPDATE <address>`；CI/已审核脚本必须显式给 `--yes`。只有确认丢弃当前断点时才加 `--restart`；旧 build 还必须显式加 `--allow-downgrade`。`--no-activate` 可停在 VERIFIED；ACTIVATE 始终是独立协议步骤。
+
+Application 正常运行时不会响应 OTA INFO。产品协议应先调用 `stc8h_boot_request_update(session_id)`，发送 ACK 后再受控复位；PC 第一阶段也可在预先进入 Bootloader/Recovery 的台架上操作。RS485 总线上不得同时存在 ESP32 和 PC 两个主站。
+
+## 9. 验证与未完成边界
+
+自动 Gate：
 
 ```sh
 tools/check_host_tests_full.sh
 tools/check_examples_full.sh
-tools/prepare_h8k64u_validation.sh
 ```
 
-可选硬件脚本：
+Gate 覆盖 frame/collector、Manifest/Params、双槽 torn write、generation wrap/歧义、显式请求、checkpoint/resume、重复块、readback、CRC 失败、restart/abort、UID 绑定、工具包/工厂镜像，以及 Bootloader reset/vector/分区边界。SDCC 全示例已通过；Keil C51 仅保持源码语法边界，仍需 Windows+Keil 真编译。
 
-- `tools/h8k64u_uart1_ota_smoke.py`：UART1 最小 OTA 闭环。
-
-该脚本会构建、上传或触发 IAP 写擦，必须在确认端口、芯片和测试板可接受风险后手动运行。
-
-## 已验证结论
-
-稳定结论只保留影响设计的事实：
-
-- UART1 bootloader reset stub 能进入高地址 bootloader。
-- `program_eeprom_split=512` 这类允许 IAP 覆盖应用区的配置下，单应用区 IAP 写入、CRC32 校验、COMMIT、trial boot 和 mark-valid 路径已通过 UART1 硬件闭环。
-- `0.5KB EEPROM` split 只能写顶部参数区，不能 IAP 擦写 `0x0200` 应用区。
-- CPU 地址到 STC IAP 地址必须显式转换，不能把 `0x0200` 直接当作 IAP 地址寄存器值。
-- OTA manifest 保存不能依赖结构体整体赋值；8051/SDCC 场景下应逐字段复制，避免 generic memcpy 和地址空间问题。
-- bootloader 跳转应用前必须按参数区记录重新读取应用区并计算 CRC32。
-
-## 剩余风险
-
-- 生产烧录流程必须能稳定设置正确的 code/EEPROM split。
-- 真实 RS485 收发器 DE/RE 时序和多从机场景仍需实测。
-- 真实断电中断和参数区 A/B 单页损坏恢复仍需实测。
-- 单应用区 OTA 失败时旧应用不可继续运行；需要真正 rollback 时必须增加外部暂存区或改为双应用区。
-- bootloader 体积必须持续检查，不能进入 `0xFC00..0xFFFF` 参数区。
+真实硬件写擦尚须单独授权并记录：首次 ISP 工厂安装、正常 update、断电 resume、错误 UID/包、重复块、CRC 失败、trial 未确认和 mark-valid。完成这些之前，不宣称生产闭环。ESP32 Sender 和 433 Adapter 不在本阶段。

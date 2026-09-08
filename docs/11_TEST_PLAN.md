@@ -70,7 +70,7 @@ Host 测试不模拟完整 MCU、寄存器时序或硬件物理现象。无法�
 - Makefile 示例构建。
 - 重型 OTA/nRF24/RF-link host 行为测试。
 - EEPROM/IAP 写擦环境的显式构建。
-- OTA app `0x0200` 链接、bootloader `0xB400` 链接和 `0xFC00..0xFFFF` 参数区边界。
+- OTA app `0x6C00` 链接、bootloader `0x0200` HOME、低地址 reset/vector 转发和 `0xFC00..0xFFFF` 参数区边界。
 - 少量高风险 IAP/地址空间编译检查。
 
 专项检查不能替代代码设计。若一个功能必须靠大量脚本约束才不出错，优先简化实现或缩小功能范围。

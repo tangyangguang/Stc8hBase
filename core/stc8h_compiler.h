@@ -47,6 +47,8 @@
 
 #else
 
+#include <stdint.h>
+
 #define STC8H_HOSTED 1
 
 #define STC8H_DATA
@@ -58,8 +60,10 @@
 
 #define STC8H_SFR(name, addr) extern volatile unsigned char name
 #define STC8H_SBIT(name, addr, bit) extern volatile unsigned char name
-#define STC8H_SFRX(addr) (*((volatile unsigned char *)(addr)))
-#define STC8H_SFR16X(addr) (*((volatile unsigned int *)(addr)))
+#define STC8H_SFRX(addr) \
+    (*((volatile unsigned char *)(uintptr_t)(addr)))
+#define STC8H_SFR16X(addr) \
+    (*((volatile unsigned int *)(uintptr_t)(addr)))
 
 #define STC8H_INTERRUPT(name, vector) void name(void)
 #define STC8H_INTERRUPT_USING(name, vector, reg_bank) void name(void)

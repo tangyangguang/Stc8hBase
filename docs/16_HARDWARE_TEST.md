@@ -51,7 +51,7 @@ tools/prepare_h8k64u_validation.sh
 - `h8k64u_eeprom_safe`：安全占位构建。
 - `h8k64u_eeprom_rw`：破坏性 EEPROM/IAP 写擦读回，必须确认测试页。
 - `h8k64u_ota_min_app`：应用链接基址和 mark-valid 路径。
-- `h8k64u_uart1_ota_bootloader` / `h8k64u_rs485_ota_bootloader`：bootloader 链接布局、参数区边界、串口 OTA frame。
+- `h8k64u_rs485_ota_bootloader`：低地址常驻 bootloader、应用向量转发、参数区边界和 UART2/RS485 OTA frame；UART1 仅作为 STC ISP 安装/救援入口。
 
 ## 记录要求
 

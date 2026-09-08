@@ -21,10 +21,12 @@
 - 不引用 QEI 的代表性 `gpio_blink` map 保持无 `_stc8h_qei` 符号检查。
 - `tools/prepare_h8k64u_validation.sh` 和 `tools/check_examples_full.sh` 通过。
 
-2026-06-29：
+STC8H8K64U Remote OTA Foundation：
 
-- `tools/check_examples_full.sh` 通过。
-- `tools/h8k64u_uart1_ota_smoke.py` 语法检查通过。
+- UART2/RS485 Bootloader 使用固定 `0x0000..0x6BFF` 保护区，SDCC 4.4.0 构建为 25951/27648 bytes；应用从 `0x6C00` 链接。
+- `h8k64u_ota_min_app` 的真实 IAP mark-valid/request 控制环境为 9599/33792 bytes。
+- `tools/check_host_tests_full.sh` 覆盖 frame、Manifest/Params、断电双槽、generation wrap、resume、CRC、trial、UID 绑定和 PC 工具；`tools/check_examples_full.sh` 检查 reset、0..44 槽向量转发及 Flash 边界。
+- UART1 不承载产品 远程 OTA，只保留 STC ISP 首次安装、Boot 更新和物理救援。
 
 长期保留的示例和脚本只覆盖当前正式目标、稳定硬件验证入口或可重复构建检查。一次性 probe、matrix 诊断、临时 fault 注入和调试流水账不进入资源报告。
 

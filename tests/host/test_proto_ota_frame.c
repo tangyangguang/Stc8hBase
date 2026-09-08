@@ -12,178 +12,106 @@ static int require(int condition, const char *message)
     return 0;
 }
 
-static int test_valid_begin_frame_parses(void)
+static int test_build_and_parse(void)
 {
-    stc8h_u8 frame[PROTO_OTA_FRAME_WIRE_MAX];
-    stc8h_u16 frame_len;
-    proto_ota_frame_t parsed;
-    int failures;
-
-    failures = 0;
-    failures += require(proto_ota_frame_build(frame,
-                                             sizeof(frame),
-                                             0x22u,
-                                             0x11u,
-                                             PROTO_OTA_FRAME_CMD_BEGIN,
-                                             0x1234u,
-                                             0UL,
-                                             0,
-                                             0u,
-                                             &frame_len) == STC8H_OK,
-                        "BEGIN frame must build");
-    failures += require(proto_ota_frame_parse(frame,
-                                             frame_len,
-                                             0x22u,
-                                             0xFFFFu,
-                                             &parsed) == PROTO_OTA_FRAME_PARSE_OK,
-                        "valid BEGIN frame must parse");
-    failures += require(parsed.cmd == PROTO_OTA_FRAME_CMD_BEGIN, "BEGIN command must decode");
-    failures += require(parsed.seq == 0x1234u, "BEGIN seq must decode little-endian");
-    failures += require(parsed.len == 0u, "BEGIN payload length must be zero");
-    return failures;
-}
-
-static int test_valid_write_block_frame_parses(void)
-{
-    stc8h_u8 frame[PROTO_OTA_FRAME_WIRE_MAX];
+    stc8h_u8 wire[PROTO_OTA_FRAME_WIRE_MAX];
     stc8h_u8 payload[3];
-    stc8h_u16 frame_len;
-    proto_ota_frame_t parsed;
+    stc8h_u16 wire_len;
+    proto_ota_frame_t frame;
     int failures;
 
+    payload[0] = 1u;
+    payload[1] = 2u;
+    payload[2] = 3u;
     failures = 0;
-    payload[0] = 0xAAu;
-    payload[1] = 0xBBu;
-    payload[2] = 0xCCu;
-    failures += require(proto_ota_frame_build(frame,
-                                             sizeof(frame),
-                                             0x22u,
-                                             0x11u,
-                                             PROTO_OTA_FRAME_CMD_WRITE_BLOCK,
-                                             7u,
-                                             0x01020304UL,
-                                             payload,
-                                             sizeof(payload),
-                                             &frame_len) == STC8H_OK,
-                        "WRITE_BLOCK frame must build");
-    failures += require(proto_ota_frame_parse(frame,
-                                             frame_len,
-                                             0x22u,
-                                             6u,
-                                             &parsed) == PROTO_OTA_FRAME_PARSE_OK,
-                        "valid WRITE_BLOCK frame must parse");
-    failures += require(parsed.cmd == PROTO_OTA_FRAME_CMD_WRITE_BLOCK, "WRITE_BLOCK command must decode");
-    failures += require(parsed.offset == 0x01020304UL, "WRITE_BLOCK offset must decode little-endian");
-    failures += require(parsed.len == sizeof(payload), "WRITE_BLOCK payload length must decode");
-    failures += require(parsed.payload[0] == 0xAAu, "WRITE_BLOCK payload must point at frame payload");
+    failures += require(proto_ota_frame_build(
+        wire, sizeof(wire), 0x22u, 0xA5u, PROTO_OTA_FRAME_CMD_DATA,
+        PROTO_OTA_FRAME_FLAG_RESTART, 0x12345678UL, 7u, 128u,
+        payload, sizeof(payload), &wire_len) == STC8H_OK,
+        "valid frame must build");
+    failures += require(proto_ota_frame_parse(
+        wire, wire_len, 0x22u, &frame) == PROTO_OTA_FRAME_PARSE_OK,
+        "valid frame must parse");
+    failures += require(frame.cmd == PROTO_OTA_FRAME_CMD_DATA,
+                        "command must round-trip");
+    failures += require(frame.flags == PROTO_OTA_FRAME_FLAG_RESTART,
+                        "flags must round-trip");
+    failures += require(frame.session_id == 0x12345678UL,
+                        "session must round-trip");
+    failures += require(frame.seq == 7u && frame.offset == 128u,
+                        "sequence and offset must round-trip");
+    failures += require(frame.len == 3u && frame.payload[2] == 3u,
+                        "payload must round-trip");
     return failures;
 }
 
-static int test_bad_crc_returns_error(void)
+static int test_wrong_address_ignored(void)
 {
-    stc8h_u8 frame[PROTO_OTA_FRAME_WIRE_MAX];
-    stc8h_u16 frame_len;
-    proto_ota_frame_t parsed;
+    stc8h_u8 wire[PROTO_OTA_FRAME_WIRE_MAX];
+    stc8h_u16 wire_len;
 
-    (void)proto_ota_frame_build(frame,
-                                sizeof(frame),
-                                0x22u,
-                                0x11u,
-                                PROTO_OTA_FRAME_CMD_BEGIN,
-                                1u,
-                                0UL,
-                                0,
-                                0u,
-                                &frame_len);
-    frame[5] ^= 0x01u;
-    return require(proto_ota_frame_parse(frame,
-                                        frame_len,
-                                        0x22u,
-                                        0xFFFFu,
-                                        &parsed) == PROTO_OTA_FRAME_PARSE_ERROR,
-                   "bad CRC must return parse error");
+    (void)proto_ota_frame_build(wire, sizeof(wire), 0x22u, 0xA5u,
+                                PROTO_OTA_FRAME_CMD_INFO, 0u, 0UL, 1u,
+                                0u, 0, 0u, &wire_len);
+    return require(proto_ota_frame_parse(wire, wire_len, 0x23u, 0) ==
+                   PROTO_OTA_FRAME_PARSE_IGNORE,
+                   "other destination must be ignored");
 }
 
-static int test_wrong_destination_returns_ignore(void)
+static int test_bad_crc_rejected(void)
 {
-    stc8h_u8 frame[PROTO_OTA_FRAME_WIRE_MAX];
-    stc8h_u16 frame_len;
-    proto_ota_frame_t parsed;
+    stc8h_u8 wire[PROTO_OTA_FRAME_WIRE_MAX];
+    stc8h_u16 wire_len;
 
-    (void)proto_ota_frame_build(frame,
-                                sizeof(frame),
-                                0x22u,
-                                0x11u,
-                                PROTO_OTA_FRAME_CMD_BEGIN,
-                                1u,
-                                0UL,
-                                0,
-                                0u,
-                                &frame_len);
-    return require(proto_ota_frame_parse(frame,
-                                        frame_len,
-                                        0x33u,
-                                        0xFFFFu,
-                                        &parsed) == PROTO_OTA_FRAME_PARSE_IGNORE,
-                   "wrong destination must return ignore");
+    (void)proto_ota_frame_build(wire, sizeof(wire), 0x22u, 0xA5u,
+                                PROTO_OTA_FRAME_CMD_INFO, 0u, 0UL, 1u,
+                                0u, 0, 0u, &wire_len);
+    wire[8] ^= 1u;
+    return require(proto_ota_frame_parse(wire, wire_len, 0x22u, 0) ==
+                   PROTO_OTA_FRAME_PARSE_ERROR,
+                   "bad CRC must fail");
 }
 
-static int test_duplicate_sequence_is_surfaced(void)
+static int test_collector_resynchronizes_and_completes(void)
 {
-    stc8h_u8 frame[PROTO_OTA_FRAME_WIRE_MAX];
-    stc8h_u16 frame_len;
-    proto_ota_frame_t parsed;
-
-    (void)proto_ota_frame_build(frame,
-                                sizeof(frame),
-                                0x22u,
-                                0x11u,
-                                PROTO_OTA_FRAME_CMD_BEGIN,
-                                9u,
-                                0UL,
-                                0,
-                                0u,
-                                &frame_len);
-    return require(proto_ota_frame_parse(frame,
-                                        frame_len,
-                                        0x22u,
-                                        9u,
-                                        &parsed) == PROTO_OTA_FRAME_PARSE_DUPLICATE,
-                   "duplicate seq must be surfaced to caller");
-}
-
-static int test_payload_above_max_is_rejected(void)
-{
-    stc8h_u8 frame[PROTO_OTA_FRAME_WIRE_MAX + 1u];
-    stc8h_u16 frame_len;
+    stc8h_u8 wire[PROTO_OTA_FRAME_WIRE_MAX];
+    stc8h_u8 collected[PROTO_OTA_FRAME_WIRE_MAX];
+    stc8h_u16 wire_len;
     stc8h_u16 i;
+    proto_ota_frame_collector_t collector;
+    proto_ota_collect_result_t result;
+    int failures;
 
-    frame[0] = PROTO_OTA_FRAME_SOF0;
-    frame[1] = PROTO_OTA_FRAME_SOF1;
-    frame[2] = PROTO_OTA_FRAME_VERSION;
-    frame[3] = 0x22u;
-    frame[4] = 0x11u;
-    frame[5] = PROTO_OTA_FRAME_CMD_WRITE_BLOCK;
-    frame[6] = 1u;
-    frame[7] = 0u;
-    frame[8] = 0u;
-    frame[9] = 0u;
-    frame[10] = 0u;
-    frame[11] = 0u;
-    frame[12] = (stc8h_u8)((PROTO_OTA_FRAME_PAYLOAD_MAX + 1u) & 0xFFu);
-    frame[13] = (stc8h_u8)((PROTO_OTA_FRAME_PAYLOAD_MAX + 1u) >> 8);
-    for (i = 0u; i < (stc8h_u16)(PROTO_OTA_FRAME_PAYLOAD_MAX + 1u); ++i) {
-        frame[PROTO_OTA_FRAME_HEADER_SIZE + i] = (stc8h_u8)i;
+    failures = 0;
+    (void)proto_ota_frame_build(wire, sizeof(wire), 0x22u, 0xA5u,
+                                PROTO_OTA_FRAME_CMD_STATUS, 0u, 0UL, 2u,
+                                0u, 0, 0u, &wire_len);
+    proto_ota_frame_collector_init(&collector, collected, sizeof(collected));
+    failures += require(proto_ota_frame_collector_feed(&collector, 0x00u) ==
+                        PROTO_OTA_COLLECT_MORE,
+                        "noise must be skipped");
+    result = PROTO_OTA_COLLECT_MORE;
+    for (i = 0u; i < wire_len; ++i) {
+        result = proto_ota_frame_collector_feed(&collector, wire[i]);
     }
-    frame_len = sizeof(frame);
-    proto_ota_frame_write_crc(frame, frame_len);
+    failures += require(result == PROTO_OTA_COLLECT_FRAME,
+                        "collector must signal complete frame");
+    failures += require(collector.length == wire_len &&
+                        memcmp(wire, collected, wire_len) == 0,
+                        "collector must preserve exact frame");
+    return failures;
+}
 
-    return require(proto_ota_frame_parse(frame,
-                                        frame_len,
-                                        0x22u,
-                                        0xFFFFu,
-                                        0) == PROTO_OTA_FRAME_PARSE_ERROR,
-                   "payload above max must be rejected");
+static int test_oversize_payload_rejected(void)
+{
+    stc8h_u8 wire[PROTO_OTA_FRAME_WIRE_MAX];
+    stc8h_u16 wire_len;
+
+    return require(proto_ota_frame_build(
+        wire, sizeof(wire), 1u, 2u, PROTO_OTA_FRAME_CMD_DATA,
+        0u, 1UL, 1u, 0u, wire, PROTO_OTA_FRAME_PAYLOAD_MAX + 1u,
+        &wire_len) == STC8H_ERROR,
+        "oversize payload must fail");
 }
 
 int main(void)
@@ -191,12 +119,10 @@ int main(void)
     int failures;
 
     failures = 0;
-    failures += test_valid_begin_frame_parses();
-    failures += test_valid_write_block_frame_parses();
-    failures += test_bad_crc_returns_error();
-    failures += test_wrong_destination_returns_ignore();
-    failures += test_duplicate_sequence_is_surfaced();
-    failures += test_payload_above_max_is_rejected();
-
+    failures += test_build_and_parse();
+    failures += test_wrong_address_ignored();
+    failures += test_bad_crc_rejected();
+    failures += test_collector_resynchronizes_and_completes();
+    failures += test_oversize_payload_rejected();
     return failures == 0 ? 0 : 1;
 }

@@ -3,20 +3,6 @@
 
 #include "../../protocols/stc8h_ota_format.c"
 
-static const stc8h_u8 manifest_bytes[STC8H_OTA_MANIFEST_WIRE_SIZE] = {
-    0x31u, 0x41u, 0x54u, 0x4Fu, 0x01u, 0x64u, 0x08u, 0x01u,
-    0x00u, 0x02u, 0x00u, 0x03u, 0x00u, 0x00u, 0x02u, 0x00u,
-    0x01u, 0x00u, 0x00u, 0x78u, 0x56u, 0x34u, 0x12u, 0x01u,
-    0x02u, 0x03u, 0x01u, 0x05u, 0x00u, 0x64u, 0x23u
-};
-
-static const stc8h_u8 params_bytes[STC8H_OTA_PARAMS_WIRE_SIZE] = {
-    0x41u, 0x50u, 0x54u, 0x4Fu, 0x01u, 0x2Au, 0x00u, 0x05u,
-    0x01u, 0x00u, 0x00u, 0x00u, 0x02u, 0x00u, 0x01u, 0x00u,
-    0x00u, 0x78u, 0x56u, 0x34u, 0x12u, 0x01u, 0x02u, 0x03u,
-    0x80u, 0x00u, 0x00u, 0x00u, 0x07u, 0xCAu, 0xF6u
-};
-
 static int require(int condition, const char *message)
 {
     if (!condition) {
@@ -26,86 +12,99 @@ static int require(int condition, const char *message)
     return 0;
 }
 
-static int test_manifest_decode_and_encode(void)
+static void make_manifest(stc8h_ota_manifest_t *manifest)
 {
-    stc8h_ota_manifest_t manifest;
-    stc8h_u8 encoded[STC8H_OTA_MANIFEST_WIRE_SIZE];
+    memset(manifest, 0, sizeof(*manifest));
+    manifest->magic = 0x4F544131UL;
+    manifest->format_version = 1u;
+    manifest->target_chip = 0x0864u;
+    manifest->board_id = 1u;
+    manifest->hw_revision = 2u;
+    manifest->app_id = 3u;
+    manifest->app_base = 0x6C00u;
+    manifest->app_size = 0x1234u;
+    manifest->app_crc32 = 0x89ABCDEFUL;
+    manifest->version_major = 1u;
+    manifest->version_minor = 2u;
+    manifest->version_patch = 3u;
+    manifest->min_bootloader_version = 2u;
+    manifest->build_number = 77u;
+    manifest->flags = 5u;
+}
+
+static int test_manifest_round_trip(void)
+{
+    stc8h_ota_manifest_t input;
+    stc8h_ota_manifest_t output;
+    stc8h_u8 bytes[STC8H_OTA_MANIFEST_WIRE_SIZE];
     int failures;
 
     failures = 0;
-    failures += require(stc8h_ota_manifest_decode(manifest_bytes,
-                                                  sizeof(manifest_bytes),
-                                                  &manifest) == STC8H_OK,
-                        "valid manifest bytes must decode");
-    failures += require(manifest.magic == 0x4F544131UL, "manifest magic must decode little-endian");
-    failures += require(manifest.target_chip == 0x0864u, "manifest target chip must decode little-endian");
-    failures += require(manifest.app_base == 0x0200u, "manifest app base must decode little-endian");
-    failures += require(manifest.app_size == 0x00000100UL, "manifest size must decode little-endian");
-    failures += require(manifest.app_crc32 == 0x12345678UL, "manifest crc32 must decode little-endian");
-    failures += require(manifest.manifest_crc == 0x2364u, "manifest crc16 must decode little-endian");
-
-    memset(encoded, 0, sizeof(encoded));
-    failures += require(stc8h_ota_manifest_encode(&manifest,
-                                                  encoded,
-                                                  sizeof(encoded)) == STC8H_OK,
+    make_manifest(&input);
+    failures += require(stc8h_ota_manifest_encode(&input, bytes,
+                                                  sizeof(bytes)) == STC8H_OK,
                         "manifest must encode");
-    failures += require(memcmp(encoded, manifest_bytes, sizeof(encoded)) == 0,
-                        "manifest encode must reproduce canonical bytes");
+    failures += require(stc8h_ota_manifest_decode(bytes, sizeof(bytes),
+                                                  &output) == STC8H_OK,
+                        "manifest must decode");
+    failures += require(output.app_base == 0x6C00u &&
+                        output.app_size == 0x1234u,
+                        "manifest range must round-trip");
+    failures += require(output.app_crc32 == 0x89ABCDEFUL &&
+                        output.build_number == 77u,
+                        "manifest identity must round-trip");
+    bytes[17] ^= 1u;
+    failures += require(stc8h_ota_manifest_decode(bytes, sizeof(bytes),
+                                                  &output) == STC8H_ERROR,
+                        "manifest CRC must reject corruption");
     return failures;
 }
 
-static int test_manifest_rejects_bad_crc(void)
+static int test_params_round_trip_and_commit_marker(void)
 {
-    stc8h_ota_manifest_t manifest;
-    stc8h_u8 corrupted[STC8H_OTA_MANIFEST_WIRE_SIZE];
-
-    memcpy(corrupted, manifest_bytes, sizeof(corrupted));
-    corrupted[15] ^= 0x01u;
-    return require(stc8h_ota_manifest_decode(corrupted,
-                                             sizeof(corrupted),
-                                             &manifest) == STC8H_ERROR,
-                   "manifest decode must reject canonical bytes with bad crc");
-}
-
-static int test_params_decode_and_encode(void)
-{
-    stc8h_ota_params_t params;
-    stc8h_u8 encoded[STC8H_OTA_PARAMS_WIRE_SIZE];
+    stc8h_ota_params_t input;
+    stc8h_ota_params_t output;
+    stc8h_u8 bytes[STC8H_OTA_PARAMS_WIRE_SIZE];
     int failures;
 
     failures = 0;
-    failures += require(stc8h_ota_params_decode(params_bytes,
-                                                sizeof(params_bytes),
-                                                &params) == STC8H_OK,
-                        "valid params bytes must decode");
-    failures += require(params.param_magic == 0x4F545041UL, "params magic must decode little-endian");
-    failures += require(params.sequence == 0x002Au, "params sequence must decode little-endian");
-    failures += require(params.state == 0x05u, "params state must decode");
-    failures += require(params.boot_attempted == 0u, "params boot_attempted must decode");
-    failures += require(params.write_offset == 0x00000080UL, "params write offset must decode little-endian");
-    failures += require(params.param_crc == 0xF6CAu, "params crc must decode little-endian");
+    memset(&input, 0, sizeof(input));
+    input.param_magic = 0x4F545032UL;
+    input.param_version = 2u;
+    input.state = 4u;
+    input.flags = 2u;
+    input.fail_reason = 3u;
+    input.generation = 0xFFF0u;
+    input.session_id = 0x12345678UL;
+    input.app_base = 0x6C00u;
+    input.app_size = 0x1234u;
+    input.app_crc32 = 0x89ABCDEFUL;
+    input.version_major = 1u;
+    input.version_minor = 2u;
+    input.version_patch = 3u;
+    input.min_bootloader_version = 2u;
+    input.build_number = 77u;
+    input.committed_offset = 0x0800u;
+    input.manifest_crc = 0xA1B2u;
 
-    memset(encoded, 0, sizeof(encoded));
-    failures += require(stc8h_ota_params_encode(&params,
-                                                encoded,
-                                                sizeof(encoded)) == STC8H_OK,
+    failures += require(stc8h_ota_params_encode(&input, bytes,
+                                                sizeof(bytes)) == STC8H_OK,
                         "params must encode");
-    failures += require(memcmp(encoded, params_bytes, sizeof(encoded)) == 0,
-                        "params encode must reproduce canonical bytes");
+    failures += require(stc8h_ota_params_decode(bytes, sizeof(bytes),
+                                                &output) == STC8H_OK,
+                        "committed params must decode");
+    failures += require(output.generation == 0xFFF0u &&
+                        output.session_id == 0x12345678UL,
+                        "params identity must round-trip");
+    failures += require(output.committed_offset == 0x0800u &&
+                        output.commit_marker == STC8H_OTA_PARAM_COMMIT_MARKER,
+                        "params progress and marker must round-trip");
+    bytes[34] = 0xFFu;
+    bytes[35] = 0xFFu;
+    failures += require(stc8h_ota_params_decode(bytes, sizeof(bytes),
+                                                &output) == STC8H_ERROR,
+                        "missing commit marker must reject torn record");
     return failures;
-}
-
-static int test_params_rejects_bad_crc(void)
-{
-    stc8h_ota_params_t params;
-    stc8h_u8 corrupted[STC8H_OTA_PARAMS_WIRE_SIZE];
-
-    memcpy(corrupted, params_bytes, sizeof(corrupted));
-    corrupted[24] ^= 0x01u;
-    return require(stc8h_ota_params_decode(corrupted,
-                                           sizeof(corrupted),
-                                           &params) == STC8H_ERROR,
-                   "params decode must reject canonical bytes with bad crc");
 }
 
 int main(void)
@@ -113,10 +112,7 @@ int main(void)
     int failures;
 
     failures = 0;
-    failures += test_manifest_decode_and_encode();
-    failures += test_manifest_rejects_bad_crc();
-    failures += test_params_decode_and_encode();
-    failures += test_params_rejects_bad_crc();
-
+    failures += test_manifest_round_trip();
+    failures += test_params_round_trip_and_commit_marker();
     return failures == 0 ? 0 : 1;
 }

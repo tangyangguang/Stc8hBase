@@ -237,7 +237,7 @@ https://memfault.com/blog/ota-testing-101-the-ultimate-guide/
 
 - `STC8H8K64U` 属于可自定义 EEPROM 大小的 IAP 系列，可作为自定义 ISP/bootloader 的目标芯片。
 - 若要让 IAP 更新程序区，生产烧录时必须把 IAP/EEPROM 空间规划为覆盖需要更新的程序空间；仅配置小 EEPROM 区不能实现应用 OTA。
-- 2026-06 硬件验证结论：`program_eeprom_split=65024` 这类小 EEPROM 配置不能 IAP 擦写 `0x0200` 应用区；改为允许 IAP 覆盖应用区的 split 后，UART1 OTA 写入、读回、CRC、commit、trial boot 和 mark-valid 路径已完成最小硬件闭环。
+- 当前生产候选 split 固定为 `0x6C00`：低地址 Bootloader 受保护，Application/IAP 从 `0x6C00` 开始，产品数据和双 Params 位于 `0xF000..0xFFFF`。旧 `0x0200/B400` UART1 实验布局已废弃且不构成当前硬件验收证据；UART1 仅用于 STC ISP 安装和救援。
 - SDCC/8051 `--stack-auto` + XDATA 场景下不应依赖结构体整体赋值保存 OTA manifest；`stc8h_ota_begin()` 已改为逐字段复制运行期需要的 manifest 字段。
 - STC8H 英文手册第 16 章将该能力定义为 `IAP/EEPROM/DATA-FLASH`，说明 IAP 模式访问 EEPROM 时目标地址从 `0000H` 开始，可配置 EEPROM 从 Flash 后方向前规划；MOVC 读取 EEPROM 时使用“EEPROM 物理地址 + 程序区大小偏移”。这和 stcgal split 语义、硬件实测需要一起作为 OTA 架构判断依据。
 - 官方 STC-ISP/BSL 适合开发下载和生产烧录；产品 OTA 更适合自定义 bootloader，因为需要控制 RS485 协议、升级状态、commit 和恢复流程。

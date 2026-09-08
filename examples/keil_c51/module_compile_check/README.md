@@ -5,7 +5,7 @@
 ## 1. 验证目标
 
 - 只做编译验证，不烧录，不链接业务固件。
-- 覆盖当前已实现的 core、HAL、drivers、utils 模块。
+- 覆盖当前已实现的 core、HAL、drivers、utils，以及 Remote OTA frame/format/core/receiver/params/application-control 模块。
 - 使用 wrapper 源文件定义 `STC8H_CONFIG_INCLUDE` 和 `STC8H_PINS_INCLUDE`，避免 Keil 命令行对带引号宏的转义差异。
 
 ## 2. 使用方式
