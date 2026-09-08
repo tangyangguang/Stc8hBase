@@ -53,6 +53,15 @@ tools/prepare_h8k64u_validation.sh
 - `h8k64u_ota_min_app`：应用链接基址和 mark-valid 路径。
 - `h8k64u_rs485_ota_bootloader`：低地址常驻 bootloader、应用向量转发、参数区边界和 UART2/RS485 OTA frame；UART1 仅作为 STC ISP 安装/救援入口。
 
+## 2026-09-08 H8K64U OTA 台架记录
+
+- 板卡：`STC8H8K64U-45I-LQFP48` 核心板，11.0592 MHz，UART1 STC 下载器，UART2 自动收发 RS485 模块。
+- 使用分离的 27 KiB code 与 37 KiB EEPROM 二进制完成 Bootloader + v1.0.0 Application + APP_VALID Params A 工厂安装；芯片 split 固定为 `27648`。
+- v1.0.0 Application 能启动、执行 mark-valid，并在 UART1 收到显式 `OTA! + session` 后返回 ACK、受控复位进入 Bootloader。
+- 临时诊断构建确认 Bootloader UART2 能收到同一总线上 ESP32 发出的 RTU 字节，证明 STC UART2 RX 和既有 RS485 支路有效。
+- 当前 `/dev/cu.usbserial-110` 的 PC USB-RS485 发送未到达 STC UART2；ESP32 已停止时 `probe` 仍超时。完成 PC→USB-RS485→STC update/resume 前，必须先修复或确认该适配器的 A/B、共地、方向和实际总线连接。
+- stcgal 1.10 的单一跨 split HEX 写法已判定不可用；稳定安装流程见 `docs/25_H8K64U_OTA_DESIGN.md`。
+
 ## 记录要求
 
 硬件验证完成后，只补充：

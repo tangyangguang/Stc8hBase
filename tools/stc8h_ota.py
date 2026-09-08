@@ -12,6 +12,7 @@ import time
 
 APP_BASE = 0x6C00
 APP_LIMIT = 0xEFFF
+FLASH_LIMIT = 0x10000
 BOOTLOADER_VERSION = 2
 TARGET_CHIP = 0x0864
 
@@ -374,8 +375,15 @@ def command_factory(args):
     for index, value in enumerate(params):
         memory[0xFC00 + index] = value
     output = pathlib.Path(args.output)
+    code_output = output.with_suffix(".code.bin")
+    eeprom_output = output.with_suffix(".eeprom.bin")
     write_ihex(output, memory)
+    code_output.write_bytes(bytes(memory.get(addr, 0xFF)
+                                  for addr in range(APP_BASE)))
+    eeprom_output.write_bytes(bytes(memory.get(addr, 0xFF)
+                                    for addr in range(APP_BASE, FLASH_LIMIT)))
     print(f"wrote {output}: protected_boot={len(boot)} app={len(image)} params=A@0xFC00 generation=1 APP_VALID")
+    print(f"stcgal code={code_output} eeprom={eeprom_output}")
 
 
 def probe(port, rx_buffer, address, seq=1):

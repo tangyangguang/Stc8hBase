@@ -46,8 +46,17 @@ def test_package_and_factory():
         args.output = str(factory_hex)
         TOOL.command_factory(args)
         memory = TOOL.read_ihex(factory_hex)
+        code_bin = factory_hex.with_suffix(".code.bin").read_bytes()
+        eeprom_bin = factory_hex.with_suffix(".eeprom.bin").read_bytes()
         require(memory[TOOL.APP_BASE] == image[0] and memory[0xFC05] == 1,
                 "factory image must contain app and APP_VALID params")
+        require(len(code_bin) == TOOL.APP_BASE and
+                len(eeprom_bin) == TOOL.FLASH_LIMIT - TOOL.APP_BASE,
+                "factory must emit exact stcgal code/EEPROM segments")
+        require(code_bin[0:3] == bytes((2, 2, 0)) and
+                eeprom_bin[0:len(image)] == image and
+                eeprom_bin[0xFC00 - TOOL.APP_BASE + 5] == 1,
+                "stcgal segments must preserve CPU-addressed factory contents")
 
         broken = bytearray(package.read_bytes())
         broken[-1] ^= 1

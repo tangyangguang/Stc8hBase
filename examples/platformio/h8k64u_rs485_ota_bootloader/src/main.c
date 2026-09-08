@@ -235,5 +235,6 @@ void main(void)
                 boot_process_frame();
             }
         }
+        boot_keep_alive();
     }
 }

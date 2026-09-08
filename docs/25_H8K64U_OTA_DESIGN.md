@@ -119,6 +119,22 @@ python3 tools/stc8h_ota.py factory \
   --package build/app.stcota --output build/factory.hex
 ```
 
+命令同时生成 CPU 地址视图 `factory.hex`、精确 27 KiB 的 `factory.code.bin` 和精确 37 KiB 的 `factory.eeprom.bin`。stcgal 1.10 不能把跨 `program_eeprom_split` 的单一 HEX 当作 code image 连续写入；会在旧/新分区边界后失败。首次从其他 split 迁移必须分两次 ISP：
+
+```sh
+# 第一次只写受保护 code，并让下一次 ISP 允许擦写完整 EEPROM 区。
+stcgal.py -P stc8g -p /dev/cu.usbserial-X -t 11059.2 -a -b 19200 \
+  -o program_eeprom_split=27648 -o eeprom_erase_enabled=true \
+  build/factory.code.bin
+
+# 第二次分别提供 code/eeprom；成功后恢复“后续 ISP 保留 EEPROM”。
+stcgal.py -P stc8g -p /dev/cu.usbserial-X -t 11059.2 -a -b 19200 \
+  -o program_eeprom_split=27648 -o eeprom_erase_enabled=false \
+  build/factory.code.bin build/factory.eeprom.bin
+```
+
+第二次启动时，芯片当前选项必须已经是 `program_eeprom_split=27648`、`eeprom_erase_enabled=true`；命令行的 `false` 是在本次完整写入结束后生效。不得把 `factory.hex` 作为 stcgal 的单一 code image。其他烧录器只有在明确支持独立 code/IAP EEPROM 地址空间时才可直接使用组合 HEX。
+
 Bootloader 已在总线上等待时：
 
 ```sh
@@ -144,4 +160,4 @@ tools/check_examples_full.sh
 
 Gate 覆盖 frame/collector、Manifest/Params、双槽 torn write、generation wrap/歧义、显式请求、checkpoint/resume、重复块、readback、CRC 失败、restart/abort、UID 绑定、工具包/工厂镜像，以及 Bootloader reset/vector/分区边界。SDCC 全示例已通过；Keil C51 仅保持源码语法边界，仍需 Windows+Keil 真编译。
 
-真实硬件写擦尚须单独授权并记录：首次 ISP 工厂安装、正常 update、断电 resume、错误 UID/包、重复块、CRC 失败、trial 未确认和 mark-valid。完成这些之前，不宣称生产闭环。ESP32 Sender 和 433 Adapter 不在本阶段。
+当前明确标记的实验台架写擦按仓库 `AGENTS.md` 已获持续授权；生产设备仍须单独授权并记录。首次 ISP 工厂安装、正常 update、断电 resume、错误 UID/包、重复块、CRC 失败、trial 未确认和 mark-valid 全部完成前，不宣称生产闭环。ESP32 Sender 和 433 Adapter 不在本阶段。
