@@ -24,7 +24,7 @@
 
 STC ISP 的 `program_eeprom_split` 必须为十进制 `27648`（`0x6C00`）；示例上传脚本通过 `custom_stcgal_eeprom_split = 27648` 显式传给 stcgal。Bootloader 从 `0x0200` 链接；`0x0000` 固定 `LJMP 0x0200`。低地址中断槽 0..44 固定转发到 `0x6C00 + vector_offset`（SDCC 对大于 31 的 ISR 仍需按芯片手册使用汇编入口）。Application 同样以 `--code-loc 0x6C00` 链接，SDCC 会把应用向量放到相同偏移。
 
-Bootloader 当前 SDCC 构建为 `25951 / 27648 bytes`（93.9%，余 1697 bytes）；mark-valid IAP 最小 Application 为 `9599 / 33792 bytes`。后续新增能力必须重新检查两边余量，不得侵占 `0xF000..0xFFFF`。
+Bootloader 当前 SDCC 构建为 `25951 / 27648 bytes`（93.9%，余 1697 bytes）；带显式 UART1 lab request 的 mark-valid IAP 最小 Application 为 `9789 / 33792 bytes`。后续新增能力必须重新检查两边余量，不得侵占 `0xF000..0xFFFF`。
 
 ## 3. 分层
 
@@ -131,7 +131,7 @@ python3 tools/stc8h_ota.py resume --port /dev/cu.usbserial-X --address 34 \
 
 交互命令要求输入 `UPDATE <address>`；CI/已审核脚本必须显式给 `--yes`。只有确认丢弃当前断点时才加 `--restart`；旧 build 还必须显式加 `--allow-downgrade`。`--no-activate` 可停在 VERIFIED；ACTIVATE 始终是独立协议步骤。
 
-Application 正常运行时不会响应 OTA INFO。产品协议应先调用 `stc8h_boot_request_update(session_id)`，发送 ACK 后再受控复位；PC 第一阶段也可在预先进入 Bootloader/Recovery 的台架上操作。RS485 总线上不得同时存在 ESP32 和 PC 两个主站。
+Application 正常运行时不会响应 OTA INFO。产品协议应先调用 `stc8h_boot_request_update(session_id)`，发送 ACK 后再受控复位；PC 第一阶段也可在预先进入 Bootloader/Recovery 的台架上操作。`h8k64u_ota_min_app` 的 mark-valid 环境仅为硬件验收提供 UART1 lab request：发送 ASCII `OTA!` 后紧跟 4-byte little-endian 非零 session，持久化成功后返回 `OTA ACK` 并复位；该入口不是产品协议，不应复制到产品固件。RS485 总线上不得同时存在 ESP32 和 PC 两个主站。
 
 ## 9. 验证与未完成边界
 
