@@ -416,6 +416,27 @@ def command_info(args):
         print_device(probe(port, bytearray(), args.address))
 
 
+def require_activatable_session(current):
+    if current["state"] != 5 or current["session"] == 0:
+        raise RuntimeError("target has no VERIFIED image awaiting activation")
+    return current["session"]
+
+
+def command_activate(args):
+    with open_serial(args) as port:
+        rx_buffer = bytearray()
+        current = probe(port, rx_buffer, args.address)
+        print_device(current)
+        session = require_activatable_session(current)
+        if not args.yes:
+            answer = input(f"Type ACTIVATE {args.address} to continue: ").strip()
+            if answer != f"ACTIVATE {args.address}":
+                raise RuntimeError("explicit confirmation not received")
+        send_command(port, rx_buffer, args.address, CMD_ACTIVATE,
+                     session, 2, timeout=5.0)
+        print("activation accepted; Station entered one-time trial boot")
+
+
 def command_transfer(args, resume):
     manifest, image, info, digest = read_package(pathlib.Path(args.file))
     with open_serial(args) as port:
@@ -458,7 +479,7 @@ def command_transfer(args, resume):
                      session, seq, timeout=10.0)
         print("full-image CRC32 verified")
         if args.no_activate:
-            print("image remains VERIFIED; run an explicit transfer with activation when ready")
+            print("image remains VERIFIED; run the explicit activate command when ready")
             return
         seq = (seq + 1) & 0xFFFF
         send_command(port, rx_buffer, args.address, CMD_ACTIVATE,
@@ -490,12 +511,15 @@ def build_parser():
     factory.add_argument("--output", required=True)
     factory.set_defaults(func=command_factory)
 
-    for name in ("info", "probe", "update", "resume"):
+    for name in ("info", "probe", "activate", "update", "resume"):
         item = sub.add_parser(name)
         item.add_argument("--port", required=True)
         item.add_argument("--baud", type=int, default=9600)
         item.add_argument("--address", type=int, required=True)
-        if name not in ("info", "probe"):
+        if name == "activate":
+            item.add_argument("--yes", action="store_true",
+                              help="explicit non-interactive authorization")
+        elif name not in ("info", "probe"):
             item.add_argument("--file", required=True)
             item.add_argument("--chunk", type=int, default=128,
                               choices=range(1, FRAME_PAYLOAD_MAX + 1),
@@ -507,9 +531,13 @@ def build_parser():
             item.add_argument("--allow-downgrade", action="store_true",
                               help="explicitly permit an older build number")
             item.add_argument("--no-activate", action="store_true")
-        item.set_defaults(func=command_info if name in ("info", "probe") else
-                          (lambda args, resume=name == "resume":
-                           command_transfer(args, resume)))
+        if name in ("info", "probe"):
+            item.set_defaults(func=command_info)
+        elif name == "activate":
+            item.set_defaults(func=command_activate)
+        else:
+            item.set_defaults(func=(lambda args, resume=name == "resume":
+                                    command_transfer(args, resume)))
     return parser
 
 

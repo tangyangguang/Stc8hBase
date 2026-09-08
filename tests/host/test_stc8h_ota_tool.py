@@ -90,6 +90,21 @@ def test_transfer_session_selection():
     current = {"state": 9, "session": 0x44556677}
     require(TOOL.select_transfer_session(current, False, True) == 0x44556677,
             "recovery from FAILED must preserve the target session")
+    current = {"state": 5, "session": 0x55667788}
+    require(TOOL.require_activatable_session(current) == 0x55667788,
+            "VERIFIED image must expose its activation session")
+    for invalid in ({"state": 4, "session": 0x55667788},
+                    {"state": 5, "session": 0}):
+        try:
+            TOOL.require_activatable_session(invalid)
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError("only a VERIFIED non-zero session may activate")
+    activate_args = TOOL.build_parser().parse_args(
+        ["activate", "--port", "relay", "--address", "34", "--yes"])
+    require(activate_args.func == TOOL.command_activate and activate_args.yes,
+            "activate CLI must require the explicit activation path")
     TOOL.require_downgrade_authorization(3, 2, True)
     try:
         TOOL.require_downgrade_authorization(3, 2, False)

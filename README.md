@@ -72,6 +72,7 @@ Stc8hBase/
 - SPI 硬件主机轮询基础收发已完成编译、资源检查和回环实测。
 - EEPROM/IAP 基础读写擦除已完成编译、资源检查和受控写擦实测；默认 PlatformIO 环境不执行写擦。
 - WDT 看门狗最小封装、INT0/INT1 外部中断辅助、idle/power-down 低功耗入口已完成 SDCC 编译、资源检查和 WDT 复位实测。
+- STC8H8K64U Remote OTA Foundation 已完成低地址常驻 Bootloader、高地址单 Application、双槽 Params、掉电续传、Trial/mark-valid、PC 工具和真实 RS485 硬件闭环；新项目从 [OTA 复用接入指南](docs/28_H8K64U_OTA_PORTING_GUIDE.md) 开始。
 - 16-bit soft timer 工具已完成编译和回绕测试。
 - Ring buffer 工具已完成编译和回绕测试。
 - CRC/checksum 工具已完成编译和标准向量测试。
@@ -114,4 +115,5 @@ tools/check_examples_full.sh
 - [25 H8K64U OTA 设计](docs/25_H8K64U_OTA_DESIGN.md)
 - [26 H8K64U PWMB 正交编码器 HAL 设计](docs/26_H8K64U_QEI_DESIGN.md)
 - [27 H8K64U UART2 中断与 RS485 有界发送设计](docs/27_H8K64U_UART2_RS485_DESIGN.md)
+- [28 H8K64U OTA 复用接入指南](docs/28_H8K64U_OTA_PORTING_GUIDE.md)
 - [资源报告](docs/RESOURCE_REPORT.md)

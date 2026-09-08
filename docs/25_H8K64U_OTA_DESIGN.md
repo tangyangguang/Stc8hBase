@@ -1,5 +1,7 @@
 # STC8H8K64U Remote OTA Foundation
 
+本文说明协议、状态机、布局和安全设计。新项目要直接接入时，从 [28 H8K64U OTA 复用接入指南](28_H8K64U_OTA_PORTING_GUIDE.md) 开始，并以本设计作为底层契约。
+
 ## 1. 范围与安全声明
 
 本设计只覆盖 STC8H8K64U 的可复用单 Application OTA 核心和第一阶段 PC→USB-RS485→UART2 Sender。它不包含云下载、ESP32 暂存/发送、业务升级窗口、433 模块适配、签名验签或 Bootloader 远程更新。
@@ -36,7 +38,7 @@ Bootloader 当前 SDCC 构建为 `25954 / 27648 bytes`（93.9%，余 1694 bytes�
 - `stc8h_iap_program` / `stc8h_iap_ota_params`：受编译期边界约束的 IAP backend。
 - `stc8h_chip_identity`：读取 7-byte CHIPID 并生成 16-byte canonical UID。
 - `h8k64u_rs485_ota_bootloader`：UART2 polling Transport Adapter、Watchdog、safe-output hook、ACK 后复位。
-- `tools/stc8h_ota.py`：pack、inspect、factory、info、update、resume。
+- `tools/stc8h_ota.py`：pack、inspect、factory、info/probe、update、resume、activate。
 
 其他可靠双向 Transport 可复用 Receiver/Core，但必须自己提供单播、ACK、超时、重试、去重和分包。只有单向 433 发射模块不能承载本协议。
 
@@ -143,9 +145,10 @@ python3 tools/stc8h_ota.py update --port /dev/cu.usbserial-X --address 34 \
   --file build/app.stcota
 python3 tools/stc8h_ota.py resume --port /dev/cu.usbserial-X --address 34 \
   --file build/app.stcota
+python3 tools/stc8h_ota.py activate --port /dev/cu.usbserial-X --address 34
 ```
 
-交互命令要求输入 `UPDATE <address>`；CI/已审核脚本必须显式给 `--yes`。只有确认丢弃当前断点时才加 `--restart`；旧 build 还必须显式加 `--allow-downgrade`。`--no-activate` 可停在 VERIFIED；ACTIVATE 始终是独立协议步骤。
+交互命令要求输入 `UPDATE <address>`；CI/已审核脚本必须显式给 `--yes`。只有确认丢弃当前断点时才加 `--restart`；旧 build 还必须显式加 `--allow-downgrade`。`--no-activate` 可停在 VERIFIED；之后必须由操作者明确执行 `activate`，ACTIVATE 始终是独立协议步骤。
 
 Application 正常运行时不会响应 OTA INFO。产品协议应先调用 `stc8h_boot_request_update(session_id)`，发送 ACK 后再受控复位；PC 第一阶段也可在预先进入 Bootloader/Recovery 的台架上操作。`h8k64u_ota_min_app` 的 mark-valid 环境仅为硬件验收提供 UART1 lab request：发送 ASCII `OTA!` 后紧跟 4-byte little-endian 非零 session，持久化成功后返回 `OTA ACK` 并复位；该入口不是产品协议，不应复制到产品固件。RS485 总线上不得同时存在 ESP32 和 PC 两个主站。
 

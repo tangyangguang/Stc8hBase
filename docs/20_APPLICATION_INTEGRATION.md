@@ -103,4 +103,4 @@ Bootloader BSP 必须提供 `H8K64U_OTA_SAFE_OUTPUTS_OFF()`。核心板示例明
 
 RS485 自动收发模块可以把 `BOARD_RS485_TX_ENABLE()` / `BOARD_RS485_RX_ENABLE()` 定义为空操作；手动 DE/RE 板必须实现它们。发送路径仍需 bounded putc 和最后停止位延时。UART2 Bootloader 使用 polling，不占用中断；低地址表会把应用中断槽 0..44 转发到 `0x6C00 + vector_offset`；大于 31 的 SDCC ISR 入口需按芯片手册使用汇编适配。
 
-打包、布局检查、初始工厂镜像和 PC→USB-RS485 操作见 `docs/25_H8K64U_OTA_DESIGN.md`。
+新项目的完整复制清单、配置、代码骨架、工厂安装、Sender 运维和验收流程见 `docs/28_H8K64U_OTA_PORTING_GUIDE.md`；协议、状态机和布局原理见 `docs/25_H8K64U_OTA_DESIGN.md`。

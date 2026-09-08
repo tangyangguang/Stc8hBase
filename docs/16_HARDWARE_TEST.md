@@ -60,7 +60,7 @@ tools/prepare_h8k64u_validation.sh
 - v1.0.0 Application 能启动、执行 mark-valid，并在 UART1 收到显式 `OTA! + session` 后返回 ACK、受控复位进入 Bootloader。
 - 临时诊断构建确认 Bootloader UART2 能收到同一总线上 ESP32 发出的 RTU 字节，证明 STC UART2 RX 和既有 RS485 支路有效。
 - 台架没有独立 USB-RS485；将项目 ESP32 临时烧录为无日志的二进制透明中转：PC USB UART0 9600 ↔ ESP32 UART2 GPIO16/17 9600 ↔ 自动收发 RS485 ↔ STC UART2。通过该路径读取到地址 34 和完整 UID `535443380107000000F784C97501B5EE`。
-- 真实链路已通过 v1.0.1 正常 BEGIN/DATA/VERIFY/ACTIVATE、每 2048 bytes checkpoint、在 4096/9789 处中断并复位后的 resume、重复 DATA 去重、错误 UID 擦除前拒绝、错误目标 Manifest 拒绝、故意篡改镜像后的整镜像 CRC32 失败，以及 FAILED 状态显式 restart 恢复。
+- 真实链路已通过 v1.0.1 正常 BEGIN/DATA/VERIFY/ACTIVATE、`--no-activate` 停留 VERIFIED 后独立 `activate`、每 2048 bytes checkpoint、在 4096/9789 处中断并复位后的 resume、重复 DATA 去重、错误 UID 擦除前拒绝、错误目标 Manifest 拒绝、故意篡改镜像后的整镜像 CRC32 失败，以及 FAILED 状态显式 restart 恢复。
 - 不持久化 mark-valid 的 v1.0.2 trial Application 经人工断电重启后，INFO 返回 `TRIAL_STARTED` 并停留 Bootloader；随后显式降级恢复 v1.0.1。v1.0.1 启动后能再次接受仅允许 APP_VALID 状态调用的 UART1 显式升级请求，证明 mark-valid 已提交；最后再次完成 v1.0.1 激活。
 - 更正：`/dev/cu.usbserial-110` 是用户的其他 ESP8266，不是本项目 USB-RS485；此前基于错误端口映射得到的 `probe` 超时不能作为 STC/RS485 链路结论，该端口后续禁止访问。
 - stcgal 1.10 的单一跨 split HEX 写法已判定不可用；稳定安装流程见 `docs/25_H8K64U_OTA_DESIGN.md`。
