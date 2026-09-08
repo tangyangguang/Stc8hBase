@@ -69,6 +69,29 @@ def test_package_and_factory():
             raise AssertionError("package corruption must fail validation")
 
 
+def test_transfer_session_selection():
+    current = {"state": 0, "session": 0}
+    require(TOOL.select_transfer_session(current, False, False, 0x1234) == 0x1234,
+            "empty target must use a fresh session")
+    current = {"state": 2, "session": 0x22334455}
+    require(TOOL.select_transfer_session(current, False, False) == 0x22334455,
+            "explicit update request must own the transfer session")
+    current = {"state": 4, "session": 0x33445566}
+    require(TOOL.select_transfer_session(current, True, False) == 0x33445566,
+            "resume must preserve the checkpoint session")
+    require(TOOL.select_transfer_session(current, False, True) == 0x33445566,
+            "restart of a receiving image must preserve the target session")
+    try:
+        TOOL.select_transfer_session(current, False, False)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("interrupted transfer must require resume or restart")
+    current = {"state": 9, "session": 0x44556677}
+    require(TOOL.select_transfer_session(current, False, True) == 0x44556677,
+            "recovery from FAILED must preserve the target session")
+
+
 def test_frame_round_trip():
     uid = bytes(range(16))
     frame = TOOL.build_frame(0x22, TOOL.CMD_BEGIN, TOOL.FLAG_RESTART,
@@ -94,4 +117,5 @@ def test_frame_round_trip():
 
 if __name__ == "__main__":
     test_package_and_factory()
+    test_transfer_session_selection()
     test_frame_round_trip()

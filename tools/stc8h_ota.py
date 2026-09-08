@@ -390,6 +390,22 @@ def probe(port, rx_buffer, address, seq=1):
     return send_command(port, rx_buffer, address, CMD_INFO, 0, seq)
 
 
+def select_transfer_session(current, resume, restart, random_session=None):
+    if resume:
+        if current["state"] != 4 or current["session"] == 0:
+            raise RuntimeError("target has no resumable RECEIVING session")
+        return current["session"]
+    if current["state"] == 2 and current["session"] != 0:
+        return current["session"]
+    if current["state"] == 4:
+        if not restart:
+            raise RuntimeError("target has an interrupted session; use resume or explicit --restart")
+        return current["session"]
+    if restart and current["session"] != 0:
+        return current["session"]
+    return random_session if random_session is not None else (secrets.randbits(32) or 1)
+
+
 def command_info(args):
     with open_serial(args) as port:
         print_device(probe(port, bytearray(), args.address))
@@ -406,18 +422,10 @@ def command_transfer(args, resume):
                 current["uid"][9:11] != b"\xF7\x84"):
             raise RuntimeError("target did not report a valid STC8H8K64U device UID")
         expected_crc = info["crc16"]
+        session = select_transfer_session(current, resume, args.restart)
         if resume:
-            if current["state"] != 4 or current["session"] == 0:
-                raise RuntimeError("target has no resumable RECEIVING session")
             if current["manifest_crc"] != expected_crc:
                 raise RuntimeError("target session belongs to a different package")
-            session = current["session"]
-        elif current["state"] == 2 and current["session"] != 0:
-            session = current["session"]
-        elif current["state"] == 4 and not args.restart:
-            raise RuntimeError("target has an interrupted session; use resume or explicit --restart")
-        else:
-            session = secrets.randbits(32) or 1
         if (current["state"] == 2 and info["build"] < current["build"] and
                 not args.allow_downgrade):
             raise RuntimeError("package build is older; repeat with explicit --allow-downgrade")
