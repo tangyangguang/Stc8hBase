@@ -59,7 +59,7 @@ tools/prepare_h8k64u_validation.sh
 - 使用分离的 27 KiB code 与 37 KiB EEPROM 二进制完成 Bootloader + v1.0.0 Application + APP_VALID Params A 工厂安装；芯片 split 固定为 `27648`。
 - v1.0.0 Application 能启动、执行 mark-valid，并在 UART1 收到显式 `OTA! + session` 后返回 ACK、受控复位进入 Bootloader。
 - 临时诊断构建确认 Bootloader UART2 能收到同一总线上 ESP32 发出的 RTU 字节，证明 STC UART2 RX 和既有 RS485 支路有效。
-- 当前 `/dev/cu.usbserial-110` 的 PC USB-RS485 发送未到达 STC UART2；ESP32 已停止时 `probe` 仍超时。完成 PC→USB-RS485→STC update/resume 前，必须先修复或确认该适配器的 A/B、共地、方向和实际总线连接。
+- 更正：`/dev/cu.usbserial-110` 是用户的其他 ESP8266，不是本项目 USB-RS485；此前基于错误端口映射得到的 `probe` 超时不能作为 STC/RS485 链路结论，该端口后续禁止访问。PC USB-RS485 的真实端口尚待用户确认，确认前不得尝试其他未识别串口。
 - stcgal 1.10 的单一跨 split HEX 写法已判定不可用；稳定安装流程见 `docs/25_H8K64U_OTA_DESIGN.md`。
 
 ## 记录要求

@@ -18,7 +18,8 @@
 - nRF24 相关示例专项检查运行：`tools/check_nrf24_examples.sh`。
 - STC8H8K64U 无硬件前置验证运行：`tools/prepare_h8k64u_validation.sh`。
 - Keil C51 验证入口在 `examples/keil_c51/module_compile_check/`；真实验证需在 Windows + Keil C51 环境运行 `build_c51.bat`。
-- 当前通过串口/RS485 连接的 ESP32、STC8H 核心板及相关模块均为可随时重烧的实验设备，其 Flash、EEPROM、IAP、NVS、校准和配置数据均无保留价值。允许为开发、诊断和验收直接烧录、擦除、重分区或重建，无需逐次说明影响或请求确认；该授权不得扩展到未来生产设备或未明确标记为实验设备的硬件。当前 STC8H8K64U Remote OTA Foundation 允许直接替换旧协议、Flash/IAP 布局、参数格式和公共 API，不提供历史兼容层或旧数据迁移。
+- 当前通过串口/RS485 连接且已明确识别为本项目实验台架的 ESP32、STC8H 核心板及相关模块均为可随时重烧的实验设备，其 Flash、EEPROM、IAP、NVS、校准和配置数据均无保留价值。允许为开发、诊断和验收直接烧录、擦除、重分区或重建，无需逐次说明影响或请求确认；该授权不得扩展到未来生产设备、未明确标记为实验设备的硬件或下述禁用端口。当前 STC8H8K64U Remote OTA Foundation 允许直接替换旧协议、Flash/IAP 布局、参数格式和公共 API，不提供历史兼容层或旧数据迁移。
+- `/dev/cu.usbserial-110` 属于用户的其他 ESP8266 设备，不是本项目 USB-RS485；严禁打开、监听、复位、发送、烧录或以任何方式访问，除非用户以后针对该设备重新明确授权。不得按串口编号猜测设备角色；不确定的端口必须先由用户确认映射后才能访问。当前已确认 `/dev/cu.usbserial-130` 是 STC UART1/ISP 下载口，`/dev/cu.usbserial-57460296581` 是本项目 ESP32；PC USB-RS485 端口尚未确认。
 - STC8H8K64U Remote OTA 必须先在本仓库完整实现并沉淀 Bootloader、IAP、协议、掉电恢复、应用链接支持和本机 PC 升级工具；下游项目只做板级配置、适配器和应用接入，不得复制、vendor、分叉或私有化 OTA 核心。下游应通过 Git submodule/包依赖等引用方式同步本仓库上游最新且已验证的提交，再固定精确版本以保证构建可复现；通用修复必须回到本仓库实现。
 - Remote OTA 必须由操作者在完整固件包和目标预检通过后，以明确命令触发；不得自动发现版本后升级，不得因上电、串口活动、联网或收到普通广播而隐式开始擦写。Application 损坏时自动停留 Bootloader 只属于恢复保护，不视为自动升级。
 - 当前优先关闭 STC 端和 PC→STC 真实链路，不依赖或同步修改 ESP32/Esp32Base；ESP32 Sender/固件托管属于后续阶段。
