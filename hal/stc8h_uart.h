@@ -42,7 +42,8 @@ char stc8h_uart_getc(stc8h_uart_id_t uart);
 #if STC8H_UART_ENABLE_ISR_API
 stc8h_status_t stc8h_uart_interrupt_enable(stc8h_uart_id_t uart);
 stc8h_status_t stc8h_uart_interrupt_disable(stc8h_uart_id_t uart);
-stc8h_u8 stc8h_uart_try_getc(stc8h_uart_id_t uart, stc8h_u8 *value);
+/* Callable from an ISR while another UART is polled in the main loop. */
+stc8h_u8 stc8h_uart_try_getc(stc8h_uart_id_t uart, stc8h_u8 *value) STC8H_REENTRANT;
 void stc8h_uart_clear_tx_flag(stc8h_uart_id_t uart);
 #endif
 

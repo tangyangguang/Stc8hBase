@@ -510,7 +510,7 @@ stc8h_status_t stc8h_uart_interrupt_disable(stc8h_uart_id_t uart)
     }
 }
 
-stc8h_u8 stc8h_uart_try_getc(stc8h_uart_id_t uart, stc8h_u8 *value)
+stc8h_u8 stc8h_uart_try_getc(stc8h_uart_id_t uart, stc8h_u8 *value) STC8H_REENTRANT
 {
     if (value == 0) {
         return 0u;

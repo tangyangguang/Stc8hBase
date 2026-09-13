@@ -389,3 +389,7 @@ https://docs.circuitpython.org/projects/nrf24l01/en/latest/
 - ACK payload 只作为短状态回传优化，启用时必须同时启用 dynamic payload。
 - PRX 的 ACK payload 会占用 TX FIFO；正常收包后追加下一份 ACK，堵塞或恢复时才 `FLUSH_TX`。
 - ISR 只置位，不在 ISR 中执行 SPI 收发。
+
+### UART ISR 参数存储（2026-09-13）
+
+依据随 SDCC 4.4.0 工具链提供的官方 `sdccman.txt` §3.7 Overlaying：ISR 调用的非重入函数不能与主循环共享 overlay 参数。`stc8h_uart_try_getc` 使用 `STC8H_REENTRANT`，避免 UART2 ISR 覆盖主循环 UART1 接收指针及整数运算临时参数；调用方需重新构建。实机证据和目标资源用量记录在 farm-auto-modbus 的当前阶段记录。
